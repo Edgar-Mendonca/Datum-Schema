@@ -1,0 +1,19 @@
+[workspace]
+resolver = "2"
+members = ["crates/core", "src-tauri"]
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+# Unwind (not abort): an internal error in one action is caught and reported instead of closing the app.
+panic = "unwind"
+strip = true
+
+# Routing and checks run on every edit; keep tests and dev runs quick.
+[profile.dev.package.datum-core]
+opt-level = 2

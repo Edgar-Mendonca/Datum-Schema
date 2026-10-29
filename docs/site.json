@@ -1,0 +1,37 @@
+{
+  "id": "schema",
+  "name": "Datum Schema",
+  "accent": "#9C1F84",
+  "logo": "docs/brand/datum-schema-icon.svg",
+  "tagline": "Intelligent P&IDs and process flow diagrams: draw, check and list.",
+  "for": "Process, chemical, mechanical, piping and instrument engineers, operators and students.",
+  "about": [
+    "Datum Schema draws piping and instrument diagrams where every symbol and line carries its data and knows what it is connected to. You place real symbols (vessels, pumps, exchangers, valves, instruments) and join them with lines that route themselves; drop a valve on a line and it goes into it, carry a line to another sheet with a pair of off-page connectors.",
+    "Because the drawing knows its connections, Datum Schema writes the line list, the equipment list, the instrument index and the valve list for you, always in step with the drawing; it checks the drawing as you work (duplicate tags, open ends, size changes without a reducer, pumps without check valves and more); and it sizes every line, with its velocity and pressure drop against limits for its service. Hydraulic results are a sizing aid, checked by the engineer."
+  ],
+  "steps": [
+    { "title": "Draw the plant", "text": "Drag symbols from the palette and draw lines port to port. In-line valves and fittings split the line they are dropped on; off-page connectors carry lines between sheets." },
+    { "title": "Check it as you go", "text": "Thirteen rules run on every change: duplicate tags, open ends, size and class changes, check valves, relief paths, control loops, velocities and pressure drops. Click an issue to go to it." },
+    { "title": "Print the drawings and lists", "text": "Print the sheets to PDF with their border and title block, export DXF for any CAD program, and the line list, equipment list, instrument index and valve list to Excel or CSV." }
+  ],
+  "highlights": [
+    "About 80 symbols of our own, following ISO 10628-2 and ISA-5.1",
+    "Lines route themselves at right angles, hop over each other and carry flow arrows",
+    "A valve dropped on a line splits it and joins both halves",
+    "Off-page connectors pair across sheets; click one to jump to its partner",
+    "Live line list, equipment list, instrument index and valve list",
+    "Thirteen drawing checks, each with a click to the problem",
+    "Line hydraulics: velocity, Reynolds number, Colebrook friction factor and pressure drop against limits",
+    "SI and US units; DXF, SVG, PDF, Excel and CSV",
+    "Automatic tags and loop numbers, renumbering, a legend sheet"
+  ],
+  "screenshots": [],
+  "roadmap": [
+    { "v": "0.1.4", "title": "The exhibition build", "when": "Next", "items": ["Polish, keyboard shortcuts and empty states", "Speed with 500 symbols", "Screenshots and README"] },
+    { "v": "0.2", "title": "Exchange and links", "when": "Soon", "items": ["Open P&ID data exchange (the DEXPI XML format) import and export", "Send a line to Datum Pipe as a stress model", "Send a loop to Datum Sim (pump, valve, tank, controller) as a dynamic model", "DXF import of an old drawing as a background"] },
+    { "v": "0.3", "title": "Process flow diagrams", "when": "Later", "items": ["Stream tables (flow, pressure, temperature, composition per stream)", "Heat and mass balance checks", "Revision clouds and comparing revisions"] },
+    { "v": "0.4", "title": "Instrument documents", "when": "Later", "items": ["Instrument loop diagrams and datasheets from the index", "Cause-and-effect matrix from interlocks", "Valve datasheets"] },
+    { "v": "0.5", "title": "Company templates and review", "when": "Later", "items": ["Company symbol and title-block templates", "Project-wide reports (valve and fitting take-off)", "Review comments from several people"] },
+    { "v": "1.0", "title": "Version 1", "when": "Goal", "items": ["User guide", "A validation note for the hydraulics", "Signed installer"] }
+  ]
+}

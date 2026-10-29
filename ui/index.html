@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Datum Schema</title>
+</head>
+<body>
+<div id="app"></div>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-save" viewBox="0 0 24 24"><path d="M4 3h13l3 3v15H4z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 3v6h8V3M7 14h10v7H7z" fill="currentColor"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 7H4V2M4 7a9 9 0 1 1 3 10" fill="none" stroke="currentColor" stroke-width="2.2"/></symbol>
+  <symbol id="i-redo" viewBox="0 0 24 24"><path d="M15 7h5V2M20 7a9 9 0 1 0-3 10" fill="none" stroke="currentColor" stroke-width="2.2"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11 12 3l9 8v10h-6v-6H9v6H3z" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-new" viewBox="0 0 24 24"><path d="M6 2h8l5 5v15H6zM14 2v5h5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-open" viewBox="0 0 24 24"><path d="M3 5h6l2 2h9v3H7l-4 10zM7 10h15l-4 10H3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-upd" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 20h16" fill="none" stroke="currentColor" stroke-width="2.2"/></symbol>
+  <symbol id="i-print" viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H3v-8h18v8h-3M7 14h10v7H7z" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2.2"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 16V4h11" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-del" viewBox="0 0 24 24"><path d="M5 7h14M9 7V4h6v3M7 7l1 14h8l1-14" fill="none" stroke="#D64545" stroke-width="2"/></symbol>
+  <symbol id="i-fit" viewBox="0 0 24 24"><path d="M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5" fill="none" stroke="#801A6C" stroke-width="2"/><rect x="7" y="10" width="10" height="4" fill="#C25BAE"/></symbol>
+  <symbol id="i-opts" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.1 2.1m10 10 2.1 2.1M4.9 19.1 7 17m10-10 2.1-2.1" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-github" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.95 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.85-2.34 4.7-4.57 4.94.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/></symbol>
+  <symbol id="i-bug" viewBox="0 0 24 24"><ellipse cx="12" cy="14" rx="5" ry="6" fill="#F3B9B4" stroke="#C0392B" stroke-width="1.6"/><path d="M12 8v12M7 12H3m18 0h-4M7 17l-3 2m17-2-3 2M8.5 8 7 5m8.5 3L17 5" stroke="#C0392B" stroke-width="1.6" fill="none"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z" fill="#F4DCEE" stroke="#801A6C" stroke-width="1.6"/><circle cx="7.5" cy="8.5" r="1.6" fill="#801A6C"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#EAB6DD" stroke="#801A6C" stroke-width="1.7"/><path d="M9.3 9.4a2.8 2.8 0 1 1 3.9 2.6c-.8.4-1.2 1-1.2 1.9v.4" stroke="#801A6C" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="12" cy="17.2" r="1.1" fill="#801A6C"/></symbol>
+  <symbol id="i-keys" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="13" rx="2" fill="none" stroke="#801A6C" stroke-width="1.8"/><path d="M6 10h1m3 0h1m3 0h1m3 0h1M7 15h10" stroke="#801A6C" stroke-width="1.8"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="#fff" stroke="#801A6C" stroke-width="1.6"/><path d="M7 8h10M7 12h10M7 16h6" stroke="#801A6C" stroke-width="1.6"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h1M3 12h1M3 18h1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-export" viewBox="0 0 24 24"><path d="M4 15v5h16v-5M12 15V3m-5 5 5-5 5 5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-import" viewBox="0 0 24 24"><path d="M4 15v5h16v-5M12 3v12m-5-5 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-table" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 9h18M3 14h18M9 9v11" stroke="currentColor" stroke-width="1.6"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4"/></symbol>
+  <symbol id="i-report" viewBox="0 0 24 24"><path d="M6 2h9l4 4v16H6z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 17v-3m3 3v-6m3 6v-4" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-renum" viewBox="0 0 24 24"><text x="2" y="11" font-size="8" font-family="monospace" fill="currentColor">10</text><text x="12" y="21" font-size="8" font-family="monospace" fill="currentColor">20</text><path d="M4 17h5M18 6h4M14 6l2 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></symbol>
+  <symbol id="i-valve" viewBox="0 0 24 24"><path d="M3 7v10l9-5zM21 7v10l-9-5z" fill="#EAB6DD" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 12V4M8 4h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></symbol>
+  <symbol id="i-units" viewBox="0 0 24 24"><path d="M3 16h18v4H3zM6 16v-2M9 16v-3M12 16v-2M15 16v-3M18 16v-2M7 4h10M12 4v8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></symbol>
+  <symbol id="i-paste" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="9" y="2.5" width="6" height="4" rx="1" fill="#EAB6DD" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 11h7M8.5 15h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-dup" viewBox="0 0 24 24"><rect x="3" y="3" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="10" y="10" width="11" height="11" fill="#EAB6DD" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="i-select" viewBox="0 0 24 24"><path d="M5 3l13 9-6 1.5L9 20z" fill="#EAB6DD" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+  <symbol id="i-line" viewBox="0 0 24 24"><path d="M3 18h8V7h10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 4l4 3-4 3z" fill="#9C1F84"/><circle cx="3" cy="18" r="2" fill="#EAB6DD" stroke="currentColor" stroke-width="1.4"/></symbol>
+  <symbol id="i-sig" viewBox="0 0 24 24"><path d="M3 12h18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="3 2.2"/><path d="M8 8l-2 8M11 8l-2 8" stroke="#9C1F84" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-symbols" viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="16" rx="3.5" fill="#EAB6DD" stroke="currentColor" stroke-width="1.7"/><circle cx="17" cy="16" r="4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M17 3v6M14 6h6" stroke="#9C1F84" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M4 4h16v12l-4 4H4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 9h8M8 13h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-leader" viewBox="0 0 24 24"><path d="M10 4h11M10 8h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M10 6L4 18" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 21l1-5 3 1.5z" fill="#9C1F84"/></symbol>
+  <symbol id="i-hold" viewBox="0 0 24 24"><path d="M6 8a3 3 0 0 1 5-2 3 3 0 0 1 5 0 3 3 0 0 1 3 5 3 3 0 0 1-2 5 3 3 0 0 1-5 1 3 3 0 0 1-5-1 3 3 0 0 1-2-5 3 3 0 0 1 1-3z" fill="#EAB6DD" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M19 12a7 7 0 1 1-2.1-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18 3v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-flip" viewBox="0 0 24 24"><path d="M12 3v18" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 2"/><path d="M9 6L3 18h6z" fill="#EAB6DD" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 6l6 12h-6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+  <symbol id="i-flow" viewBox="0 0 24 24"><path d="M3 9h16M21 15H5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M15 5l5 4-5 4zM9 11l-5 4 5 4z" fill="#9C1F84"/></symbol>
+  <symbol id="i-vessel" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="5" fill="#EAB6DD" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="i-pump" viewBox="0 0 24 24"><circle cx="11" cy="13" r="6.5" fill="#EAB6DD" stroke="currentColor" stroke-width="1.8"/><path d="M11 6.5h10M2 13h2.5M7 19l-2 3h12l-2-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-hx" viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="10" fill="#EAB6DD" stroke="currentColor" stroke-width="1.8"/><path d="M1 12h3M20 12h3M8 4v3M16 17v3M4 10.5h16M4 13.5h16" stroke="currentColor" stroke-width="1.4"/></symbol>
+  <symbol id="i-cv" viewBox="0 0 24 24"><path d="M3 14v8l9-4zM21 14v8l-9-4z" fill="#EAB6DD" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 18V9M7 9h10a5 5 0 0 0-10 0z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+  <symbol id="i-fitting" viewBox="0 0 24 24"><path d="M2 7h7l6 3h7v4h-7l-6 3H2z" fill="#EAB6DD" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+  <symbol id="i-inst" viewBox="0 0 24 24"><circle cx="12" cy="11" r="8" fill="#fff" stroke="currentColor" stroke-width="1.8"/><path d="M4 11h16" stroke="currentColor" stroke-width="1.4"/><path d="M12 19v3" stroke="#9C1F84" stroke-width="1.8"/></symbol>
+  <symbol id="i-meter" viewBox="0 0 24 24"><path d="M1 12h4M19 12h4" stroke="currentColor" stroke-width="1.8"/><rect x="5" y="7" width="14" height="10" fill="#EAB6DD" stroke="currentColor" stroke-width="1.8"/><path d="M8 14l2-4 2 4 2-4 2 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+  <symbol id="i-mark" viewBox="0 0 24 24"><path d="M2 12h20" stroke="currentColor" stroke-width="2"/><path d="M12 4v16" stroke="#9C1F84" stroke-width="1.8" stroke-dasharray="2.5 2"/></symbol>
+  <symbol id="i-offpage" viewBox="0 0 24 24"><path d="M2 8h14l5 4-5 4H2z" fill="#EAB6DD" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.6 0l3-3a4 4 0 0 0-5.6-5.6l-1 1M14 10a4 4 0 0 0-5.6 0l-3 3a4 4 0 0 0 5.6 5.6l1-1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-go" viewBox="0 0 24 24"><path d="M4 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 17a8 8 0 1 1 16 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 17l4-6" stroke="#9C1F84" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-sheet" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" fill="#fff" stroke="currentColor" stroke-width="1.7"/><rect x="13" y="14" width="9" height="5" fill="#EAB6DD" stroke="currentColor" stroke-width="1.4"/></symbol>
+  <symbol id="i-legend" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="7.5" cy="8" r="2" fill="#EAB6DD" stroke="currentColor" stroke-width="1.2"/><path d="M11 8h7M6 15h3M11 15h7" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-scale" viewBox="0 0 24 24"><rect x="3" y="11" width="10" height="10" fill="#EAB6DD" stroke="currentColor" stroke-width="1.7"/><path d="M13 11l8-8M15 3h6v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-dxf" viewBox="0 0 24 24"><path d="M5 2h10l4 4v16H5z" fill="none" stroke="currentColor" stroke-width="1.7"/><text x="12" y="17" font-size="6.5" font-family="monospace" text-anchor="middle" fill="#9C1F84" font-weight="700">DXF</text></symbol>
+  <symbol id="i-svg" viewBox="0 0 24 24"><path d="M5 2h10l4 4v16H5z" fill="none" stroke="currentColor" stroke-width="1.7"/><text x="12" y="17" font-size="6.5" font-family="monospace" text-anchor="middle" fill="#9C1F84" font-weight="700">SVG</text></symbol>
+  <symbol id="i-csv" viewBox="0 0 24 24"><path d="M5 2h10l4 4v16H5z" fill="none" stroke="currentColor" stroke-width="1.7"/><text x="12" y="17" font-size="6.5" font-family="monospace" text-anchor="middle" fill="#9C1F84" font-weight="700">CSV</text></symbol>
+  <symbol id="i-xlsx" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" fill="#fff" stroke="#1F7A4D" stroke-width="1.7"/><path d="M3 9h18M3 14h18M9 4v16M15 4v16" stroke="#1F7A4D" stroke-width="1.2"/></symbol>
+</svg>
+<script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

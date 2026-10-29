@@ -1,0 +1,111 @@
+// The bottom panel: Checks · Line list · Equipment · Instruments · Valves. The lists come from the
+// engine (lists.rs) in display units; sort, filter and group them, click a row to find it on the
+// drawing, edit a cell and the drawing follows.
+import { For, Show, createSignal, createMemo, createResource, createEffect, on } from "solid-js";
+import { List, Col, Row, parseNum, Issue } from "./api";
+import { panel, setPanel, panelOpen, setPanelOpen, derived, call, out, act, proj, toast } from "./store";
+import { fromU } from "./units";
+import { C } from "./cmds";
+import { Help } from "./help";
+
+const TABS: [string, string][] = [["checks", "Checks"], ["lines", "Line list"], ["equipment", "Equipment"], ["instruments", "Instruments"], ["valves", "Valves"]];
+
+const level = (l: string) => (l === "error" ? 0 : l === "warning" ? 1 : 2);
+
+const Checks = () => {
+  const [show, setShow] = createSignal<Record<string, boolean>>({ error: true, warning: true, note: true });
+  const issues = createMemo(() => [...(derived()?.issues ?? [])].sort((a, b) => level(a.level) - level(b.level) || a.rule - b.rule).filter(i => show()[i.level]));
+  const sheetNo = (id: number) => proj()?.sheets.find(s => s.id === id)?.number ?? "";
+  const go = (i: Issue) => C.goTo(i.ids, i.sheet);
+  const n = (l: string) => (derived()?.issues ?? []).filter(i => i.level === l).length;
+  return (
+    <div class="checks">
+      <div class="cfilter">
+        <For each={[["error", "Errors"], ["warning", "Warnings"], ["note", "Notes"]]}>{([k, l]) => <label class={`chk ${k}`}><input type="checkbox" checked={show()[k]} onChange={e => setShow({ ...show(), [k]: e.currentTarget.checked })} />{n(k)} {l.toLowerCase()}</label>}</For>
+        <span class="grow" /><span class="muted small">Click a row to go to it. Rules can be switched off in Options › Checks.</span>
+      </div>
+      <div class="cscroll">
+        <Show when={issues().length} fallback={<div class="cempty"><b>✓ Nothing to report</b><span class="muted">{(derived()?.issues.length ?? 0) ? "Nothing at the levels shown." : "Every check passes: no duplicate tags, no open ends, sizes and classes change where they should, pumps have check valves, vessels have relief."}</span></div>}>
+          <table class="tbl ctbl"><thead><tr><th style={{ width: "30px" }} /><th style={{ width: "42px" }}>Rule</th><th>What</th><th style={{ width: "90px" }}>Sheet</th></tr></thead><tbody>
+            <For each={issues()}>{i => <tr class={`f ${i.level}`} onClick={() => go(i)}><td class="lvl">{i.level === "error" ? "✗" : i.level === "warning" ? "!" : "i"}</td><td class="mono">{i.rule}</td><td>{i.msg}</td><td class="mono">{sheetNo(i.sheet)}</td></tr>}</For>
+          </tbody></table>
+        </Show>
+      </div>
+    </div>
+  );
+};
+
+/** One list as a grid. */
+const ListView = (p: { kind: string }) => {
+  // Reload whenever the project changes.
+  const [list, { refetch }] = createResource(() => p.kind, k => call<List>("list", { kind: k }));
+  createEffect(on(() => out(), () => refetch(), { defer: true }));
+  const [sort, setSort] = createSignal<{ col: number; dir: 1 | -1 } | null>(null);
+  const [q, setQ] = createSignal("");
+  const [group, setGroup] = createSignal(-1);
+  const rows = createMemo(() => {
+    const l = list(); if (!l) return [] as Row[];
+    const s = q().trim().toLowerCase();
+    let r = l.rows.filter(x => !s || x.cells.some(c => c.toLowerCase().includes(s)));
+    const so = sort();
+    if (so) r = [...r].sort((a, b) => { const x = a.cells[so.col], y = b.cells[so.col]; const nx = parseFloat(x), ny = parseFloat(y); const c = !isNaN(nx) && !isNaN(ny) && l.cols[so.col].num ? nx - ny : x.localeCompare(y, undefined, { numeric: true }); return c * so.dir; });
+    if (group() >= 0) r = [...r].sort((a, b) => a.cells[group()].localeCompare(b.cells[group()], undefined, { numeric: true }));
+    return r;
+  });
+  const edit = (r: Row, c: Col, v: string) => {
+    if (c.key === "tag") return act({ SetTag: { id: r.ids[0], tag: v } });
+    let val: string | number | null = v.trim() === "" ? null : v;
+    if (c.q && val !== null) { const x = parseNum(v); if (x === null) return toast(`${c.label}: type a number.`); val = fromU(c.q, x); }
+    act({ SetData: { ids: r.ids, key: c.key, val } });
+  };
+  return (
+    <div class="lists">
+      <div class="cfilter">
+        <input class="lsearch" placeholder="Filter" value={q()} onInput={e => setQ(e.currentTarget.value)} />
+        <label class="inline small">Group by <select onChange={e => setGroup(+e.currentTarget.value)}><option value="-1">—</option><For each={list()?.cols ?? []}>{(c, i) => <option value={i()}>{c.label}</option>}</For></select></label>
+        <span class="grow" /><span class="muted small">{rows().length} rows</span>
+        <button class="btn sm" onClick={() => C.exportList(p.kind, "xlsx")}>Excel</button><button class="btn sm" onClick={() => C.exportList(p.kind, "csv")}>CSV</button><button class="btn sm" onClick={C.print}>Print</button>
+      </div>
+      <div class="lscroll">
+        <Show when={list()} fallback={<div class="cempty"><span class="muted">{list.error ? String(list.error) : "…"}</span></div>}>{l => <table class="egrid">
+          <thead><tr><For each={l().cols}>{(c, i) => <th classList={{ r: c.num }} onClick={() => setSort(sort()?.col === i() ? { col: i(), dir: (-sort()!.dir) as 1 | -1 } : { col: i(), dir: 1 })}>{c.label}{sort()?.col === i() ? (sort()!.dir > 0 ? " ▲" : " ▼") : ""}</th>}</For></tr></thead>
+          <tbody>
+            <For each={rows()} fallback={<tr><td colSpan={l().cols.length} class="muted" style={{ padding: "8px" }}>{l().kind === "lines" ? "Lines with a number appear here: draw a process line and give it a size, fluid, sequence and class." : "Tagged items appear here as you place them."}</td></tr>}>{(r, ri) => <>
+              <Show when={group() >= 0 && (ri() === 0 || rows()[ri() - 1].cells[group()] !== r.cells[group()])}><tr class="grow"><td colSpan={l().cols.length}><b>{l().cols[group()].label}: {r.cells[group()] || "—"}</b></td></tr></Show>
+              <tr class="f" classList={{ bad: r.status === 2, warn: r.status === 1 }} onClick={() => C.goTo(r.ids, r.sheet)}>
+                <For each={l().cols}>{(c, i) => <td classList={{ r: c.num }}>
+                  <Show when={c.edit} fallback={<span>{r.cells[i()]}</span>}><input value={r.cells[i()]} classList={{ mono: c.num }} onClick={e => e.stopPropagation()} onChange={e => edit(r, c, e.currentTarget.value)} /></Show>
+                </td>}</For>
+              </tr>
+            </>}</For>
+          </tbody>
+        </table>}</Show>
+      </div>
+    </div>
+  );
+};
+
+export const Bottom = () => {
+  const [h, setH] = createSignal(230);
+  const resize = (e: MouseEvent) => {
+    const y0 = e.clientY, h0 = h();
+    const mv = (m: MouseEvent) => setH(Math.max(90, Math.min(innerHeight * 0.7, h0 + y0 - m.clientY)));
+    const upf = () => { removeEventListener("mousemove", mv); removeEventListener("mouseup", upf); };
+    addEventListener("mousemove", mv); addEventListener("mouseup", upf);
+  };
+  const badge = (k: string) => { if (k !== "checks") return ""; const i = derived()?.issues ?? []; const e = i.filter(x => x.level === "error").length, w = i.filter(x => x.level === "warning").length; return e || w ? ` (${e} · ${w})` : ""; };
+  return (
+    <section class="bottom" style={{ height: panelOpen() ? `${h()}px` : "30px" }}>
+      <Show when={panelOpen()}><div class="bhandle" onMouseDown={resize} /></Show>
+      <nav class="btabs">
+        <For each={TABS}>{([k, l]) => <button classList={{ on: panelOpen() && panel() === k }} onClick={() => { if (panel() === k && panelOpen()) setPanelOpen(false); else { setPanel(k); setPanelOpen(true); } }}>{l}{badge(k)}</button>}</For>
+        <Help k={panel() === "checks" ? "checks" : "lists"} />
+        <span class="grow" />
+        <button class="bcollapse" title={panelOpen() ? "Hide the panel" : "Show the panel"} onClick={() => setPanelOpen(!panelOpen())}>{panelOpen() ? "▾" : "▴"}</button>
+      </nav>
+      <Show when={panelOpen()}>
+        <Show when={panel() === "checks"} fallback={<ListView kind={panel()} />}><Checks /></Show>
+      </Show>
+    </section>
+  );
+};

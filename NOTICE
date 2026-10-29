@@ -1,0 +1,21 @@
+Datum Schema
+Copyright (c) 2026 Edgar Mendonca. MIT licence.
+
+The window bundles SolidJS (MIT) and the IBM Plex fonts (SIL Open Font Licence 1.1). The desktop
+shell uses Tauri (MIT or Apache-2.0) and the Rust crates listed in Cargo.lock, each under MIT,
+Apache-2.0, BSD, ISC, Zlib, MPL-2.0 or Unicode licences (checked by cargo deny, deny.toml). Excel
+workbooks are written with rust_xlsxwriter (MIT or Apache-2.0), as in Datum Plan.
+
+The symbols are Datum Schema's own vector drawings, following the conventions of the public
+symbol standards ISO 10628-2 (equipment, valves, fittings and lines) and ISA-5.1 (instrument
+bubbles and letter codes). No symbol library from other software is copied.
+
+The unit table (crates/core/src/units.rs) is copied from Datum Calc (MIT, same author), by way of
+Datum Pipe, with factors from NIST SP 811 (2008). Pipe outside diameters and wall thicknesses
+(crates/core/src/pipes.rs, from Datum Pipe) are the published nominal dimensions of wrought steel
+pipe (ASME B36.10M) and stainless steel pipe (ASME B36.19M). The line hydraulics use the
+Darcy–Weisbach equation and the Colebrook equation (C. F. Colebrook, J. Inst. Civil Eng. 11
+(1939) 133–156), as in Datum Calc's pipe pressure-drop pack.
+
+The family window, ribbon, File page, updater and printing are taken from Datum Plan; the drawing
+canvas and the orthogonal router from Datum Sim (all MIT, same author).

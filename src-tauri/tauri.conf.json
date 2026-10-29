@@ -1,0 +1,62 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Datum Schema",
+  "identifier": "com.edgarmendonca.datumschema",
+  "build": {
+    "frontendDist": "../ui/dist",
+    "beforeBuildCommand": "npm run build:ui",
+    "beforeDevCommand": "npm run build:ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Datum Schema",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 960,
+        "minHeight": 600,
+        "center": true,
+        "maximized": true,
+        "dragDropEnabled": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; frame-ancestors 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "publisher": "Datum",
+    "copyright": "© 2026 Edgar Mendonca",
+    "category": "Productivity",
+    "shortDescription": "Intelligent P&IDs and process flow diagrams",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "fileAssociations": [
+      {
+        "ext": [
+          "dschema"
+        ],
+        "name": "Datum Schema project",
+        "description": "Datum Schema project",
+        "role": "Editor"
+      }
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "installerIcon": "icons/icon.ico",
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}
