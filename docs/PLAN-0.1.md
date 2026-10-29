@@ -34,3 +34,7 @@ Cut order if time runs short (brief): the Hold cloud, line hops, ANSI sheet size
 - **Routing quality** with ports on four sides and many lines: Sim's sparse-grid router is proven; user bend points override it.
 - **Releases from a cloud session**: tag pushes are blocked, so each release runs `release.yml` by workflow_dispatch on Windows; the CI on Linux checks the same code first.
 - **No Windows machine here**: the window is checked in Chromium with a mocked bridge (Playwright) and the real shell is built on Linux (WebKitGTK) for compile checks; the installer is built only by the release workflow.
+
+## Course change (after 0.1.3)
+
+The user set the long-term direction: an enterprise-class, object-based plant engineering tool, not a drawing tool. Objects are the master and a symbol is only a view of one; every object sits in a plant hierarchy (project › plant › unit › area); classes and their attributes are data (a JSON class library; users add attributes); the project is one SQLite database with a history of every change; names follow DEXPI. 0.1 shipped on the drawing-centred core (0.1.0–0.1.3; 0.1.4 held). The object core is the 0.2 stage, proposed in `docs/PLAN-0.2.md` and to be agreed with the user before it is built. If it costs time, cut from the brief's cut list, never from connectivity, checks, lists, hydraulics, printing or DXF.

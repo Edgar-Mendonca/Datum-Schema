@@ -82,6 +82,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 
 | Version | Decision | Why |
 | --- | --- | --- |
+| 0.1.3 (course change) | **Datum Schema becomes an object-based plant engineering tool, not a drawing tool**: objects are the master and symbols are views of them; a plant hierarchy (project › plant › unit › area); classes and attributes as data (a JSON class library, user attributes in Options); the project as one SQLite database with a history of every change; DEXPI names. The proposal and open questions are in `docs/PLAN-0.2.md`; 0.1.4 is held until they are discussed | The user's direction after 0.1.3: an open-source tool in the class of the enterprise object-based plant engineering suites, for students, researchers and engineers |
 | plan | Everything in the brief §1 (name, magenta accent, identifier, `.dschema`, stack, units, ribbon tabs, layout, own symbols after ISO 10628-2 and ISA-5.1, logo, public words) | Made with the user in the hub, session 22 |
 | plan | The shell (main.rs, styles, ribbon, File page, print, help) is copied from Datum Pipe, the newest copy of Plan's shell; the updater, `guard`, crash.log and atomic writes from Plan 0.4.3 itself | Pipe's shell is already adapted to an engineering app; Plan carries the latest safety rules (FAMILY §11) and Pipe's release profile still aborts on panic |
 | plan | Symbols are data in the engine (a small drawing language), turned into SVG for the window and into blocks for DXF | One drawing per symbol; the window, print and DXF always agree |
@@ -113,8 +114,9 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.1.1 | Graph, tags, numbering, hardening tests; off-page connectors, legend sheet, notes and Hold clouds; the 13 checks and the Checks panel; hydraulics with badges; the four lists with CSV and Excel; print, SVG, DXF; the examples and Find the faults | ✅ |
 | 0.1.2 | Speed (router marks blocked cells per symbol: 5 s → 0.07 s on a crowded 500-symbol sheet), coloured badges, selected line number highlighted on every sheet, screenshots | ✅ |
 | 0.1.3 | An independent engine review (a separate agent, report only): 8 findings fixed with regression tests in `hardening.rs` › `review`; more UI checks; list pages with a title block; DXF checked with ezdxf | ✅ |
-| 0.1.4 | Final check: every example opens with 0 errors, prints and exports (engine test and UI checks); README with the demo, site.json (the exhibition build) | ✅ |
-| 0.2 | 🔜 DEXPI import and export; send a line to Datum Pipe; send a loop to Datum Sim; DXF import as a background | ⬜ |
+| 0.1.4 | Final check: every example opens with 0 errors, prints and exports (engine test and UI checks); README with the demo, site.json (the exhibition build). Committed, not released: held for the discussion of `docs/PLAN-0.2.md` | ⏸ |
+| 0.2.x | The object core (proposal in `docs/PLAN-0.2.md`): objects and views, SQLite file, class library, plant hierarchy, history, DEXPI | 🔜 to discuss |
+| later | DEXPI import and export; send a line to Datum Pipe; send a loop to Datum Sim; DXF import as a background | ⬜ |
 | 0.3 | Process flow diagrams with stream tables; heat and mass balance checks; revision clouds and comparison | ⬜ |
 | 0.4 | Loop diagrams and instrument datasheets; cause-and-effect matrix; valve datasheets | ⬜ |
 | 0.5 | Company templates; project reports (valve and fitting take-off); review comments | ⬜ |
@@ -144,3 +146,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 - **Cut or not done:** nothing from the brief's cut list was cut (the Hold cloud, line hops, ANSI sizes and the rarer symbols are all in). Not done: bend points are dropped when a line is split; check 8 does not look at a check valve's direction; the real shell was only started on Linux (Xvfb), the installer is built and published by the release workflow on Windows.
 - **The 2-minute exhibition demo:** open File › Examples › Find the faults; show the Checks panel (3 errors, 5 warnings) and click an issue to jump to it; fix two (drop a check valve on pump P-101A's discharge; rename the duplicate pump to P-101B); open the Line list and click a discharge line to show its velocity badge and hydraulics in the Inspector; File › Print to show a sheet with its title block; Sheets › DXF.
 - **For the hub chat:** add Datum Schema to apps.json (id schema, accent #9C1F84) and copy its icon (`docs/brand/datum-schema-icon.svg`) to `brand/datum-schema-icon.svg`.
+
+### 2026-10-29: Session 1, course change
+- The user changed direction after 0.1.3: an object-based plant engineering application, not a drawing tool (objects master, views on sheets, plant hierarchy, class library as data, SQLite with history, DEXPI names). 0.1.4 is committed but not released.
+- Read the public documentation of the enterprise suites (object database across the lifecycle, base objects and classes, rules with real-time consistency and propagation, task lists, claims and working layers, revisions, 3D comparison) and of DEXPI (Proteus XML, specification CC BY 4.0, pyDEXPI). Wrote `docs/PLAN-0.2.md` with the proposal, the release order and seven questions for the user.
