@@ -230,3 +230,111 @@ fn speed_gate_500_items() {
     eprintln!("{} symbols, {} lines tiled: {ms} ms", big.items.len(), d.view.unwrap().lines.len());
     assert!(ms < limit, "derived took {ms} ms");
 }
+
+/// Regressions for the findings of the independent engine review (0.1.3).
+mod review {
+    use super::*;
+    use crate::checks::tests::B;
+    use crate::graph::Net;
+
+    #[test]
+    fn three_lines_on_a_valve_join_by_number() {
+        let mut b = B::new();
+        let (v1, v2, v3) = (b.item("vvessel", 50.0, 100.0), b.item("vvessel", 250.0, 100.0), b.item("vvessel", 250.0, 200.0));
+        let g = b.item("gate", 150.0, 108.0);
+        let l1 = b.line((v1, 5), (g, 0));
+        let l3 = b.line((g, 1), (v3, 3));
+        let l2 = b.line((g, 1), (v2, 3));
+        b.spec(&[l1, l2], "3", "A1A");
+        b.spec(&[l3], "3", "A1A");
+        b.set(&[l1, l2], "seq", Val::Text("7".into()));
+        b.set(&[l3], "seq", Val::Text("9".into()));
+        let net = Net::new(&b.d.p);
+        assert_eq!(net.run_of[&l1], net.run_of[&l2]);
+        assert!(!b.issues().iter().any(|i| i.rule == 1));
+    }
+
+    #[test]
+    fn a_pasted_pipeline_keeps_one_number() {
+        let mut b = B::new();
+        let (v1, v2) = (b.item("vvessel", 50.0, 100.0), b.item("vvessel", 250.0, 100.0));
+        let l = b.line((v1, 5), (v2, 3));
+        b.spec(&[l], "3", "A1A");
+        let sheet = b.sheet();
+        let made = b.d.apply(Op::AddItem { item: Item { sheet, sym: "gate".into(), x: 150.0, y: 108.0, ..Item::default() }, on: Some(l) }).unwrap();
+        let p = b.d.p.clone();
+        let lines: Vec<Line> = p.lines.iter().filter(|x| x.id == l || x.id == made[1]).cloned().collect();
+        let items = vec![p.item(made[0]).unwrap().clone()];
+        let new = b.d.apply(Op::Paste { sheet, items, lines, notes: vec![], dx: 0.0, dy: 60.0 }).unwrap();
+        let seqs: Vec<String> = new[1..].iter().map(|id| b.d.p.line(*id).unwrap().data["seq"].text()).collect();
+        assert_eq!(seqs[0], seqs[1]);
+        assert_ne!(seqs[0], p.line(l).unwrap().data["seq"].text());
+    }
+
+    #[test]
+    fn check_valve_found_across_sheets() {
+        let mut b = B::new();
+        let pm = b.item("pump_cent", 50.0, 100.0);
+        let a = b.item("offpage", 150.0, 94.0);
+        b.line((pm, 1), (a, 0));
+        let s2 = b.d.apply(Op::AddSheet { sheet: Sheet::default() }).unwrap()[0];
+        let add = |b: &mut B, sym: &str, x: f64| b.d.apply(Op::AddItem { item: Item { sheet: s2, sym: sym.into(), x, y: 100.0, ..Item::default() }, on: None }).unwrap()[0];
+        let c = add(&mut b, "offpage", 30.0);
+        let ck = add(&mut b, "check", 80.0);
+        let v = add(&mut b, "vvessel", 200.0);
+        b.d.apply(Op::Link { a, b: c }).unwrap();
+        for (x, y) in [((c, 0), (ck, 0)), ((ck, 1), (v, 2))] {
+            b.d.apply(Op::AddLine { line: Line { sheet: s2, a: End::Port { item: x.0, port: x.1 }, b: End::Port { item: y.0, port: y.1 }, ..Line::default() } }).unwrap();
+        }
+        assert!(!b.has(8), "{:?}", b.issues());
+    }
+
+    #[test]
+    fn deleting_a_valve_in_a_loop_is_allowed_and_merge_keeps_data() {
+        let mut b = B::new();
+        let v = b.item("vvessel", 50.0, 100.0);
+        let g = b.item("gate", 150.0, 108.0);
+        let a = b.line((v, 5), (g, 0));
+        let sheet = b.sheet();
+        b.d.apply(Op::AddLine { line: Line { sheet, a: End::Port { item: g, port: 1 }, b: End::Line { line: a, x: 100.0, y: 108.0 }, ..Line::default() } }).unwrap();
+        assert!(b.d.apply(Op::Delete { ids: vec![g] }).is_ok());
+        // A plain merge keeps data only the second half had.
+        let mut c = B::new();
+        let (v1, v2) = (c.item("vvessel", 50.0, 100.0), c.item("vvessel", 250.0, 100.0));
+        let g = c.item("gate", 150.0, 108.0);
+        let (l1, l2) = (c.line((v1, 5), (g, 0)), c.line((g, 1), (v2, 3)));
+        c.set(&[l2], "flow", Val::Num(0.01));
+        c.d.apply(Op::Delete { ids: vec![g] }).unwrap();
+        assert_eq!(c.d.p.line(l1).unwrap().data.get("flow"), Some(&Val::Num(0.01)));
+    }
+
+    #[test]
+    fn running_out_of_ids_is_an_error_not_a_silent_loss() {
+        let mut p = Project::new();
+        p.next = u32::MAX;
+        let mut d = Doc::new(p);
+        let s = d.p.sheets[0].id;
+        let add = |d: &mut Doc| d.apply(Op::AddItem { item: Item { sheet: s, sym: "gate".into(), ..Item::default() }, on: None });
+        let first = add(&mut d);
+        let second = add(&mut d);
+        assert!(first.is_ok() || second.is_err());
+        assert!(second.is_err(), "the second add must fail, not vanish");
+    }
+
+    #[test]
+    fn csv_quotes_a_carriage_return_and_dxf_handles_wide_characters() {
+        let mut b = B::new();
+        let v = b.item("vvessel", 50.0, 100.0);
+        b.set(&[v], "service", Val::Text("a\rb".into()));
+        assert!(lists::csv(&lists::build(&b.d.p, "equipment").unwrap()).contains("\"a\rb\""));
+        b.tag(v, "V-1😀");
+        let t = dxf::write(&b.d.p, &b.d.p.sheets[0]);
+        assert!(t.contains("V-1?") && !t.contains("1F600"));
+        // Symbol letters are upright text, not inside the blocks.
+        let m = b.item("motor", 100.0, 100.0);
+        let _ = m;
+        let t = dxf::write(&b.d.p, &b.d.p.sheets[0]);
+        let block = &t[t.find("SYM_MOTOR").unwrap()..t.find("ENDBLK").unwrap()];
+        assert!(!block.contains("TEXT"));
+    }
+}

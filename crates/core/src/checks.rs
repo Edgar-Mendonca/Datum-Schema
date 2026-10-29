@@ -191,7 +191,7 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
             if net.on_port(it.id, k as u8).is_empty() {
                 continue;
             }
-            let found = net.reach(it.id, k as u8, false, 8, |_, ns| !ns.inline).iter().any(|(n, _, _)| matches!(net.items[n].sym.as_str(), "check" | "nonslam"));
+            let found = net.reach(it.id, k as u8, false, 8, |_, ns| !ns.inline && ns.cat != Cat::Connector).iter().any(|(n, _, _)| matches!(net.items[n].sym.as_str(), "check" | "nonslam"));
             if !found {
                 v.push(on_item(8, WARNING, it, format!("Pump {} has no check valve on its discharge.", name(it))));
             }
@@ -223,7 +223,7 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
         const ISOLATE: [&str; 6] = ["gate", "globe", "ball", "butterfly", "plug", "diaphragm"];
         for it in p.items.iter().filter(|i| matches!(i.sym.as_str(), "cv_pneu" | "cv_motor")) {
             let Some(s) = sym(it) else { continue };
-            let sides: Vec<bool> = s.ports.iter().enumerate().filter(|(_, x)| !x.signal).map(|(k, _)| net.reach(it.id, k as u8, false, 6, |ni, ns| !ns.inline || ISOLATE.contains(&ni.sym.as_str())).iter().any(|(n, _, _)| ISOLATE.contains(&net.items[n].sym.as_str()))).collect();
+            let sides: Vec<bool> = s.ports.iter().enumerate().filter(|(_, x)| !x.signal).map(|(k, _)| net.reach(it.id, k as u8, false, 6, |ni, ns| (!ns.inline && ns.cat != Cat::Connector) || ISOLATE.contains(&ni.sym.as_str())).iter().any(|(n, _, _)| ISOLATE.contains(&net.items[n].sym.as_str()))).collect();
             if sides.iter().any(|x| !x) {
                 v.push(on_item(10, NOTE, it, format!("Control valve {} has no isolation valve {}.", name(it), if sides.iter().all(|x| !x) { "on either side" } else { "on one side" })));
             }

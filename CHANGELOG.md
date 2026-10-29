@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.3 — 2026-10-29
+
+Fixes from an independent review of the engine, and polish.
+
+**Fixes.**
+- A valve with three or more lines on it no longer splits one line number into two (it reported a duplicate line number).
+- Copying and pasting a pipeline keeps one new line number across its valves.
+- The pump check valve and control valve isolation checks follow a line across sheets through its off-page connectors.
+- Deleting a valve in a small loop works again, and joining the two halves keeps data only the second half had.
+- A project that has used up its ids says so instead of losing what was added.
+- CSV quotes text with a carriage return; Excel cells no longer show a stray apostrophe.
+- DXF: symbol letters (M, S, RO…) stay upright like in the window; characters a DXF cannot hold are written as ?; the hydraulic badges are written OK, ! and X.
+
+**Lists.** Printed lists have a title block on every page.
+
+**Window.** An instrument's loop number shows from its tag; more checks of the window run before every release (keyboard editing, units, Tell Me).
+
 ## 0.1.2 — 2026-10-29
 
 Fast with big drawings; hydraulic badges in colour.

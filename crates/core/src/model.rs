@@ -377,9 +377,11 @@ impl Project {
             max = max.max(i);
         }
         let mut next = max.saturating_add(1);
+        let mut dropped = 0;
         let mut fresh = |id: &mut u32, seen: &mut HashSet<u32>| {
             if *id == 0 || !seen.insert(*id) {
                 if next == u32::MAX {
+                    dropped += 1;
                     return false;
                 }
                 *id = next;
@@ -395,6 +397,9 @@ impl Project {
         self.notes.retain_mut(|s| fresh(&mut s.id, &mut seen));
         if dup > 0 {
             w.push(format!("{dup} repeated or missing ids were renumbered."));
+        }
+        if dropped > 0 {
+            w.push(format!("{dropped} things were left out: the project has run out of ids."));
         }
         self.next = self.next.max(next);
         if self.sheets.is_empty() {

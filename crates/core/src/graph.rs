@@ -127,9 +127,14 @@ impl<'a> Net<'a> {
                 joined.extend(process_lines(it.id, 0));
                 joined.extend(process_lines(it.link, 0));
             }
-            for w in joined.windows(2) {
-                if numbers[&w[0]] == numbers[&w[1]] {
-                    d.join(idx[&w[0]], idx[&w[1]]);
+            // Every pair with the same number joins, however many lines meet here.
+            let mut first: HashMap<&str, u32> = HashMap::new();
+            for l in &joined {
+                match first.get(numbers[l].as_str()) {
+                    Some(f) => d.join(idx[f], idx[l]),
+                    None => {
+                        first.insert(numbers[l].as_str(), *l);
+                    }
                 }
             }
         }

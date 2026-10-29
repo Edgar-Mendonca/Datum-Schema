@@ -188,7 +188,7 @@ pub fn safe(s: &str) -> String {
 pub fn csv(l: &List) -> String {
     let q = |s: &str| {
         let s = safe(s);
-        if s.contains([',', '"', '\n']) { format!("\"{}\"", s.replace('"', "\"\"")) } else { s }
+        if s.contains([',', '"', '\n', '\r']) { format!("\"{}\"", s.replace('"', "\"\"")) } else { s }
     };
     let mut out = l.cols.iter().map(|c| q(&c.label)).collect::<Vec<_>>().join(",");
     out.push_str("\r\n");
@@ -220,7 +220,7 @@ pub fn xlsx(p: &Project, kind: &str) -> Result<Vec<u8>, String> {
             let (rr, cc) = (r as u32 + 3, c as u16);
             match cell.parse::<f64>() {
                 Ok(v) if l.cols[c].num && v.is_finite() => ws.write_number(rr, cc, v).map_err(e)?,
-                _ => ws.write_string(rr, cc, safe(cell)).map_err(e)?,
+                _ => ws.write_string(rr, cc, cell).map_err(e)?,
             };
         }
     }

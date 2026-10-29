@@ -6,7 +6,7 @@
 | | |
 | --- | --- |
 | **Product** | Datum Schema: intelligent P&IDs and process flow diagrams: draw, check and list (symbols and lines that carry their data and connections; live line list, equipment list, instrument index and valve list; drawing checks; line hydraulics; print, SVG and DXF) |
-| **Current version** | 0.1.2 (2026-10-29) |
+| **Current version** | 0.1.3 (2026-10-29) |
 | **Repo** | `Edgar-Mendonca/Datum-Schema` · branch `claude/vigilant-hamilton-ku7r0w` (the first branch pushed, so the default branch) |
 | **Stack** | Rust engine (`crates/core`: model, symbols, graph, tags, checks, hydraulics, lists, frame, routing, DXF), Tauri 2, SolidJS + strict TypeScript; no Python |
 | **Identifier** | `com.edgarmendonca.datumschema` · files `.dschema` (JSON, `format` 1) · installer `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` · publisher "Datum" |
@@ -94,6 +94,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | plan | Tags number 101 … on sheet 1, 201 … on sheet 2 (line sequence 1001 …, 2001 …) | "Automatic numbering per prefix and sheet" in the brief |
 | 0.1.0 | Manual valves take the prefix HV (hand valve), not V | V is the vessels' prefix; the first test placed a valve tagged V-103 among vessels V-101 and V-102 |
 | 0.1.1 | The build ran ahead of the brief's step plan (checks, lists, hydraulics, DXF and examples were ready with the canvas), so 0.1.1 carries brief steps 3–6 and the next releases are speed, polish and the exhibition build; each CHANGELOG section says what its release really contains | Releases stay small and true; holding finished work back to match a plan would only delay it |
+| 0.1.3 | An independent review of the engine before the exhibition build, as Datum Pipe did: run joining by number at items with 3+ lines, one new sequence per pasted pipeline, checks 8/10 walk through off-page pairs, merge skipped in loops and keeps the other half's data, running out of ids is an error, CSV quotes CR, no apostrophe in Excel text, DXF letters upright outside blocks and no 5-digit escapes | Every confirmed finding fixed with a regression test; bend points on split left as a known limit |
 | 0.1.3 | The DXF was read back with an independent reader (ezdxf 1.4.5): all four examples open with 0 errors and 0 repairs, blocks and TAG attributes intact, and render the right way up | "Opens in any CAD program" should be checked by a reader we did not write |
 | 0.1.2 | The router marks cells and edges inside symbols by index ranges (binary search on the grid lines) and keeps distances in arrays, and its second search window is 120 mm | Routing was 5 s on a crowded 500-symbol sheet; now 0.07 s with the same routes |
 | 0.1.1 | One line number label and one hydraulic badge per run per sheet, on its longest straight segment | Labels on every short piece between valves cluttered the examples |
@@ -111,8 +112,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.1.0 | Shell, updater, File page, Options; model, symbols (about 80), units, pipe sizes, edits with undo, routing, the frame; canvas, palette, inspector; CI and release | ✅ |
 | 0.1.1 | Graph, tags, numbering, hardening tests; off-page connectors, legend sheet, notes and Hold clouds; the 13 checks and the Checks panel; hydraulics with badges; the four lists with CSV and Excel; print, SVG, DXF; the examples and Find the faults | ✅ |
 | 0.1.2 | Speed (router marks blocked cells per symbol: 5 s → 0.07 s on a crowded 500-symbol sheet), coloured badges, selected line number highlighted on every sheet, screenshots | ✅ |
-| 0.1.3 | More UI checks, keyboard shortcuts, empty states, ? cards | 🔜 |
-| 0.1.4 | Polish, speed with 500 items, screenshots, README, site.json; final check (the exhibition build) | ⬜ |
+| 0.1.3 | An independent engine review (a separate agent, report only): 8 findings fixed with regression tests in `hardening.rs` › `review`; more UI checks; list pages with a title block; DXF checked with ezdxf | ✅ |
+| 0.1.4 | Final check: every example opens with 0 errors, prints and exports; README, site.json (the exhibition build) | 🔜 |
 | 0.2 | DEXPI import and export; send a line to Datum Pipe; send a loop to Datum Sim; DXF import as a background | ⬜ |
 | 0.3 | Process flow diagrams with stream tables; heat and mass balance checks; revision clouds and comparison | ⬜ |
 | 0.4 | Loop diagrams and instrument datasheets; cause-and-effect matrix; valve datasheets | ⬜ |
@@ -121,6 +122,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 
 ## 4. Known limits
 
+- Splitting a line with a valve (and deleting the valve again) re-routes both halves: bend points the user placed on that line are dropped (review finding 9, not fixed).
+- Check 8 accepts a check valve whatever way round it is fitted.
 - Lines keep their bend points when symbols move; drag a segment again or Straighten to re-route.
 - Hydraulics are single-phase Darcy–Weisbach per line number (from its first piece); two-phase lines only get the two-phase velocity limits, not a two-phase pressure drop.
 - DXF text beyond ASCII is written as \U+XXXX escapes (CAD programs decode them; some simple viewers show them literally); the hydraulic badges are written OK, ! and X.

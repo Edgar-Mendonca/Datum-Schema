@@ -112,9 +112,10 @@ fn clean(s: &str) -> String {
         match c {
             c if (c as u32) < 0x20 => o.push(' '),
             c if c.is_ascii() => o.push(c),
-            c => {
+            c if (c as u32) <= 0xFFFF => {
                 let _ = write!(o, "\\U+{:04X}", c as u32);
             }
+            _ => o.push('?'),
         }
     }
     o
@@ -212,8 +213,9 @@ pub fn write(p: &Project, s: &Sheet) -> String {
         w.f(20, 0.0);
         w.f(30, 0.0);
         w.g(3, block(key));
-        for pr in symbols::parse(sym.draw) {
-            w.prim(&pr, "0", false, false);
+        // Shapes only: the symbol's letters are written upright as text, as the window shows them.
+        for pr in symbols::parse(sym.draw).iter().filter(|x| !matches!(x, Prim::Text { .. })) {
+            w.prim(pr, "0", false, false);
         }
         w.g(0, "ATTDEF");
         w.g(8, "0");
@@ -260,8 +262,7 @@ pub fn write(p: &Project, s: &Sheet) -> String {
         w.text(pt, h, &it.tag, anchor, &layer, true, Some(("TAG", hidden || it.tag.is_empty())));
         w.g(0, "SEQEND");
         w.g(8, &layer);
-        let sym_texts = symbols::get(&it.sym).map_or(0, |s| symbols::parse(s.draw).iter().filter(|x| matches!(x, Prim::Text { .. })).count());
-        for t in it.texts.iter().skip(sym_texts) {
+        for t in &it.texts {
             if !matches!(t, Prim::Text { s, .. } if *s == it.tag && label.is_some()) {
                 w.prim(t, &layer, true, false);
             }

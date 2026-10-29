@@ -432,8 +432,17 @@ fn delete(p: &mut Project, ids: &[u32]) {
         if a.kind != b.kind {
             continue;
         }
-        // Keep l1, oriented to end at the item, and give it l2's far end.
+        // Not when the far end, or the kept line's own start, is on one of the two halves (a loop).
+        let far = if b2 { &b.a } else { &b.b };
+        let start = if b1 { &a.a } else { &a.b };
+        if [far, start].iter().any(|e| matches!(e, End::Line { line, .. } if *line == l1 || *line == l2)) {
+            continue;
+        }
+        // Keep l1, oriented to end at the item, and give it l2's far end; data only l2 had is kept.
         let mut keep = a.clone();
+        for (k, v) in &b.data {
+            keep.data.entry(k.clone()).or_insert_with(|| v.clone());
+        }
         if !b1 {
             std::mem::swap(&mut keep.a, &mut keep.b);
             keep.flip = !keep.flip;
@@ -589,6 +598,7 @@ fn paste(p: &mut Project, sheet: u32, items: Vec<Item>, lines: Vec<Line>, notes:
         p.items.push(it);
     }
     let line_ids: HashSet<u32> = lines.iter().map(|l| l.id).collect();
+    let mut seqs: HashMap<String, String> = HashMap::new();
     let mut new_lines = vec![];
     for mut l in lines {
         let new = p.id();
@@ -612,7 +622,19 @@ fn paste(p: &mut Project, sheet: u32, items: Vec<Item>, lines: Vec<Line>, notes:
         }
         l.sheet = sheet;
         if l.kind.process() {
-            l.data.insert("seq".into(), Val::Text(tags::next_seq(p, sheet)));
+            // One new sequence number per pasted pipeline: pieces that shared one still do.
+            let old = l.data.get("seq").map(|v| v.text()).unwrap_or_default();
+            let new = match seqs.get(&old) {
+                Some(s) => s.clone(),
+                None => {
+                    let s = tags::next_seq(p, sheet);
+                    if !old.is_empty() {
+                        seqs.insert(old, s.clone());
+                    }
+                    s
+                }
+            };
+            l.data.insert("seq".into(), Val::Text(new));
         }
         created.push(l.id);
         p.lines.push(l);
