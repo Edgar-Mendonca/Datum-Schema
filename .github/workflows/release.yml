@@ -3,6 +3,7 @@ name: Release
 # as a GitHub Release (the shape Datum Home and the in-app updater rely on, FAMILY §9).
 # Bump the version in src-tauri/Cargo.toml and crates/core/Cargo.toml, add a CHANGELOG.md section,
 # then run this workflow from the Actions tab (or push a tag: git tag v0.1.0 && git push origin v0.1.0).
+# Tag pushes are blocked from Claude sessions, so releases run by workflow_dispatch.
 on:
   push:
     tags: ["v*"]
