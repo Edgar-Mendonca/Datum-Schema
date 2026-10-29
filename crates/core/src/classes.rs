@@ -21,6 +21,8 @@ pub struct Attr {
     /// The attribute's DEXPI name, where one is known.
     pub dexpi: String,
     pub required: bool,
+    /// The datasheet section it is printed in (empty: the class's own section).
+    pub group: String,
     /// The class that defines it (filled when a class's attributes are listed).
     pub from: String,
 }

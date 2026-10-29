@@ -261,6 +261,21 @@ const shots = process.env.SHOTS;
   check("an object can be drawn again from the Plant panel", q1.items.some(i => tagOf(q1, i) === "P-101B") && q1.objects.filter(o => o.tag === "P-101B").length === 1);
   await p.click(".palette header button:text-is('Symbols')");
 
+  // 24. Datasheets: LT-101's datasheet takes the conditions of the line it measures; a value typed
+  // on it goes to the object; it prints on one A4 page.
+  const q2 = await project(); const lt = q2.items.find(i => tagOf(q2, i) === "LT-101");
+  { const [lx, ly] = await scr(lt.x, lt.y); await p.mouse.click(lx, ly); await p.waitForTimeout(200); }
+  await p.click(".insp button:has-text('Datasheet')"); await p.waitForSelector(".dlg .ds");
+  const dsText = await p.textContent(".dlg .ds");
+  check("an instrument's datasheet has its sections", ["General", "Process conditions", "Instrument", "Specification"].every(t => dsText.includes(t)), dsText.slice(0, 200));
+  check("the datasheet takes the process conditions from the vessel it is tapped to", dsText.includes("Mounted onV-101") && dsText.includes("from V-101"), dsText.slice(0, 400));
+  await p.fill(".dlg .ds tr:has(td:text-is('Manufacturer')) input", "Acme Instruments"); await p.keyboard.press("Tab"); await p.waitForTimeout(300);
+  check("a value typed on the datasheet goes to the object", (await project()).objects.find(o => o.tag === "LT-101")?.data.manufacturer === "Acme Instruments");
+  await p.click(".dlg footer button:has-text('Print')"); await p.waitForSelector(".pprev .pwrap");
+  const dsPages = await p.$$eval(".pprev .pwrap", els => els.map(e => e.textContent));
+  check("one datasheet prints on one page", dsPages.length === 1 && dsPages[0].includes("LT-101") && dsPages[0].includes("Acme Instruments"), JSON.stringify(dsPages.map(t => t.slice(0, 60))));
+  await p.click(".printpage button:has-text('Back to the drawing')"); await p.waitForTimeout(200);
+
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();
   await fetch(`${url}quit`).catch(() => {});

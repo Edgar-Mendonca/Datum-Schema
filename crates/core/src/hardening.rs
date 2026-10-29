@@ -91,6 +91,10 @@ fn exercise(p: &Project) {
         let _ = lists::csv(&l);
     }
     let _ = lists::xlsx(p, "lines").unwrap();
+    for d in crate::datasheets::all(p) {
+        assert!(!d.sections.is_empty());
+    }
+    let _ = crate::datasheets::xlsx(p);
     let _ = view::all(p);
     let _ = crate::tags::renumber(p);
 }

@@ -37,6 +37,8 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             let obj = s.doc.p.obj_id(id).unwrap_or(0);
             json!(s.doc.history.iter().rev().filter(|c| id == 0 || c.obj == obj).take(500).cloned().collect::<Vec<_>>())
         }
+        "datasheet" => serde_json::to_value(datum_core::datasheets::build(&s.doc.p, a["id"].as_u64().unwrap_or(0) as u32)?).unwrap(),
+        "datasheets_all" => serde_json::to_value(datum_core::datasheets::all(&s.doc.p)).unwrap(),
         "derived" => serde_json::to_value(api::derived(&s.doc.p, a["sheet"].as_u64().unwrap_or(0) as u32)).unwrap(),
         "list" => serde_json::to_value(lists::build(&s.doc.p, &str_("kind"))?).unwrap(),
         "views" => serde_json::to_value(view::all(&s.doc.p)).unwrap(),
@@ -80,6 +82,7 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             let text = match kind.as_str() {
                 "csv" => lists::csv(&lists::build(&s.doc.p, &what)?),
                 "xlsx" => format!("{} bytes", lists::xlsx(&s.doc.p, &what)?.len()),
+                "datasheets" => format!("{} bytes", datum_core::datasheets::xlsx(&s.doc.p)?.len()),
                 _ => {
                     let sh = a["sheet"].as_u64().unwrap_or(0) as u32;
                     let sheet = s.doc.p.sheet(sh).or(s.doc.p.sheets.first()).ok_or("There is no sheet.")?.clone();

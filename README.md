@@ -35,10 +35,13 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Sheets**: A3, A1, ANSI B and ANSI D with border, grid zones, title block and revision table; a legend sheet.
 - **Live checks**: thirteen rules on every change (duplicate tags, open ends, size changes without a reducer, class changes without a spec break, pumps without check valves, vessels without relief, control loops, hydraulic limits and more), each a click away from the problem.
 - **Line hydraulics**: inside diameter from size and schedule, velocity, Reynolds number, Colebrook friction factor, pressure drop per 100 m and over the line, with a ✓ ! ✗ badge against the limits for its service.
+- **Plant objects**: every equipment item, valve, instrument and line number is an object in a plant › unit › area hierarchy (the Plant panel); symbols are views of it, so one object can be drawn on several sheets. Every change is recorded with who made it and when.
+- **Classes you can extend**: a class library (named after the open DEXPI data standard) defines what data each kind of object has; add your company's attributes in Options and mark them required.
+- **Instrument datasheets**: one per instrument, control valve and relief device, with the process conditions taken from its line or vessel; type on it, print it, export every datasheet to Excel.
 - **Lists**: line list, equipment list, instrument index and valve list, always in step with the drawing; edit them, export to Excel or CSV, print them.
 - **Print and export**: PDF (sheets at their size or fitted to A3, lists, legend), SVG, and DXF (R12) that opens in any CAD program.
 - **Examples**: a pump transfer, a compressor package, a steam heater loop, and "Find the faults".
-- **Safe files**: `.dschema` projects (JSON), atomic saves, recovery of unsaved work, undo and redo for everything.
+- **Safe files**: `.dschema` projects (a single SQLite database with the history), atomic saves, recovery of unsaved work, undo and redo for everything.
 
 ![The Checks panel on "Find the faults": duplicate tag, open end, a size change without a reducer, a pump without a check valve, a vessel without relief](docs/images/checks.png)
 

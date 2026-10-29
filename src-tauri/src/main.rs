@@ -5,7 +5,7 @@ mod update;
 
 use datum_core::doc::{self, Doc, Op};
 use datum_core::model::{self, Project};
-use datum_core::{api, dxf, examples, lists, units, view};
+use datum_core::{api, datasheets, dxf, examples, lists, units, view};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -132,6 +132,18 @@ fn changes(st: State<St>, id: u32) -> Vec<doc::Change> {
     a.doc.history.iter().rev().filter(|c| id == 0 || c.obj == obj).take(500).cloned().collect()
 }
 
+/// The datasheet of an instrument, control valve or relief device (by object or symbol id).
+#[tauri::command]
+fn datasheet(st: State<St>, id: u32) -> R<datasheets::Datasheet> {
+    guard(|| datasheets::build(&st.lock().doc.p, id))
+}
+
+/// Every datasheet in the project, in tag order (for printing).
+#[tauri::command]
+fn datasheets_all(st: State<St>) -> R<Vec<datasheets::Datasheet>> {
+    guard(|| Ok(datasheets::all(&st.lock().doc.p)))
+}
+
 #[tauri::command]
 fn history(st: State<St>, redo: bool) -> Out {
     let mut a = st.lock();
@@ -249,11 +261,11 @@ async fn export(app: AppHandle, st: State<'_, St>, kind: String, what: String, s
     let name = st.lock().doc.p.name.clone();
     let (label, ext) = match kind.as_str() {
         "csv" => ("CSV", "csv"),
-        "xlsx" => ("Excel workbook", "xlsx"),
+        "xlsx" | "datasheets" => ("Excel workbook", "xlsx"),
         "dxf" => ("DXF drawing", "dxf"),
         k => return Err(format!("Unknown export type {k}.")),
     };
-    let file = if kind == "dxf" { format!("{name}.dxf") } else { format!("{name} {what}.{ext}") };
+    let file = if kind == "dxf" { format!("{name}.dxf") } else if kind == "datasheets" { format!("{name} datasheets.xlsx") } else { format!("{name} {what}.{ext}") };
     let Some(path) = app.dialog().file().add_filter(label, &[ext]).set_file_name(file).blocking_save_file().and_then(|f| f.into_path().ok()) else { return Ok(None) };
     let bytes = guard(|| {
         let a = st.lock();
@@ -261,6 +273,7 @@ async fn export(app: AppHandle, st: State<'_, St>, kind: String, what: String, s
         match kind.as_str() {
             "csv" => Ok(lists::csv(&lists::build(p, &what)?).into_bytes()),
             "xlsx" => lists::xlsx(p, &what),
+            "datasheets" => datasheets::xlsx(p),
             _ => {
                 let s = p.sheet(sheet).or(p.sheets.first()).ok_or("There is no sheet.")?;
                 Ok(dxf::write(p, s).into_bytes())
@@ -484,7 +497,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            state, apply, history, changes, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
+            state, apply, history, changes, datasheet, datasheets_all, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
             options, set_options, autosave, recovery, recover, recent, startup_file, open_url, version, quit, check_update, install_update
         ])
         .run(tauri::generate_context!())

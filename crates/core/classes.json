@@ -327,6 +327,82 @@
      "key": "loop",
      "label": "Loop number",
      "type": "text"
+    },
+    {
+     "key": "cv_required",
+     "label": "Cv required",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "cv_rated",
+     "label": "Cv rated",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "characteristic",
+     "label": "Characteristic",
+     "type": "choice",
+     "group": "Specification",
+     "choices": [
+      "Equal percentage",
+      "Linear",
+      "Quick opening"
+     ]
+    },
+    {
+     "key": "leakage_class",
+     "label": "Seat leakage class",
+     "type": "choice",
+     "group": "Specification",
+     "choices": [
+      "IV",
+      "V",
+      "VI"
+     ]
+    },
+    {
+     "key": "actuator",
+     "label": "Actuator",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "positioner",
+     "label": "Positioner",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "body_material",
+     "label": "Body material",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "trim_material",
+     "label": "Trim material",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "manufacturer",
+     "label": "Manufacturer",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "model",
+     "label": "Model",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "ds_notes",
+     "label": "Notes",
+     "type": "text",
+     "group": "Specification"
     }
    ]
   },
@@ -346,6 +422,42 @@
      "key": "loop",
      "label": "Loop number",
      "type": "text"
+    },
+    {
+     "key": "orifice_area",
+     "label": "Orifice designation",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "relieving_case",
+     "label": "Relieving case",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "body_material",
+     "label": "Body material",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "manufacturer",
+     "label": "Manufacturer",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "model",
+     "label": "Model",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "ds_notes",
+     "label": "Notes",
+     "type": "text",
+     "group": "Specification"
     }
    ]
   },
@@ -412,6 +524,72 @@
       "PLC"
      ],
      "dexpi": "Location"
+    },
+    {
+     "key": "manufacturer",
+     "label": "Manufacturer",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "model",
+     "label": "Model",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "process_connection",
+     "label": "Process connection",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "wetted_material",
+     "label": "Wetted parts material",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "body_material",
+     "label": "Housing material",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "electrical_connection",
+     "label": "Electrical connection",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "hazardous_area",
+     "label": "Hazardous area classification",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "ip_rating",
+     "label": "Enclosure (IP rating)",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "power_supply",
+     "label": "Power supply",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "accuracy",
+     "label": "Accuracy",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "ds_notes",
+     "label": "Notes",
+     "type": "text",
+     "group": "Specification"
     }
    ]
   },
@@ -425,6 +603,18 @@
      "label": "Size (NPS)",
      "type": "text",
      "dexpi": "NominalDiameter"
+    },
+    {
+     "key": "element_type",
+     "label": "Element type",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "beta_ratio",
+     "label": "Beta ratio",
+     "type": "text",
+     "group": "Specification"
     }
    ]
   },

@@ -7,6 +7,7 @@ import { proj, derived, act, lib, symOf, toast, openMenu, setSel, setTool } from
 import { C } from "./cmds";
 import { Help } from "./help";
 import * as D from "./dialogs";
+import { openDatasheet } from "./datasheet";
 
 /** Where an object is shown: its symbols, or for a line number its drawn pieces. */
 export const viewsOf = (o: Obj) => {
@@ -43,6 +44,7 @@ export const PlantPanel = () => {
   ]);
   const objMenu = (e: MouseEvent, o: Obj) => openMenu(e, [
     { label: "Go to its symbol", run: () => go(o), off: !viewsOf(o).length },
+    { label: "Datasheet…", run: () => openDatasheet(o.id), off: !viewsOf(o).length || !lib()?.classes.some(c => c.name === o.class && c.symbols.some(k => ["instrument", "primary", "control"].includes(symOf(k)?.cat ?? ""))) },
     { label: "Draw it on this sheet", run: () => { const s = symbolFor(o); if (s) setTool({ k: "place", sym: s, obj: o.id }); }, off: o.class === "PipingNetworkSystem" || !symbolFor(o) },
     "-", { label: "Delete the object (and its symbols)", icon: "del", run: () => D.confirm(`Delete ${labelOf(o)} and every symbol that shows it?`, "Delete", () => act({ DeleteObjects: { ids: [o.id] } }).then(r => r && setSel([]))) },
   ]);
@@ -73,7 +75,6 @@ export const PlantPanel = () => {
       </Show>
     </div>
   );
-  void symOf;
   return (
     <div class="plant">
       <div class="pltools">

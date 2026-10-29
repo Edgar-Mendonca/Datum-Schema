@@ -118,6 +118,7 @@ export const C = {
 
   // ---------- export ----------
   exportList: async (kind: string, format: "csv" | "xlsx") => { const f = await call<string | null>("export", { kind: format, what: kind, sheet: sid() }); if (f) toast(`Saved ${f}.`, true); },
+  exportDatasheets: async () => { const f = await call<string | null>("export", { kind: "datasheets", what: "", sheet: sid() }); if (f) toast(`Saved ${f}.`, true); },
   exportDxf: async () => { const f = await call<string | null>("export", { kind: "dxf", what: "", sheet: sid() }); if (f) toast(`Saved ${f}. It opens in any CAD program.`, true); },
   exportSvg: async () => { const s = sheet(); if (!s) return; const svg = await sheetSvg(s.id); const f = await call<string | null>("save_file", { name: `${s.number}.svg`, data: svg }); if (f) toast(`Saved ${f}.`, true); },
   planned: (what: string, v: string) => toast(`${what} arrives in ${v}. File › Roadmap shows what comes when.`),

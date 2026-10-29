@@ -7,7 +7,8 @@
   "for": "Process, chemical, mechanical, piping and instrument engineers, operators and students.",
   "about": [
     "Datum Schema draws piping and instrument diagrams where every symbol and line carries its data and knows what it is connected to. You place real symbols (vessels, pumps, exchangers, valves, instruments) and join them with lines that route themselves; drop a valve on a line and it goes into it, carry a line to another sheet with a pair of off-page connectors.",
-    "Because the drawing knows its connections, Datum Schema writes the line list, the equipment list, the instrument index and the valve list for you, always in step with the drawing; it checks the drawing as you work (duplicate tags, open ends, size changes without a reducer, pumps without check valves and more); and it sizes every line, with its velocity and pressure drop against limits for its service. Hydraulic results are a sizing aid, checked by the engineer."
+    "Because the drawing knows its connections, Datum Schema writes the line list, the equipment list, the instrument index and the valve list for you, always in step with the drawing; it checks the drawing as you work (duplicate tags, open ends, size changes without a reducer, pumps without check valves and more); and it sizes every line, with its velocity and pressure drop against limits for its service. Hydraulic results are a sizing aid, checked by the engineer.",
+    "Every symbol is a view of a plant object (equipment, valve, instrument, line number) in a plant › unit › area hierarchy, defined by a class library you can extend with your company's attributes. Every change is recorded in the project file, and every instrument, control valve and relief device has a datasheet whose process conditions come straight from the P&ID."
   ],
   "steps": [
     {
@@ -25,6 +26,9 @@
   ],
   "highlights": [
     "About 80 symbols of our own, following ISO 10628-2 and ISA-5.1",
+    "Plant objects in a plant › unit › area hierarchy; symbols are views, every change is recorded",
+    "A class library you can extend with your company's attributes",
+    "Instrument datasheets with process conditions taken from the P&ID; print and Excel",
     "Lines route themselves at right angles, hop over each other and carry flow arrows",
     "A valve dropped on a line splits it and joins both halves",
     "Off-page connectors pair across sheets; click one to jump to its partner",
@@ -67,9 +71,9 @@
       "title": "Instrument documents",
       "when": "Later",
       "items": [
-        "Instrument loop diagrams and datasheets from the index",
+        "Instrument loop diagrams",
         "Cause-and-effect matrix from interlocks",
-        "Valve datasheets"
+        "Datasheet revisions and company layouts"
       ]
     },
     {

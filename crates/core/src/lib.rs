@@ -5,6 +5,7 @@
 pub mod api;
 pub mod checks;
 pub mod classes;
+pub mod datasheets;
 pub mod doc;
 pub mod dxf;
 pub mod examples;

@@ -976,3 +976,17 @@ tr.behind td { background: var(--err-bg); }
 .porow .ptag { font-family: var(--mono); font-size: 11.5px; }
 .porow.undrawn .ptag { color: var(--muted); font-style: italic; }
 .plhint { padding: 6px 10px; }
+
+/* Datasheets: the dialog and the A4 page share one table. */
+.ds { width: 100%; border-collapse: collapse; font-size: 12px; }
+.ds td { padding: 2px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.ds td:first-child { width: 38%; }
+.ds td.u { width: 70px; color: var(--muted); }
+.ds td.src { width: 190px; color: var(--muted); font-size: 11px; }
+.ds tr.derived td:nth-child(2) { color: var(--muted); }
+.ds tr.dsh th { text-align: left; padding: 8px 6px 3px; color: var(--navy); border-bottom: 1px solid var(--line3); font-size: 12px; }
+.ds input, .ds select { width: 100%; box-sizing: border-box; }
+.pds .ds { font-size: 8pt; }
+.pds .ds td { border: 1px solid #888; padding: 0.6mm 1.5mm; color: #000; }
+.pds .ds td.src, .pds .ds td.u { color: #333; width: auto; }
+.pds .ds tr.dsh th { color: #000; background: #eee; border: 1px solid #888; padding: 1mm 1.5mm; }

@@ -2,12 +2,13 @@
 // as SVG at real size and printed with the WebView's print dialog, where "Save as PDF" makes a PDF.
 // The sheets print at their own size or fitted to A3; the lists flow over A3 pages with a header
 // and footer on every page; the legend comes last. The same SVG writer saves a sheet as SVG.
-import { For, Show, JSX, createSignal, createMemo, createResource, onMount } from "solid-js";
+import { For, Show, JSX, createSignal, createMemo, createResource, onMount, onCleanup } from "solid-js";
 import { Portal } from "solid-js/web";
-import { SheetView, Prim, List } from "./api";
+import { SheetView, Prim, List, Datasheet } from "./api";
 import { call, proj, lib, sheet, setBackstage, symOf } from "./store";
 import { Help } from "./help";
 import { Check, Pick } from "./ui";
+import { DatasheetTable } from "./datasheet";
 
 export const MM = 96 / 25.4;
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -70,19 +71,38 @@ export const sheetSvg = async (id: number) => {
 type Page = { w: number; h: number; body: () => JSX.Element; label: string };
 const LISTS: [string, string][] = [["lines", "Line list"], ["equipment", "Equipment list"], ["instruments", "Instrument index"], ["valves", "Valve list"]];
 const [printing, setPrinting] = createSignal(false);
+/** Set by a datasheet's Print button: print only that object's datasheet. */
+export const [printOnly, setPrintOnly] = createSignal<number | null>(null);
 
 export const PrintPage = () => {
   const [views] = createResource(() => call<SheetView[]>("views"));
   const [which, setWhich] = createSignal<"all" | "this">("all");
   const [fitA3, setFitA3] = createSignal(false);
-  const [want, setWant] = createSignal<Record<string, boolean>>({ lines: true, equipment: true, instruments: true, valves: true, legend: true });
+  const [want, setWant] = createSignal<Record<string, boolean>>({ lines: true, equipment: true, instruments: true, valves: true, legend: true, datasheets: false });
+  const [datasheets] = createResource(() => call<Datasheet[]>("datasheets_all"));
+  onCleanup(() => setPrintOnly(null));
   const [lists] = createResource(async () => Promise.all(LISTS.map(([k]) => call<List>("list", { kind: k }).then(l => l ?? null).catch(() => null))));
   const [zoomP, setZoomP] = createSignal(0.4);
   const sheets = createMemo(() => (views() ?? []).filter(v => which() === "all" || v.id === sheet()?.id));
   /** Rows per A3 landscape list page. */
   const ROWS = 36;
+  /** A datasheet on A4 portrait, with a header and the title block. */
+  const dsPage = (d: Datasheet): Page => {
+    const p = proj();
+    return { w: 210, h: 297, label: `Datasheet ${d.tag}`, body: () => (
+      <div class="plist pds">
+        <header><b>{d.title} · {d.tag}</b><span>{p?.title.project || p?.name}</span></header>
+        <DatasheetTable d={d} />
+        <table class="ptb"><tbody><tr>
+          <td><small>COMPANY</small>{p?.title.company || "—"}</td><td><small>PROJECT</small>{p?.title.project || p?.name}</td><td><small>TAG</small>{d.tag}</td>
+          <td><small>BY</small>{p?.title.by || "—"}</td><td><small>CHECKED</small>{p?.title.checked || "—"}</td><td><small>DATE</small>{new Date().toLocaleDateString()}</td>
+        </tr></tbody></table>
+      </div>) };
+  };
   const pages = createMemo<Page[]>(() => {
     const out: Page[] = [];
+    const only = printOnly();
+    if (only !== null) return (datasheets() ?? []).filter(d => d.obj === only || d.item === only).map(dsPage);
     for (const v of sheets()) {
       const [w, h] = fitA3() ? [420, 297] : [v.w, v.h];
       out.push({ w, h, label: v.number, body: () => <div innerHTML={svgString(v, { width: w, height: h })} /> });
@@ -102,6 +122,7 @@ export const PrintPage = () => {
           </tr></tbody></table>
         </div>) });
     });
+    if (want().datasheets) for (const d of datasheets() ?? []) out.push(dsPage(d));
     if (want().legend && !(views() ?? []).some(v => v.legend)) {
       const used = [...new Set((p?.items ?? []).map(i => i.sym))].map(k => symOf(k)).filter(Boolean);
       if (used.length) out.push({ w: 420, h: 297, label: "Legend", body: () => (
@@ -128,13 +149,17 @@ export const PrintPage = () => {
         <h1>Print <Help k="export" /></h1>
         <div class="pbtns"><button class="btn pri big" onClick={doPrint}><svg class="ic"><use href="#i-print" /></svg> Print / Save as PDF</button></div>
         <p class="muted">In the print window choose your printer, or <b>Save as PDF</b>. {pages().length} {pages().length === 1 ? "page" : "pages"}.</p>
+        <Show when={printOnly() !== null}><p class="small">Printing one datasheet. <button class="btn sm" onClick={() => setPrintOnly(null)}>Choose what to print</button></p></Show>
+        <Show when={printOnly() === null}>
         <h4>Sheets</h4>
         <Pick value={which()} set={v => setWhich(v as any)} options={[["all", "Every sheet"], ["this", "This sheet only"]]} />
         <Check label="Fit every sheet to A3" value={fitA3()} set={setFitA3} />
         <h4>Lists</h4>
         <For each={LISTS}>{([k, l]) => <Check label={l} value={!!want()[k]} set={v => setWant({ ...want(), [k]: v })} />}</For>
         <Check label="Legend (when there is no legend sheet)" value={!!want().legend} set={v => setWant({ ...want(), legend: v })} />
-        <p class="muted small">Sheets print at their own size (A3, A1, ANSI B, ANSI D) unless fitted to A3; the lists print on A3 landscape with a header and page numbers.</p>
+        <Check label={`Datasheets (${datasheets()?.length ?? 0}, one A4 page each)`} value={!!want().datasheets} set={v => setWant({ ...want(), datasheets: v })} />
+        </Show>
+        <p class="muted small">Sheets print at their own size (A3, A1, ANSI B, ANSI D) unless fitted to A3; the lists print on A3 landscape with a header and page numbers; datasheets on A4 portrait.</p>
         <p><button class="btn sm" onClick={() => setBackstage(null)}>Back to the drawing</button></p>
       </div>
       <div class="pprev">

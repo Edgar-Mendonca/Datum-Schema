@@ -79,3 +79,7 @@ export const num = (v: number, sig = 4) => {
   if (a >= 1e7 || a < 1e-3) return v.toExponential(Math.max(0, sig - 1)).replace(/\.?0+e/, "e").replace("-", "−");
   return String(+v.toPrecision(Math.max(sig, Math.ceil(Math.log10(a + 1))))).replace("-", "−");
 };
+
+/** A datasheet row: the object's own value (key set, editable) or one taken from elsewhere (source set). */
+export interface DsRow { key: string; label: string; value: string; unit: string; q: string; choices: string[]; required: boolean; source: string }
+export interface Datasheet { obj: number; item: number; sheet: number; tag: string; title: string; sections: { title: string; rows: DsRow[] }[] }

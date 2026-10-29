@@ -6,7 +6,7 @@
 | | |
 | --- | --- |
 | **Product** | Datum Schema: intelligent P&IDs and process flow diagrams: draw, check and list (symbols and lines that carry their data and connections; live line list, equipment list, instrument index and valve list; drawing checks; line hydraulics; print, SVG and DXF) |
-| **Current version** | 0.1.7 (2026-10-29) |
+| **Current version** | 0.1.8 (2026-10-29) |
 | **Repo** | `Edgar-Mendonca/Datum-Schema` · branch `claude/vigilant-hamilton-ku7r0w` (the first branch pushed, so the default branch) |
 | **Stack** | Rust engine (`crates/core`: model, symbols, graph, tags, checks, hydraulics, lists, frame, routing, DXF), Tauri 2, SolidJS + strict TypeScript; no Python |
 | **Identifier** | `com.edgarmendonca.datumschema` · files `.dschema` (SQLite, `format` 2; JSON `format` 1 from 0.1.0–0.1.4 converts) · installer `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` · publisher "Datum" |
@@ -30,6 +30,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | `crates/core/src/model.rs` | The project: plant objects (`Obj`: id, uid, class, tag, hierarchy node, data; line numbers are `PipingNetworkSystem` objects) and the hierarchy (`Node`: plant › unit › area); items and line pieces are views with `obj`; the 0.1 JSON migration (`migrate_1`); sheets (number, title, size A3/A1/ANSI B/ANSI D, revisions, legend flag), items (symbol, position, quarter turns, mirror, scale, tag, data, off-page partner), lines (type, ends on a port, on another line or free, bend points, flow flip, data), notes (note, leader, Hold cloud), settings (line number format, rules off, hydraulic limits, roughness, grid); `.dschema` read part by part with `normalize` (damaged files open as far as possible, with warnings), and write |
 | `crates/core/src/symbols.rs` | The symbol library (about 80 of our own drawings in a small drawing language: polylines, outlines, fills, dashes, circles, arcs, ellipses, rectangles, text), ports with directions, categories, tag prefixes, in-line and terminal flags; placement (turn, mirror, scale); primitives and their SVG |
 | `crates/core/classes.json`, `crates/core/src/classes.rs` | The class library (83 classes, DEXPI-style names, inheritance from PlantItem, symbols, prefixes, attributes with quantity, type, choices, DEXPI name, required) and its reader: `attrs(project, class)` merges inherited, own and project (`settings.user_attrs`) attributes |
+| `crates/core/src/datasheets.rs` | Datasheets: per instrument, primary element, control valve and relief device; General, Process conditions (from `process_source`: its line, a primary element it is tapped to, the equipment it is mounted on, else its loop's measurement), the class's own attributes, Specification (`group`), company attributes; Excel with one worksheet each |
 | `crates/core/src/units.rs` | Calc's unit table (NIST SP 811) with unit expressions and Schema's display table |
 | `crates/core/src/pipes.rs` | Pipe's sizes ½"–24" and schedules (ASME B36.10M/B36.19M dimensions); inside diameters |
 | `crates/core/src/doc.rs` | The history (`Change`: who, when, what, object, old, new; recorded by diffing objects after every edit, undo and redo). Edit operations (NewLineObject, SetNode, AddNode, SetNode2, DeleteNode, add, set, move, rotate, mirror, delete with merge of in-line items, set data, tags, bend points, split, paste with the next free tags, pair connectors, sheets, title, project, settings, renumber, batch) on a copy, kept only if `normalize` finds nothing to repair; undo/redo; size-limited reads and atomic writes |
@@ -84,6 +85,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 
 | Version | Decision | Why |
 | --- | --- | --- |
+| 0.1.8 | Datasheets are a view built by the engine from the object, its class (attribute `group` places a row in a section) and its process source; derived rows carry their source and are not editable on the datasheet | One copy of every value: the datasheet can never disagree with the P&ID |
+| 0.1.8 | Process source order: a process line on the instrument; a process line through an in-line element it is tapped to; equipment it is tapped to by an impulse line; else its loop (same first letter and number), measurement first. Signal lines are never followed | LT-101 on a vessel must show the vessel, not the vent; LIC-101 its transmitter, not PVSV-101 |
 | 0.1.7 | `Delete { ids, keep }`: deleting views only purges the objects of those views (and only when no other view shows them and `keep` is off); `DeleteObjects` removes objects with all their views. The window asks only when a deletion would leave an object drawn nowhere | Objects kept on purpose (not drawn) must survive later edits; a question on every delete would be noise |
 | 0.1.6 | Attribute keys stay the short internal keys (design_p, size…) with the DEXPI name alongside (`dexpi`); class names are DEXPI-style and will be checked against the DEXPI specification when export is built | No migration of existing data; DEXPI export maps names in one place |
 | 0.1.6 | The class library replaces `fields.rs`; the window gets each used class's attributes (with the project's additions) in `derived().attrs` | One owner of "what data a thing has"; project attributes show at once |
@@ -130,10 +133,11 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.1.5 | Objects and views, line-number objects, hierarchy node, SQLite file with history (PLAN-0.2 §7) | ✅ |
 | 0.1.6 | Class library JSON (DEXPI names), Options › Classes with project attributes, required attributes in check 6 | ✅ |
 | 0.1.7 | Plant panel (hierarchy, every object, drag to draw or move), delete the object or only the drawing, objects on several sheets, Area column in the lists | ✅ |
-| 0.1.8 | Instrument datasheets | 🔜 |
+| 0.1.8 | Instrument datasheets (process conditions from the line, vessel or loop; Specification group; print on A4; Excel one worksheet each) | ✅ |
+| 0.1.9 | Next, proposed: datasheet revisions and status (issued for enquiry, purchase, as-built), a company datasheet layout, loop diagrams from the loop | ⬜ |
 | later | DEXPI import and export; send a line to Datum Pipe; send a loop to Datum Sim; DXF import as a background | ⬜ |
 | 0.3 | Process flow diagrams with stream tables; heat and mass balance checks; revision clouds and comparison | ⬜ |
-| 0.4 | Loop diagrams and instrument datasheets; cause-and-effect matrix; valve datasheets | ⬜ |
+| 0.4 | Loop diagrams; cause-and-effect matrix; valve datasheets | ⬜ |
 | 0.5 | Company templates; project reports (valve and fitting take-off); review comments | ⬜ |
 | 1.0 | User guide, a validation note for the hydraulics, signed installer | ⬜ |
 
@@ -169,3 +173,10 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 ### 2026-10-29: Session 1, 0.1.5 (the object core begins)
 - 0.1.4 released as agreed. Built 0.1.5: objects and views, line-number objects, the plant hierarchy model, the history, the SQLite file with 0.1 conversion. Engine 58 tests (new: SQLite round trip with history, 0.1 conversion, damaged databases); 48 UI checks including the SQLite file read back.
 - Did not use the reverse-engineering toolkit the user pointed to: it is for inspecting other software, and the rule is to build from public documentation and open standards only.
+
+### 2026-10-29: Session 1, 0.1.6 → 0.1.8, and where we are
+- **Released:** 0.1.5 (objects, SQLite file with history; re-released after the Windows save fix), 0.1.6 (class library, Options › Classes, required attributes), 0.1.7 (Plant panel, delete the object or only the drawing, objects on several sheets), 0.1.8 (instrument datasheets).
+- **0.1.8:** `datasheets.rs` builds each datasheet; Specification attributes for Instrument, PrimaryElement, ControlValve and ReliefDevice in `classes.json` (`group: "Specification"`); `datasheet` and `datasheets_all` commands and the `datasheets` export kind; datasheet dialog (editable own values, grey derived rows), Print (one or all, A4 portrait with title block), Excel export; Inspector and Plant panel entries; help card. Tests: engine (line, vessel and loop sources; company section; Excel), hardening on random projects, UI (sections, vessel source, typing, printing one page).
+- **Found while building:** the first loop fallback matched PVSV-101 for LIC-101 (same number, other loop) and followed a controller's signal line to its valve; both fixed and covered by the engine test.
+- **Next (to discuss):** datasheet revisions and status, a company datasheet layout, loop diagrams; DEXPI export; datasheet import from Excel.
+

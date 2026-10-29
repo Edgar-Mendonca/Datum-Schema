@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.8 — 2026-10-29
+
+Instrument datasheets, made from the drawing.
+
+**A datasheet for every instrument.** Every instrument, primary element, control valve and relief device has a datasheet: **General** (tag, type, measured variable, loop, P&ID, area, line), **Process conditions**, the instrument's or valve's own data (range, signal, fail position, set pressure…), and a new **Specification** section (manufacturer, model, process connection, wetted and body materials, electrical connection, hazardous area, IP rating, power supply, accuracy; for control valves the required and rated Cv, characteristic, leakage class, actuator, positioner and trim; for relief devices the orifice area and relieving case). Attributes your company adds in Options › Classes get a section of their own.
+
+**Process conditions from the P&ID.** The datasheet takes the fluid, flow, density, viscosity, operating and design pressure and temperature, size, schedule and pipe class from the line the instrument measures or sits in, from a primary element it is tapped to, or from the vessel it is mounted on. A controller takes its transmitter's. These values show where they come from and change where they live, so the datasheet and the P&ID never disagree.
+
+**Open, type, print, export.** Open a datasheet from the Inspector (**Datasheet…**) or the Plant panel. Type the instrument's own values on it; every change is in the object's history. Print one datasheet from its Print button, or all of them from File › Print on A4 pages with the title block. **Excel › Datasheets** exports every datasheet, one worksheet each, with an index.
+
 ## 0.1.7 — 2026-10-29
 
 The Plant panel: every object in its place in the plant, drawn or not.
