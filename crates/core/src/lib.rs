@@ -4,11 +4,11 @@
 
 pub mod api;
 pub mod checks;
+pub mod classes;
 pub mod doc;
 pub mod dxf;
 pub mod examples;
 pub mod file;
-pub mod fields;
 pub mod frame;
 pub mod graph;
 pub mod hydraulics;

@@ -222,6 +222,21 @@ const shots = process.env.SHOTS;
     await p.click(".bs .back"); await p.waitForTimeout(200);
   }
 
+  // 22. Classes: add a required attribute to Pump in Options; pumps show it and check 6 asks for it.
+  await openEx("Pump transfer");
+  await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Options')"); await p.waitForTimeout(400);
+  await p.selectOption(".classes select", "Pump");
+  await p.fill(".addattr input >> nth=0", "Seal plan");
+  await p.click(".addattr label.chk input");
+  await p.click(".addattr button"); await p.waitForTimeout(400);
+  check("a project attribute is added to a class", (await project()).settings.user_attrs.some(u => u.class === "Pump" && u.attr.key === "seal_plan" && u.attr.required));
+  await p.click(".bs .back"); await p.waitForTimeout(400);
+  await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
+  check("check 6 asks for the required attribute", (await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("seal plan")));
+  const pq = await project(); const pa = pq.items.find(i => tagOf(pq, i) === "P-101A");
+  const [sx, sy] = await scr(pa.x, pa.y + 2); await p.mouse.click(sx, sy); await p.waitForTimeout(300);
+  check("the Inspector shows the class's new attribute", (await p.textContent(".insp")).includes("Seal plan *"));
+
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();
   await fetch(`${url}quit`).catch(() => {});

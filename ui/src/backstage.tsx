@@ -3,8 +3,8 @@
 import { For, Show, createSignal, createResource, onMount, JSX } from "solid-js";
 import { PrintPage } from "./print";
 import { RoadmapPage } from "./roadmap";
-import { Options, Out, Example, Settings, Limit, listen, invoke, num, parseNum } from "./api";
-import { backstage, setBackstage, call, out, setOut, opts, setOpts, toast, setThemeRaw, applyTheme, proj, act } from "./store";
+import { Options, Out, Example, Settings, Limit, Field, UserAttr, listen, invoke, num, parseNum } from "./api";
+import { backstage, setBackstage, call, out, setOut, opts, setOpts, toast, setThemeRaw, applyTheme, proj, act, lib } from "./store";
 import { C } from "./cmds";
 import * as D from "./dialogs";
 import { Icon, Text, Pick, Check } from "./ui";
@@ -103,6 +103,42 @@ const Export = () => (
 const Opt = (p: { l: string; hint?: string; children: JSX.Element }) => <div class="opt"><div><b>{p.l}</b>{p.hint && <small>{p.hint}</small>}</div><div class="ctl">{p.children}</div></div>;
 const Sec = (p: { t: string; about: string; children: JSX.Element }) => <section class="osec"><h3>{p.t}</h3><p class="muted">{p.about}</p>{p.children}</section>;
 
+/** Options › Classes: every class with its attributes; the project adds its own (and marks any as
+ *  required: check 6 then reports objects where it is empty). */
+const ClassesSec = () => {
+  const [cls, setCls] = createSignal("Pump");
+  const [label, setLabel] = createSignal(""), [q, setQ] = createSignal(""), [choices, setChoices] = createSignal(""), [req, setReq] = createSignal(false);
+  const info = () => lib()?.classes.find(c => c.name === cls());
+  const own = () => (proj()?.settings.user_attrs ?? []).map((u, i) => [u, i] as const).filter(([u]) => u.class === cls());
+  const set = (user_attrs: UserAttr[]) => act({ SetSettings: { settings: { ...proj()!.settings, user_attrs } } });
+  const add = () => {
+    const l = label().trim(); if (!l) return toast("Give the attribute a name.");
+    const key = l.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "attr";
+    const ch = choices().split(",").map(x => x.trim()).filter(Boolean);
+    const attr: Field = { key, label: l, q: q(), type: ch.length ? "choice" : q() ? "number" : "text", choices: ch, dexpi: "", required: req(), from: cls() };
+    set([...(proj()!.settings.user_attrs ?? []), { class: cls(), attr }]).then(o => { if (o) { setLabel(""); setChoices(""); setReq(false); toast(`${l} added to ${info()?.label ?? cls()} and every class under it.`, true); } });
+  };
+  return <Sec t="Classes" about="Every kind of object is a class with attributes, inherited from the classes above it (a centrifugal pump has a pump's and an equipment item's attributes). Add your company's attributes to any class; they reach every class under it and are saved in the project. Mark one required and check 6 reports where it is empty.">
+    <div class="classes">
+      <select size="12" onChange={e => setCls(e.currentTarget.value)}><For each={lib()?.classes ?? []}>{c => <option value={c.name} selected={c.name === cls()}>{c.label}{c.symbols.length ? "" : " (group)"}</option>}</For></select>
+      <div>
+        <p class="muted small">{info()?.name}{info()?.parent ? ` · under ${lib()?.classes.find(c => c.name === info()!.parent)?.label}` : ""}</p>
+        <table class="tbl small"><thead><tr><th>Attribute</th><th>Unit</th><th>From</th><th></th></tr></thead><tbody>
+          <For each={info()?.attrs ?? []}>{a => <tr><td>{a.label}{a.required ? " *" : ""}</td><td class="muted">{a.q ? unit(a.q) : a.choices.length ? "choice" : "text"}</td><td class="muted">{lib()?.classes.find(c => c.name === a.from)?.label ?? a.from}</td><td /></tr>}</For>
+          <For each={own()}>{([u, i]) => <tr><td><b>{u.attr.label}{u.attr.required ? " *" : ""}</b></td><td class="muted">{u.attr.q ? unit(u.attr.q) : u.attr.choices.length ? "choice" : "text"}</td><td class="muted">This project</td><td><button class="x" title="Remove" onClick={() => set(proj()!.settings.user_attrs.filter((_, j) => j !== i))}>×</button></td></tr>}</For>
+        </tbody></table>
+        <div class="addattr">
+          <input placeholder="New attribute, e.g. Seal plan" value={label()} onInput={e => setLabel(e.currentTarget.value)} />
+          <Pick value={q()} set={setQ} options={[["", "Text"], ["press", "Pressure"], ["temp", "Temperature"], ["flow", "Volume flow"], ["mflow", "Mass flow"], ["density", "Density"], ["visc", "Viscosity"], ["length", "Length"], ["thk", "Thickness"], ["power", "Power"], ["head", "Head"], ["volume", "Volume"], ["area", "Area"], ["velocity", "Velocity"]]} />
+          <input placeholder="Choices, comma-separated (optional)" value={choices()} onInput={e => setChoices(e.currentTarget.value)} />
+          <Check label="Required" value={req()} set={setReq} />
+          <button class="btn sm pri" onClick={add}>Add attribute</button>
+        </div>
+      </div>
+    </div>
+  </Sec>;
+};
+
 /** The open project's check rules, line number format and hydraulic limits. */
 const ProjectSettings = () => {
   const s = () => proj()!.settings;
@@ -121,6 +157,7 @@ const ProjectSettings = () => {
       <Opt l="Pipe roughness" hint="For the friction factor; 0.045 mm is commercial steel."><span class="inline"><input type="number" step="0.005" style={{ width: "90px" }} value={num(s().roughness * 1000, 4)} onChange={e => { const x = parseNum(e.currentTarget.value); if (x !== null) set({ roughness: x / 1000 }); }} /> mm</span></Opt>
       <Opt l="Snap grid" hint="Symbols, bends and ends snap to it."><span class="inline"><input type="number" step="0.5" style={{ width: "90px" }} value={s().grid} onChange={e => set({ grid: Math.max(0.5, +e.currentTarget.value || 2.5) })} /> mm</span></Opt>
     </Sec>
+    <ClassesSec />
     <Sec t="Hydraulic limits" about="Typical limits by service, used for the badges on the lines and check 13. Change them to your company's practice; a line takes the limits of its service (set on the line, or worked out from a pump's suction or discharge and the phase).">
       <table class="tbl limits"><thead><tr><th>Service</th><th class="r">Min velocity <span class="unit">{unit("velocity")}</span></th><th class="r">Max velocity <span class="unit">{unit("velocity")}</span></th><th class="r">Max pressure drop <span class="unit">{unit("dp100")}</span></th></tr></thead>
         <tbody><For each={s().limits}>{(l, i) => <tr><td>{l.name}</td>

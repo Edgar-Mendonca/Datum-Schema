@@ -25,7 +25,7 @@ export interface Line { id: number; sheet: number; kind: Kind; a: End; b: End; p
 export type NoteKind = "note" | "leader" | "hold";
 export interface Note { id: number; sheet: number; kind: NoteKind; x: number; y: number; w: number; h: number; text: string; to: Pt }
 export interface Limit { service: string; name: string; vmin: number; vmax: number; dp: number }
-export interface Settings { line_format: string; off: number[]; limits: Limit[]; roughness: number; grid: number; hidden: string[] }
+export interface Settings { line_format: string; off: number[]; limits: Limit[]; roughness: number; grid: number; hidden: string[]; user_attrs: UserAttr[] }
 export interface Project { format: number; name: string; units: "SI" | "US"; title: Title; nodes: PlantNode[]; objects: Obj[]; sheets: Sheet[]; items: Item[]; lines: Line[]; notes: Note[]; settings: Settings; next: number }
 export interface Out { p: Project; path: string | null; dirty: boolean; undo: boolean; redo: boolean; created: number[]; warnings: string[] }
 
@@ -44,14 +44,16 @@ export interface LegendRow { sym: string | null; kind: Kind | null; x: number; y
 export interface SheetView { id: number; number: string; title: string; w: number; h: number; legend: boolean; frame: Prim[]; items: ItemView[]; lines: LineView[]; notes: NoteView[]; legend_rows: LegendRow[] }
 export interface Issue { rule: number; level: "error" | "warning" | "note"; msg: string; ids: number[]; sheet: number; at: Pt }
 export interface Hyd { id: number; v: number; re: number; f: number; dp100: number; dp: number; length: number; service: string; service_name: string; vmin: number; vmax: number; dpmax: number; status: number; reason: string }
-export interface Derived { view: SheetView | null; issues: Issue[]; hyd: (Hyd | null)[]; runs: number[][]; numbers: Record<string, string> }
+export interface Derived { view: SheetView | null; issues: Issue[]; hyd: (Hyd | null)[]; runs: number[][]; numbers: Record<string, string>; attrs: Record<string, Field[]> }
 
 // ---------- library ----------
 export interface Port { x: number; y: number; dir: number; name: string; signal: boolean }
-export interface Field { key: string; label: string; q: string; choices: string[] }
-export interface SymInfo { key: string; name: string; cat: Cat; cat_name: string; w: number; h: number; ports: Port[]; prefix: string; inline: boolean; terminal: boolean; rare: boolean; svg: string; texts: Prim[]; fields: Field[] }
+export interface Field { key: string; label: string; q: string; type: string; choices: string[]; dexpi: string; required: boolean; from: string }
+export interface ClassInfo { name: string; label: string; parent: string | null; symbols: string[]; attrs: Field[] }
+export interface UserAttr { class: string; attr: Field }
+export interface SymInfo { key: string; name: string; cat: Cat; cat_name: string; w: number; h: number; ports: Port[]; prefix: string; inline: boolean; terminal: boolean; rare: boolean; svg: string; texts: Prim[]; class: string; fields: Field[] }
 export interface Size { nps: string; od: number; schedules: [string, number][] }
-export interface Library { symbols: SymInfo[]; kinds: [Kind, string][]; line_fields: Field[]; sizes: Size[]; sizes_source: string; limits: Limit[] }
+export interface Library { symbols: SymInfo[]; kinds: [Kind, string][]; line_fields: Field[]; classes: ClassInfo[]; sizes: Size[]; sizes_source: string; limits: Limit[] }
 export interface Shown { q: string; label: string; factor: number; offset: number }
 export interface Example { id: string; name: string; what: string }
 export interface Col { key: string; label: string; q: string; edit: boolean; num: boolean }

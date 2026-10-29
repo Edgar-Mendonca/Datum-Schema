@@ -330,7 +330,7 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
                 Some(o) => p.obj(o).map(|x| x.id).ok_or("That object no longer exists.")?,
                 None => {
                     let t = auto_tag(p, &item, &tag);
-                    p.new_obj(s.key, &t)
+                    p.new_obj(&crate::classes::class_name_for(s.key), &t)
                 }
             };
             let id = item.id;

@@ -29,7 +29,7 @@ const FieldInput = (p: { f: Field; v: Val | undefined; ids: number[]; placeholde
     act({ SetData: { ids: p.ids, key: p.f.key, val } });
   };
   return (
-    <Row label={p.f.label} unit={p.f.q ? unit(p.f.q) : undefined}>
+    <Row label={p.f.required ? `${p.f.label} *` : p.f.label} unit={p.f.q ? unit(p.f.q) : undefined}>
       <Show when={p.f.choices.length} fallback={<input value={shown()} placeholder={p.placeholder} class={p.f.q ? "mono" : undefined} onChange={e => set(e.currentTarget.value)} />}>
         <Pick value={shown()} set={set} options={[["", "—"], ...p.f.choices.filter(c => c).map(c => [c, c] as [string, string])]} />
       </Show>
@@ -62,7 +62,7 @@ const ItemPanel = (p: { it: Item }) => {
   });
   const partner = () => proj()?.items.find(i => i.id === p.it.link);
   return <>
-    <div class="iwhat"><b>{s()?.name ?? p.it.sym}</b><span class="muted small"> · {s()?.cat_name}</span><Help k={`cat:${s()?.cat ?? "mark"}`} /></div>
+    <div class="iwhat"><b>{s()?.name ?? p.it.sym}</b><span class="muted small"> · {lib()?.classes.find(c => c.name === o()?.class)?.label ?? o()?.class} · {s()?.cat_name}</span><Help k={`cat:${s()?.cat ?? "mark"}`} /></div>
     <Show when={s()?.cat !== "mark" || s()?.prefix}>
       <Row label="Tag" hint={s()?.cat === "instrument" || s()?.cat === "primary" ? "Letters and loop number, e.g. LIC-101 (ISA-5.1)." : undefined}>
         <input class="mono" value={o()?.tag ?? ""} onChange={e => act({ SetTag: { id: p.it.obj, tag: e.currentTarget.value } })} />
@@ -76,7 +76,7 @@ const ItemPanel = (p: { it: Item }) => {
       <button class="btn sm" onClick={() => C.pairDialog(p.it.id)}>{partner() ? "Change partner…" : "Pair with…"}</button>
     </Show>
     <h4>Data</h4>
-    <For each={s()?.fields ?? []}>{f => <FieldInput f={f} v={o()?.data[f.key]} ids={[p.it.obj]} placeholder={f.key === "loop" ? (o()?.tag.match(/\d+/)?.[0] ?? "") : undefined} />}</For>
+    <For each={derived()?.attrs[o()?.class ?? ""] ?? s()?.fields ?? []}>{f => <FieldInput f={f} v={o()?.data[f.key]} ids={[p.it.obj]} placeholder={f.key === "loop" ? (o()?.tag.match(/\d+/)?.[0] ?? "") : undefined} />}</For>
     <Show when={conns().length}>
       <h4>Connections</h4>
       <table class="vmini"><tbody><For each={conns()}>{c => <tr classList={{ f: c.ids.length > 0 }} onClick={() => c.ids.length && setSel(c.ids)}><td>{c.port}</td><td class="r">{c.lines.length ? c.lines.join(", ") : <span class="muted">open</span>}</td></tr>}</For></tbody></table>
@@ -118,7 +118,7 @@ const LinePanel = (p: { l: Line }) => {
         <p class="muted small">A sizing aid: check it as the engineer.</p>
       </>}</Show>
       <h4>Data</h4>
-      <For each={lib()?.line_fields ?? []}>{f => <FieldInput f={f} v={objOf(p.l.obj)?.data[f.key]} ids={[p.l.obj]} />}</For>
+      <For each={derived()?.attrs["PipingNetworkSystem"] ?? lib()?.line_fields ?? []}>{f => <FieldInput f={f} v={objOf(p.l.obj)?.data[f.key]} ids={[p.l.obj]} />}</For>
       <div class="ibtns"><button class="btn sm" title="Give this piece a line number of its own (a copy of this line's data), as after a reducer" onClick={() => act({ NewLineObject: { line: p.l.id } })}>New line number from here</button></div>
       <History id={p.l.obj} />
     </Show>

@@ -177,9 +177,24 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
             if !text(p, l, "number").is_empty() {
                 continue;
             }
-            let missing: Vec<&str> = [("size", "size"), ("fluid", "fluid code"), ("seq", "sequence number"), ("class", "pipe class")].iter().filter(|(k, _)| text(p, l, k).is_empty()).map(|x| x.1).collect();
+            let req = crate::classes::attrs(Some(p), crate::model::LINE_CLASS);
+            let missing: Vec<String> = req.iter().filter(|a| a.required && text(p, l, &a.key).is_empty()).map(|a| a.label.to_lowercase()).collect();
             if !missing.is_empty() {
-                v.push(on_lines(6, WARNING, p, net, lines, format!("{} has no {}.", cap(&label(net, l.id)), join(&missing))));
+                let m: Vec<&str> = missing.iter().map(|s| s.as_str()).collect();
+                v.push(on_lines(6, WARNING, p, net, lines, format!("{} has no {}.", cap(&label(net, l.id)), join(&m))));
+            }
+        }
+        // Attributes a class (or the project) marks as required.
+        let mut seen = std::collections::HashSet::new();
+        for it in &p.items {
+            let Some(o) = p.obj(it.obj) else { continue };
+            if !seen.insert(o.id) {
+                continue;
+            }
+            let missing: Vec<String> = crate::classes::attrs(Some(p), &o.class).iter().filter(|a| a.required && o.data.get(&a.key).is_none_or(|v| v.text().trim().is_empty())).map(|a| a.label.to_lowercase()).collect();
+            if !missing.is_empty() {
+                let m: Vec<&str> = missing.iter().map(|s| s.as_str()).collect();
+                v.push(on_item(6, WARNING, it, format!("{} has no {}.", cap(&name(p, it)), join(&m))));
             }
         }
     }

@@ -315,11 +315,13 @@ pub struct Settings {
     pub grid: f64,
     /// Hidden layers: process, utility, instrument, notes.
     pub hidden: Vec<String>,
+    /// Attributes this project adds to classes (Options › Classes).
+    pub user_attrs: Vec<crate::classes::UserAttr>,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![] }
+        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![] }
     }
 }
 
@@ -639,6 +641,12 @@ impl Project {
         let areas: HashSet<u32> = self.nodes.iter().filter(|n| n.level == "area").map(|n| n.id).collect();
         let mut uids = HashSet::new();
         for o in &mut self.objects {
+            // 0.1.5 files named objects by their symbol: give them the symbol's class.
+            if crate::classes::get(&o.class).is_none() {
+                if let Some(c) = crate::classes::for_symbol(&o.class) {
+                    o.class = c.name.clone();
+                }
+            }
             if !areas.contains(&o.node) {
                 o.node = area;
             }
@@ -662,7 +670,7 @@ impl Project {
             } 
         }
         for (item, i) in &missing {
-            let class = if *item { self.items[*i].sym.clone() } else { LINE_CLASS.to_string() };
+            let class = if *item { crate::classes::class_name_for(&self.items[*i].sym) } else { LINE_CLASS.to_string() };
             let o = self.new_obj(&class, "");
             if *item { self.items[*i].obj = o } else { self.lines[*i].obj = o }
         }
@@ -764,7 +772,7 @@ fn migrate_1(p: &mut Project, raw_items: Option<serde_json::Value>, raw_lines: O
         let (id, tag) = field(raw, "tag");
         let data: Data = raw.get("data").and_then(|d| serde_json::from_value(d.clone()).ok()).unwrap_or_default();
         let Some(i) = p.items.iter().position(|x| x.id == id) else { continue };
-        let sym = p.items[i].sym.clone();
+        let sym = crate::classes::class_name_for(&p.items[i].sym);
         let o = p.new_obj(&sym, tag.as_ref().and_then(|t| t.as_str()).unwrap_or(""));
         if let Some(ob) = p.obj_mut(o) {
             ob.data = data;

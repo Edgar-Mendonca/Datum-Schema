@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.6 — 2026-10-29
+
+Classes: every kind of object is defined by data, and you can add your own attributes.
+
+**The class library.** Every object belongs to a class (centrifugal pump, gate valve, control valve, instrument function, line number…), named after the open P&ID data standard (DEXPI) where a matching class is known. Classes inherit from the classes above them: a centrifugal pump has a pump's attributes (flow, head, power) and an equipment item's (service, design and operating conditions, material). The Inspector shows the class of the selected object and its attributes.
+
+**Your own attributes.** File › Options › Classes lists every class and its attributes. Add your company's attributes to any class (text, a choice list, or a value with units); they reach every class under it and are saved with the project. Mark one **required** and check 6 lists the objects where it is still empty.
+
 ## 0.1.5 — 2026-10-29
 
 The first step to an object-based plant engineering tool: plant objects, a database file and a history.

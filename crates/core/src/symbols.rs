@@ -400,7 +400,9 @@ pub struct SymInfo {
     pub svg: String,
     /// The symbol's own letters (M, S, T…), drawn upright by the window.
     pub texts: Vec<Prim>,
-    pub fields: Vec<crate::fields::Field>,
+    /// The class it draws by default, and that class's attributes.
+    pub class: String,
+    pub fields: Vec<crate::classes::Attr>,
 }
 
 pub fn info() -> Vec<SymInfo> {
@@ -409,7 +411,7 @@ pub fn info() -> Vec<SymInfo> {
         .map(|s| {
             let ps = parse(s.draw);
             let (texts, shapes): (Vec<Prim>, Vec<Prim>) = ps.into_iter().partition(|p| matches!(p, Prim::Text { .. }));
-            SymInfo { key: s.key, name: s.name, cat: s.cat, cat_name: s.cat.name(), w: s.w, h: s.h, ports: s.ports.clone(), prefix: s.prefix, inline: s.inline, terminal: s.terminal, rare: s.rare, svg: svg(&shapes), texts, fields: crate::fields::for_cat(s.cat, s.key) }
+            SymInfo { key: s.key, name: s.name, cat: s.cat, cat_name: s.cat.name(), w: s.w, h: s.h, ports: s.ports.clone(), prefix: s.prefix, inline: s.inline, terminal: s.terminal, rare: s.rare, svg: svg(&shapes), texts, class: crate::classes::class_name_for(s.key), fields: crate::classes::attrs(None, &crate::classes::class_name_for(s.key)) }
         })
         .collect()
 }
