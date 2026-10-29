@@ -6,7 +6,7 @@
 | | |
 | --- | --- |
 | **Product** | Datum Schema: intelligent P&IDs and process flow diagrams: draw, check and list (symbols and lines that carry their data and connections; live line list, equipment list, instrument index and valve list; drawing checks; line hydraulics; print, SVG and DXF) |
-| **Current version** | 0.1.0 (2026-10-29) |
+| **Current version** | 0.1.1 (2026-10-29) |
 | **Repo** | `Edgar-Mendonca/Datum-Schema` · branch `claude/vigilant-hamilton-ku7r0w` (the first branch pushed, so the default branch) |
 | **Stack** | Rust engine (`crates/core`: model, symbols, graph, tags, checks, hydraulics, lists, frame, routing, DXF), Tauri 2, SolidJS + strict TypeScript; no Python |
 | **Identifier** | `com.edgarmendonca.datumschema` · files `.dschema` (JSON, `format` 1) · installer `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` · publisher "Datum" |
@@ -38,7 +38,11 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | `crates/core/src/view.rs` | What the window draws for a sheet: items with ports and upright texts (tags, instrument letters and loop numbers, fail positions, connector partners), lines (route, pieces with hops, arrows or signal marks, line number, hydraulic badge), notes and Hold clouds, the legend |
 | `crates/core/src/frame.rs` | The sheet frame: border, zones, title block, revision table, as primitives |
 | `crates/core/src/hydraulics.rs` | Inside diameter, velocity, Reynolds, Colebrook (or 64/Re), Δp per 100 m and over length + fittings, limits by service, status |
-| `crates/core/src/checks.rs`, `lists.rs`, `dxf.rs`, `examples.rs` | The checks, the four lists, the DXF writer and the examples (filled in 0.1.2 and 0.1.3) |
+| `crates/core/src/checks.rs` (+ `checks/tests.rs`) | The 13 checks, one function per rule, each issue with level, reason, ids and place; a passing and a failing test per rule |
+| `crates/core/src/lists.rs` | The line list (one row per line number: from/to, hydraulics), equipment list, instrument index, valve list; CSV with a formula guard; Excel (rust_xlsxwriter) |
+| `crates/core/src/dxf.rs` | The DXF writer (R12: layers per line type and symbol category, blocks with a TAG attribute, text, frame) and `read_back` for the tests |
+| `crates/core/src/examples.rs` | The examples built through the edit operations: pump transfer, compressor package, exchanger loop, Find the faults (tests: 0 errors and warnings; exactly the planted faults) |
+| `crates/core/src/hardening.rs` | FAMILY §11: random projects and edits, failed edits change nothing, damaged files, hostile values, speed gate (500 symbols) |
 | `crates/core/src/api.rs` | What the shell's commands return (`derived`: the sheet's view, issues, hydraulics, runs, numbers; `library`), shared with the test server |
 | `crates/core/examples/serve.rs` | The test server: the window and the engine behind one local HTTP port, answering the shell's commands, for the UI tests |
 | `src-tauri/src/main.rs` | Commands: state, apply, history, derived, list, views, examples, new project, library, unit table, open/save, save file, export (CSV, Excel, DXF), options, recovery, recent, startup file, open_url, version, updates; `guard`, crash.log, atomic saves |
@@ -87,6 +91,10 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | plan | Instrument presets (PT, LIC, FIC…) in the palette; a new instrument given only its letters takes the next free loop number on its sheet | The brief lists the tag letters; loops share numbers (LT-101, LIC-101, LV-101) |
 | plan | Tags number 101 … on sheet 1, 201 … on sheet 2 (line sequence 1001 …, 2001 …) | "Automatic numbering per prefix and sheet" in the brief |
 | 0.1.0 | Manual valves take the prefix HV (hand valve), not V | V is the vessels' prefix; the first test placed a valve tagged V-103 among vessels V-101 and V-102 |
+| 0.1.1 | The build ran ahead of the brief's step plan (checks, lists, hydraulics, DXF and examples were ready with the canvas), so 0.1.1 carries brief steps 3–6 and the next releases are speed, polish and the exhibition build; each CHANGELOG section says what its release really contains | Releases stay small and true; holding finished work back to match a plan would only delay it |
+| 0.1.1 | One line number label and one hydraulic badge per run per sheet, on its longest straight segment | Labels on every short piece between valves cluttered the examples |
+| 0.1.1 | A process-type line with an end on an instrument bubble or a thermowell is an instrument connection: no number, not in the line list, not checked as a pipeline | Impulse lines are part of the instrument, not the piping |
+| 0.1.1 | Final elements for check 11 are control valves and regulators only (by symbol), not relief devices | PSV and breather tags end in V too, and hid a missing control valve in Find the faults |
 | 0.1.0 | The UI tests drive the real engine: `examples/serve.rs` answers the shell's commands over a local HTTP port and serves the built window; `api.rs` holds what both return | The brief's UI tests (place, connect, split, see a check appear and clear, export a list) need the real engine, not a canned fixture |
 
 ## 3. Roadmap
@@ -97,9 +105,9 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | --- | --- | --- |
 | plan | Read the hub, Plan, Sim, Calc and Pipe; PLAN-0.1, MEMORY, CLAUDE, icon | ✅ |
 | 0.1.0 | Shell, updater, File page, Options; model, symbols (about 80), units, pipe sizes, edits with undo, routing, the frame; canvas, palette, inspector; CI and release | ✅ |
-| 0.1.1 | Engine: graph, tags, numbering, hardening tests; canvas: off-page connectors, legend sheet, notes and Hold clouds | 🔜 |
-| 0.1.2 | The 13 checks and the Checks panel; hydraulics with badges; the four lists with CSV and Excel | ⬜ |
-| 0.1.3 | Print to PDF, SVG, DXF; the three examples and "Find the faults"; ? cards for every tool | ⬜ |
+| 0.1.1 | Graph, tags, numbering, hardening tests; off-page connectors, legend sheet, notes and Hold clouds; the 13 checks and the Checks panel; hydraulics with badges; the four lists with CSV and Excel; print, SVG, DXF; the examples and Find the faults | ✅ |
+| 0.1.2 | Speed (the 500-symbol drawing), editing polish | 🔜 |
+| 0.1.3 | More UI checks, keyboard shortcuts, empty states, ? cards | ⬜ |
 | 0.1.4 | Polish, speed with 500 items, screenshots, README, site.json; final check (the exhibition build) | ⬜ |
 | 0.2 | DEXPI import and export; send a line to Datum Pipe; send a loop to Datum Sim; DXF import as a background | ⬜ |
 | 0.3 | Process flow diagrams with stream tables; heat and mass balance checks; revision clouds and comparison | ⬜ |

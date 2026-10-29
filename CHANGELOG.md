@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.1 — 2026-10-29
+
+The drawing now checks itself, lists itself and sizes its lines; the examples, printing and DXF.
+
+**Examples.** File › Examples: a pump transfer (tank, duty and standby pumps with strainers and check valves, a level-controlled vessel with its safety valve), a compressor package with its anti-surge loop, a steam heater with its temperature loop and condensate return, and **Find the faults**, the pump transfer with planted mistakes. Each example opens with no errors.
+
+**Checks.** Thirteen rules run on every change and fill the Checks panel: duplicate tags and line numbers, open ends, off-page connectors without a partner, size changes without a reducer, class changes without a spec break, missing tags or line data, flow arrows against each other, pumps without a check valve, vessels without relief, control valves without isolation, controllers without a measurement or a final element, instrument letters that do not fit, and lines outside their hydraulic limits. Click an issue to go to it; the status bar counts errors and warnings. Rules can be switched off in Options.
+
+**Line hydraulics.** Every line with a flow, a density and a viscosity gets its inside diameter (from its size and schedule), velocity, Reynolds number, friction factor (Colebrook) and pressure drop per 100 m and over its length, with a ✓, ! or ✗ badge against the limits for its service (pump suction and discharge are recognised). The limits are editable in Options. Results are a sizing aid, checked by the engineer.
+
+**Lists.** The line list, equipment list, instrument index and valve list are always generated from the drawing. Sort, filter and group them, click a row to find it, edit a cell and the drawing follows; export to Excel or CSV.
+
+**Sheets and connectors.** Off-page connectors pair across sheets and show where the line continues; double-click one to jump to its partner. A legend sheet shows every symbol and line type the project uses. Notes, leader notes and Hold clouds.
+
+**Print and export.** Print to PDF: the sheets at their size or fitted to A3, the lists on A3 with page numbers, and the legend. Save a sheet as SVG. DXF (R12) with a layer per line type and symbol category, symbols as blocks with their tag as an attribute, the border and title block included.
+
+**Drawing.** Lines carry one line number and one hydraulic badge per sheet; Fit shows the drawing, Sheet the whole sheet. Manual valves are tagged HV.
+
 ## 0.1.0 — 2026-10-29
 
 The first release: the window, the sheet, symbols and lines, and the updater.

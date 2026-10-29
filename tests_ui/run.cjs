@@ -17,6 +17,7 @@ const shots = process.env.SHOTS;
   const url = `http://127.0.0.1:${port}/`;
   const b = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
   const p = await b.newPage({ viewport: { width: 1440, height: 900 } });
+  p.setDefaultTimeout(5000);
   const errors = [];
   p.on("pageerror", e => errors.push(e.message));
   p.on("console", m => { if (m.type() === "error") errors.push(m.text()); });
@@ -89,6 +90,91 @@ const shots = process.env.SHOTS;
   await p.click(".theme"); await p.waitForTimeout(200);
   check("dark theme", (await p.evaluate(() => document.documentElement.dataset.theme)) === "dark");
   await shot("dark");
+
+  await p.click(".theme"); await p.click(".theme"); await p.waitForTimeout(200);
+
+  // 10. Find the faults: the Checks panel lists the planted faults; the status bar counts them.
+  const openEx = async name => {
+    await p.evaluate(() => document.querySelector(".tabs .file").click()); await p.waitForTimeout(200);
+    await p.click(`.tile:has(b:text-is("${name}"))`); await p.waitForTimeout(300);
+    const d = await p.$('.dlg button:has-text("Don\'t save")'); if (d) { await d.click(); await p.waitForTimeout(300); }
+    await p.waitForTimeout(600);
+  };
+  await openEx("Find the faults");
+  const rules = await p.$$eval(".ctbl tbody tr td:nth-child(2)", els => els.map(e => e.textContent));
+  check("the Checks panel lists the planted faults", JSON.stringify(rules) === JSON.stringify(["1", "2", "4", "7", "8", "9", "11", "13"]), JSON.stringify(rules));
+  check("the status bar counts errors and warnings", (await p.textContent(".status .sbtn")).includes("3 errors · 5 warnings"));
+  await shot("faults");
+
+  // 11. Click the pump issue: pump B is selected; then fix it with a check valve and the issue clears.
+  await p.click(".ctbl tr:has(td:text-is('8'))"); await p.waitForTimeout(500);
+  let pr2 = await project();
+  const pumpB = pr2.items.filter(i => i.sym === "pump_cent").sort((a, b) => b.y - a.y)[0];
+  const selIds = await p.evaluate(() => [...document.querySelectorAll(".it.sel")].length);
+  check("clicking an issue selects what it is about", selIds === 1);
+  // Pump B's discharge runs along y = 184 to the gate at x = 205; drop a check valve at x = 186.
+  await place("Check valve", 186, 184);
+  pr2 = await project();
+  const rules2 = await p.$$eval(".ctbl tbody tr td:nth-child(2)", els => els.map(e => e.textContent));
+  check("a check valve on pump B's discharge clears check 8", !rules2.includes("8") && pr2.items.filter(i => i.sym === "check").length === 2, JSON.stringify(rules2));
+  void pumpB;
+
+  // 12. The line list: rows from the drawing, hydraulics; export it to CSV.
+  await p.click(".btabs button:has-text('Line list')"); await p.waitForTimeout(500);
+  const lrows = await p.$$eval(".lists tbody tr.f td:first-child", els => els.map(e => e.textContent));
+  check("the line list lists the line numbers", lrows.includes('3"-P-1003-A1A') && lrows.includes('4"-P-1001-A1A'), JSON.stringify(lrows));
+  await p.click(".cfilter button:has-text('CSV')"); await p.waitForTimeout(400);
+  const csv = (await inv("exports")).filter(e => e.kind === "csv").pop();
+  check("the line list exports to CSV", !!csv && csv.text.startsWith("Line number,Size,") && csv.text.includes('"3""-P-1003-A1A"'), csv?.text.slice(0, 200));
+  // Editing a cell edits the drawing: the service of a line.
+  const cell = p.locator(".lists tbody tr.f").filter({ has: p.locator("td:first-child", { hasText: '3"-P-1007-A1A' }) }).locator("td:nth-child(7) input");
+  await cell.fill("Receiver outlet, edited"); await cell.press("Enter"); await p.waitForTimeout(400);
+  pr2 = await project();
+  check("editing the list edits the line", pr2.lines.some(l => l.data.service === "Receiver outlet, edited"));
+  await p.click(".btabs button:has-text('Equipment')"); await p.waitForTimeout(400);
+  check("the equipment list", (await p.$$eval(".lists tbody tr.f td:first-child input", els => els.map(e => e.value))).includes("V-101"));
+
+  // 13. DXF of the sheet.
+  await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title='DXF']"); await p.waitForTimeout(500);
+  const dxf = (await inv("exports")).filter(e => e.kind === "dxf").pop();
+  check("DXF export writes an R12 drawing", !!dxf && dxf.text.includes("AC1009") && dxf.text.includes("SYM_PUMP_CENT") && dxf.text.trimEnd().endsWith("EOF"));
+
+  // 14. A second sheet with an off-page connector pair; double-click jumps to the partner.
+  await openEx("Pump transfer");
+  await place("Off-page connector", 395, 60);
+  const opA = (await project()).items.find(i => i.sym === "offpage");
+  await p.click(".stabs .sadd"); await p.waitForTimeout(500);
+  await place("Off-page connector", 30, 60);
+  pr2 = await project();
+  const opB = pr2.items.find(i => i.sym === "offpage" && i.id !== opA.id);
+  check("a new sheet is numbered PID-002", pr2.sheets.length === 2 && pr2.sheets[1].number === "PID-002" && opB.sheet === pr2.sheets[1].id);
+  // Pair them in the window: the new connector is selected; Lines › Pair….
+  await p.click(".tabs button:text-is('Lines')"); await p.click(".ribbon button[title='Pair…']"); await p.waitForTimeout(300);
+  await p.click(".dlg tr.f"); await p.click(".dlg .btn.pri"); await p.waitForTimeout(400);
+  pr2 = await project();
+  check("pairing off-page connectors", pr2.items.find(i => i.id === opA.id).link === opB.id);
+  const [cx, cy] = await scr(30, 60); await p.mouse.dblclick(cx, cy); await p.waitForTimeout(600);
+  const onSheet = await p.$eval(".stabs button.on", e => e.textContent);
+  check("double-clicking an off-page connector jumps to its partner's sheet", onSheet === "PID-100", onSheet);
+
+  // 15. A legend sheet shows the symbols used.
+  await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title*='every symbol']"); await p.waitForTimeout(600);
+  const legend = await p.$$eval(".legend text", els => els.map(e => e.textContent));
+  check("the legend sheet lists the symbols used", legend.includes("Centrifugal pump") && legend.includes("Gate valve") && legend.includes("LEGEND"), JSON.stringify(legend.slice(0, 8)));
+  await shot("legend");
+
+  // 16. A Hold cloud and a note.
+  await p.click(".stabs button:text-is('PID-100')"); await p.waitForTimeout(400);
+  await p.click(".tabs button:text-is('Draw')"); await p.click(".ribbon button[title='Hold Cloud']"); await clickAt(250, 220);
+  check("a Hold cloud", (await project()).notes.some(n => n.kind === "hold") && (await p.$$(".note.hold path")).length > 10);
+
+  // 17. Print: the pages are drawn (sheets, lists, legend).
+  await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Print')"); await p.waitForTimeout(1200);
+  const pages = await p.$$(".pprev .pwrap");
+  check("the print preview has the sheets and the lists", pages.length >= 4, String(pages.length));
+  check("printed sheets are drawn as SVG with the title block", (await p.$$eval(".pprev .ppage svg text", els => els.map(e => e.textContent))).includes("DRAWING NO."));
+  await shot("print");
+  await p.click(".bs .back"); await p.waitForTimeout(300);
 
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();

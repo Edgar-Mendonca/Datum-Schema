@@ -315,7 +315,8 @@ export const Canvas = () => {
   // A newly opened sheet is fitted to the window once it arrives.
   onFit(fit);
   // The first drawing is fitted when it arrives.
-  createEffect(on(() => !!v(), has => { if (has) requestAnimationFrame(fit); }));
+  const hasView = createMemo(() => !!v());
+  createEffect(on(hasView, has => { if (has) requestAnimationFrame(fit); }));
   onMount(() => { addEventListener("mousemove", move); addEventListener("mouseup", up); addEventListener("keyup", keyup); });
   onCleanup(() => { removeEventListener("mousemove", move); removeEventListener("mouseup", up); removeEventListener("keyup", keyup); });
 

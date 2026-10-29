@@ -27,7 +27,8 @@
   ],
   "screenshots": [],
   "roadmap": [
-    { "v": "0.1.4", "title": "The exhibition build", "when": "Next", "items": ["Polish, keyboard shortcuts and empty states", "Speed with 500 symbols", "Screenshots and README"] },
+    { "v": "0.1.2", "title": "Speed", "when": "Next", "items": ["Quick with 500 symbols on a sheet", "Editing polish"] },
+    { "v": "0.1.4", "title": "The exhibition build", "when": "Soon", "items": ["Keyboard shortcuts and empty states", "Screenshots and README"] },
     { "v": "0.2", "title": "Exchange and links", "when": "Soon", "items": ["Open P&ID data exchange (the DEXPI XML format) import and export", "Send a line to Datum Pipe as a stress model", "Send a loop to Datum Sim (pump, valve, tank, controller) as a dynamic model", "DXF import of an old drawing as a background"] },
     { "v": "0.3", "title": "Process flow diagrams", "when": "Later", "items": ["Stream tables (flow, pressure, temperature, composition per stream)", "Heat and mass balance checks", "Revision clouds and comparing revisions"] },
     { "v": "0.4", "title": "Instrument documents", "when": "Later", "items": ["Instrument loop diagrams and datasheets from the index", "Cause-and-effect matrix from interlocks", "Valve datasheets"] },
