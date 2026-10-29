@@ -1,4 +1,4 @@
-# Datum Schema 0.2: the object core (proposal for discussion)
+# Datum Schema: the object core (agreed; releases 0.1.5 onwards)
 
 Written after 0.1.3, when the user changed course (session 1). Nothing here is built yet; the questions at the end are for the user. Commercial products are not named in this file (FAMILY §13); "the enterprise suites" means the commercial object-based plant engineering systems the user has worked with.
 
@@ -101,3 +101,19 @@ The old 0.2–0.5 roadmap (links to Pipe and Sim, PFD, instrument documents, tem
 5. **Disciplines.** Beyond P&ID: is the next discipline instrumentation (index, loop diagrams, datasheets), electrical (motor lists, cable schedules), or the link to 3D (Datum Pipe)?
 6. **Hierarchy names.** Project › Plant › Unit › Area, or your company's breakdown (site, plant, unit, system, area…)? Fixed levels or user-defined?
 7. **Users and history.** "Who" in the history: the Windows user name, or a name typed in Options?
+
+## 7. Agreed with the user (session 1, after 0.1.3)
+
+- **Versions stay consecutive**: 0.1.4 (the held exhibition build) is released, then 0.1.5, 0.1.6, 0.1.7… — no jump to 0.2.0. The table in §5 is renumbered:
+
+| Release | Content |
+| --- | --- |
+| 0.1.5 | Objects and views: every equipment item, valve and instrument is an object with its tag and data; symbols are views of it; a line number is an object (`PipingNetworkSystem`) owning its drawn pieces; plant hierarchy node on every object (defaults); the project file is one SQLite database with a history table; 0.1 JSON files open and convert |
+| 0.1.6 | The class library as JSON (DEXPI names, inheritance, attributes with units, choices, required); Inspector, lists and checks read it; user attributes in Options |
+| 0.1.7 | The Plant panel (hierarchy tree), delete from sheet or object, objects not drawn, lists grouped by plant/unit/area |
+| 0.1.8 | Instrument datasheets generated from the class attributes: one per instrument, editable, printable, exportable — the user's daily pain point in the oil and gas work |
+| next | History and revisions, DEXPI export and import, further datasheets (valves, equipment), loop diagrams |
+
+- **The user's aim**: a flexible, free, open-source plant engineering tool for students and engineers who cannot afford the enterprise suites; datasheets and every document from one place. Built from scratch in Rust in the Datum way; open-source libraries only where needed (SQLite).
+- **No reverse engineering** of any commercial product (the user suggested a reverse-engineering toolkit; it is not used on proprietary software). Only public documentation and open standards.
+- **Defaults chosen** for the open questions (to revisit with the user): Save button kept (the database is written as a whole on Save, atomically; recovery as now); hierarchy levels Plant › Unit › Area with names the user edits; "who" in the history is the name in Options (default: the computer's user name); one person per file for now, with UUIDs and history so merging can come later.
