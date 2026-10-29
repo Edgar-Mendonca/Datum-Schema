@@ -44,6 +44,14 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 
 ![The line list with hydraulics, and a line's velocity and pressure drop in the Inspector](docs/images/line-list.png)
 
+## The two-minute demo
+
+1. File › Examples › **Find the faults**: the Checks panel lists three errors and five warnings, and the status bar counts them.
+2. Click "Pump P-101A has no check valve on its discharge": the pump is selected on the drawing. Drag a check valve from the palette onto its discharge line; the issue clears.
+3. Click the duplicate tag issue and rename the standby pump P-101B in the Inspector; the issue clears.
+4. Open the **Line list**: every line number with its from and to, flow, velocity and pressure drop. Click a line on the drawing to see its hydraulics and its ✓, ! or ✗ badge.
+5. File › Print: the sheet with its title block, then the lists. Sheets › DXF writes the drawing for any CAD program.
+
 ## Build
 
 ```bash

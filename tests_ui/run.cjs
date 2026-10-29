@@ -207,6 +207,19 @@ const shots = process.env.SHOTS;
   await p.keyboard.type("equipment list"); await p.keyboard.press("Enter"); await p.waitForTimeout(400);
   check("Tell Me runs a command", (await p.textContent(".btabs button.on")).includes("Equipment"));
 
+  // 21. The exhibition check: every example opens with 0 errors, prints and exports DXF.
+  for (const name of ["Pump transfer", "Compressor package", "Exchanger loop"]) {
+    await openEx(name);
+    const errs = await p.textContent(".status .sbtn");
+    check(`${name} opens with 0 errors and 0 warnings`, errs.includes("0 errors · 0 warnings"), errs);
+    await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title='DXF']"); await p.waitForTimeout(400);
+    const dx = (await inv("exports")).filter(e => e.kind === "dxf").pop();
+    check(`${name} exports DXF`, !!dx && dx.text.trimEnd().endsWith("EOF"));
+    await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Print')"); await p.waitForTimeout(1000);
+    check(`${name} prints`, (await p.$$(".pprev .pwrap")).length >= 3);
+    await p.click(".bs .back"); await p.waitForTimeout(200);
+  }
+
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();
   await fetch(`${url}quit`).catch(() => {});

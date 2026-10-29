@@ -42,27 +42,9 @@
   ],
   "roadmap": [
     {
-      "v": "0.1.3",
-      "title": "Polish",
-      "when": "Next",
-      "items": [
-        "More keyboard shortcuts and UI checks",
-        "Clearer empty states"
-      ]
-    },
-    {
-      "v": "0.1.4",
-      "title": "The exhibition build",
-      "when": "Soon",
-      "items": [
-        "Keyboard shortcuts and empty states",
-        "Screenshots and README"
-      ]
-    },
-    {
       "v": "0.2",
       "title": "Exchange and links",
-      "when": "Soon",
+      "when": "Next",
       "items": [
         "Open P&ID data exchange (the DEXPI XML format) import and export",
         "Send a line to Datum Pipe as a stress model",

@@ -6,7 +6,7 @@
 | | |
 | --- | --- |
 | **Product** | Datum Schema: intelligent P&IDs and process flow diagrams: draw, check and list (symbols and lines that carry their data and connections; live line list, equipment list, instrument index and valve list; drawing checks; line hydraulics; print, SVG and DXF) |
-| **Current version** | 0.1.3 (2026-10-29) |
+| **Current version** | 0.1.4 (2026-10-29), the exhibition build |
 | **Repo** | `Edgar-Mendonca/Datum-Schema` · branch `claude/vigilant-hamilton-ku7r0w` (the first branch pushed, so the default branch) |
 | **Stack** | Rust engine (`crates/core`: model, symbols, graph, tags, checks, hydraulics, lists, frame, routing, DXF), Tauri 2, SolidJS + strict TypeScript; no Python |
 | **Identifier** | `com.edgarmendonca.datumschema` · files `.dschema` (JSON, `format` 1) · installer `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` · publisher "Datum" |
@@ -113,8 +113,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.1.1 | Graph, tags, numbering, hardening tests; off-page connectors, legend sheet, notes and Hold clouds; the 13 checks and the Checks panel; hydraulics with badges; the four lists with CSV and Excel; print, SVG, DXF; the examples and Find the faults | ✅ |
 | 0.1.2 | Speed (router marks blocked cells per symbol: 5 s → 0.07 s on a crowded 500-symbol sheet), coloured badges, selected line number highlighted on every sheet, screenshots | ✅ |
 | 0.1.3 | An independent engine review (a separate agent, report only): 8 findings fixed with regression tests in `hardening.rs` › `review`; more UI checks; list pages with a title block; DXF checked with ezdxf | ✅ |
-| 0.1.4 | Final check: every example opens with 0 errors, prints and exports; README, site.json (the exhibition build) | 🔜 |
-| 0.2 | DEXPI import and export; send a line to Datum Pipe; send a loop to Datum Sim; DXF import as a background | ⬜ |
+| 0.1.4 | Final check: every example opens with 0 errors, prints and exports (engine test and UI checks); README with the demo, site.json (the exhibition build) | ✅ |
+| 0.2 | 🔜 DEXPI import and export; send a line to Datum Pipe; send a loop to Datum Sim; DXF import as a background | ⬜ |
 | 0.3 | Process flow diagrams with stream tables; heat and mass balance checks; revision clouds and comparison | ⬜ |
 | 0.4 | Loop diagrams and instrument datasheets; cause-and-effect matrix; valve datasheets | ⬜ |
 | 0.5 | Company templates; project reports (valve and fitting take-off); review comments | ⬜ |
@@ -137,3 +137,10 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 - Wrote CLAUDE.md, this MEMORY, PLAN-0.1; the logo (vessel, line with flow arrow and instrument bubble, pump, amber diamond) and the Windows icons.
 - Engine: model and file with repair, symbols (82 definitions), fields, units, pipe sizes, routing, frame, graph, tags, edit operations with split and merge, view, hydraulics (tested against a hand calculation and Datum Calc's pipe pack); 23 tests.
 - Window: ribbon, File page, Options (with the check rules and hydraulic limits), canvas, palette, inspector, bottom panel, print and SVG writer, help cards; the test server and 16 UI checks against the real engine.
+
+### 2026-10-29: Session 1, summary (0.1.0 → 0.1.4)
+- **Released:** 0.1.0 (shell, sheet, symbols, lines, updater), 0.1.1 (checks, hydraulics, lists, examples, print, DXF), 0.1.2 (fast routing, coloured badges, line number highlight, screenshots), 0.1.3 (fixes from an independent engine review), 0.1.4 (the exhibition build: final check, README demo). Each as `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` from `release.yml`.
+- **Works:** about 80 own symbols; lines port to port with routing, hops, flow arrows and signal marks; in-line symbols split lines and join them again when deleted; off-page connectors with jump; sheets A3/A1/ANSI B/ANSI D with zones, title block and revisions; legend sheet; notes, leaders, Hold clouds; tags and loops numbered per sheet, renumber, copy with the next free tag; the 13 checks with the Checks panel; line hydraulics with badges and editable limits; the four live lists with sort, filter, group, edit, CSV and Excel; print (sheets, lists with title block, legend), SVG, DXF (read by ezdxf with 0 errors); SI/US units; undo/redo; recovery; the updater. 55 engine tests (hardening, every check, hydraulics against a hand calculation and Datum Calc's pack, DXF read back, examples) and 47 UI checks against the real engine.
+- **Cut or not done:** nothing from the brief's cut list was cut (the Hold cloud, line hops, ANSI sizes and the rarer symbols are all in). Not done: bend points are dropped when a line is split; check 8 does not look at a check valve's direction; the real shell was only started on Linux (Xvfb), the installer is built and published by the release workflow on Windows.
+- **The 2-minute exhibition demo:** open File › Examples › Find the faults; show the Checks panel (3 errors, 5 warnings) and click an issue to jump to it; fix two (drop a check valve on pump P-101A's discharge; rename the duplicate pump to P-101B); open the Line list and click a discharge line to show its velocity badge and hydraulics in the Inspector; File › Print to show a sheet with its title block; Sheets › DXF.
+- **For the hub chat:** add Datum Schema to apps.json (id schema, accent #9C1F84) and copy its icon (`docs/brand/datum-schema-icon.svg`) to `brand/datum-schema-icon.svg`.

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.4 — 2026-10-29
+
+The exhibition build.
+
+**Checked end to end.** Before this release every example was opened, checked for errors, printed and exported to DXF in the window, and the DXF files were read back by an independent reader with no errors.
+
+**README.** A two-minute demo of Find the faults, the line list and its hydraulics, printing and DXF, and the screenshots.
+
 ## 0.1.3 — 2026-10-29
 
 Fixes from an independent review of the engine, and polish.

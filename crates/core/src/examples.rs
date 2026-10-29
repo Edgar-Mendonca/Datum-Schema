@@ -397,6 +397,24 @@ mod tests {
     }
 
     #[test]
+    fn every_example_prints_and_exports() {
+        for ex in list() {
+            let p = get(ex.id).unwrap();
+            for s in &p.sheets {
+                let v = crate::view::sheet(&p, s, &Net::new(&p), &[]);
+                assert!(!v.items.is_empty() && !v.frame.is_empty(), "{}", ex.name);
+                let (layers, blocks, ents) = crate::dxf::read_back(&crate::dxf::write(&p, s)).unwrap();
+                assert!(layers.len() > 10 && !blocks.is_empty() && ents["INSERT"] == v.items.len(), "{}", ex.name);
+            }
+            for (k, _) in crate::lists::KINDS {
+                let l = crate::lists::build(&p, k).unwrap();
+                assert!(!crate::lists::csv(&l).is_empty());
+                assert_eq!(&crate::lists::xlsx(&p, k).unwrap()[..2], b"PK");
+            }
+        }
+    }
+
+    #[test]
     fn find_the_faults_has_exactly_its_planted_faults() {
         let p = get("faults").unwrap();
         let mut rules: Vec<u8> = issues(&p).iter().filter(|i| i.level != "note").map(|i| i.rule).collect();
