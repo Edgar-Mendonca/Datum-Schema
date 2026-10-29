@@ -96,7 +96,10 @@ export const PrintPage = () => {
           <header><b>{l.title}</b><span>{p?.title.project || p?.name}</span><span>{p?.title.company}</span><span>Page {c + 1} of {chunks}</span></header>
           <table class="tbl small"><thead><tr><For each={l.cols}>{col => <th classList={{ r: col.num }}>{col.label}</th>}</For></tr></thead>
             <tbody><For each={l.rows.slice(c * ROWS, (c + 1) * ROWS)}>{r => <tr><For each={r.cells}>{(x, j) => <td classList={{ r: l.cols[j()].num }}>{x}</td>}</For></tr>}</For></tbody></table>
-          <footer><span>{p?.name}</span><span>Datum Schema</span><span>{new Date().toLocaleDateString()}</span></footer>
+          <table class="ptb"><tbody><tr>
+            <td><small>COMPANY</small>{p?.title.company || "—"}</td><td><small>PROJECT</small>{p?.title.project || p?.name}</td><td><small>DOCUMENT</small>{l.title}</td>
+            <td><small>BY</small>{p?.title.by || "—"}</td><td><small>CHECKED</small>{p?.title.checked || "—"}</td><td><small>DATE</small>{new Date().toLocaleDateString()}</td><td><small>PAGE</small>{c + 1} of {chunks}</td>
+          </tr></tbody></table>
         </div>) });
     });
     if (want().legend && !(views() ?? []).some(v => v.legend)) {

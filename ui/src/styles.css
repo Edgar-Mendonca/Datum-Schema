@@ -951,3 +951,6 @@ tr.behind td { background: var(--err-bg); }
 .badge.ok .pt { fill: var(--ok-fg) !important; }
 .badge.warn .pt { fill: var(--warn-fg) !important; }
 .badge.bad .pt { fill: var(--err-fg) !important; }
+.plist .ptb { margin-top: auto; width: 100%; border-collapse: collapse; font-size: 9pt; }
+.plist .ptb td { border: 1px solid #000; padding: 1mm 2mm; vertical-align: top; }
+.plist .ptb small { display: block; font-size: 6pt; letter-spacing: .08em; color: #333; }

@@ -94,6 +94,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | plan | Tags number 101 … on sheet 1, 201 … on sheet 2 (line sequence 1001 …, 2001 …) | "Automatic numbering per prefix and sheet" in the brief |
 | 0.1.0 | Manual valves take the prefix HV (hand valve), not V | V is the vessels' prefix; the first test placed a valve tagged V-103 among vessels V-101 and V-102 |
 | 0.1.1 | The build ran ahead of the brief's step plan (checks, lists, hydraulics, DXF and examples were ready with the canvas), so 0.1.1 carries brief steps 3–6 and the next releases are speed, polish and the exhibition build; each CHANGELOG section says what its release really contains | Releases stay small and true; holding finished work back to match a plan would only delay it |
+| 0.1.3 | The DXF was read back with an independent reader (ezdxf 1.4.5): all four examples open with 0 errors and 0 repairs, blocks and TAG attributes intact, and render the right way up | "Opens in any CAD program" should be checked by a reader we did not write |
 | 0.1.2 | The router marks cells and edges inside symbols by index ranges (binary search on the grid lines) and keeps distances in arrays, and its second search window is 120 mm | Routing was 5 s on a crowded 500-symbol sheet; now 0.07 s with the same routes |
 | 0.1.1 | One line number label and one hydraulic badge per run per sheet, on its longest straight segment | Labels on every short piece between valves cluttered the examples |
 | 0.1.1 | A process-type line with an end on an instrument bubble or a thermowell is an instrument connection: no number, not in the line list, not checked as a pipeline | Impulse lines are part of the instrument, not the piping |
@@ -121,6 +122,9 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 ## 4. Known limits
 
 - Lines keep their bend points when symbols move; drag a segment again or Straighten to re-route.
+- Hydraulics are single-phase Darcy–Weisbach per line number (from its first piece); two-phase lines only get the two-phase velocity limits, not a two-phase pressure drop.
+- DXF text beyond ASCII is written as \U+XXXX escapes (CAD programs decode them; some simple viewers show them literally); the hydraulic badges are written OK, ! and X.
+- The examples' layouts are hand-placed; lines route themselves, so a moved symbol can make a route less tidy until a segment is dragged.
 - Printing uses one page size per print job (the largest page); mixed sheet sizes print best one size at a time or fitted to A3.
 
 ## 5. Session log

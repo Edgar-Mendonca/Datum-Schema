@@ -101,6 +101,12 @@ impl W {
 
 /// Text a DXF file can hold: no control characters; characters beyond ASCII as \U+XXXX.
 fn clean(s: &str) -> String {
+    // The hydraulic badges as plain letters: every reader shows them, whatever its fonts.
+    match s {
+        "✓" => return "OK".into(),
+        "✗" => return "X".into(),
+        _ => {}
+    }
     let mut o = String::new();
     for c in s.chars() {
         match c {
