@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.7 — 2026-10-29
+
+The Plant panel: every object in its place in the plant, drawn or not.
+
+**Plant panel.** Beside the symbol palette, the **Plant** tab shows the plant hierarchy (plant › unit › area) with every object in the project: equipment, valves, instruments and line numbers. Click an object to go to its symbol. Add plants, units and areas, rename them (double-click) and remove empty ones. Drag an object onto another area to move it; the Inspector shows and changes an object's area too.
+
+**Draw an object anywhere.** Drag an object from the Plant panel onto a sheet to draw it there: the same object, with one tag and one set of data, can be drawn on several sheets.
+
+**Delete: the object or only its drawing?** Deleting the last symbol of an object asks whether to delete the object with its data or only remove it from the sheet. Objects kept this way stay in the Plant panel, marked "not drawn", ready to be drawn again.
+
+**Lists.** Every list has an Area column, so lists can be grouped by area.
+
 ## 0.1.6 — 2026-10-29
 
 Classes: every kind of object is defined by data, and you can add your own attributes.

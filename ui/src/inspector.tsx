@@ -75,6 +75,9 @@ const ItemPanel = (p: { it: Item }) => {
       <p class="small">{partner() ? <>Pairs with the connector on <b>{proj()?.sheets.find(x => x.id === partner()!.sheet)?.number}</b>. <button class="btn sm" onClick={() => C.goPartner(p.it.id)}>Go there</button></> : <span class="warnline">No partner yet: pair it with a connector on another sheet.</span>}</p>
       <button class="btn sm" onClick={() => C.pairDialog(p.it.id)}>{partner() ? "Change partner…" : "Pair with…"}</button>
     </Show>
+    <Show when={o()}>{ob => <Row label="Area" hint={`Shown ${proj()!.items.filter(i => i.obj === ob().id).length}× · ${[...new Set(proj()!.items.filter(i => i.obj === ob().id).map(i => proj()!.sheets.find(s => s.id === i.sheet)?.number))].join(", ")}`}>
+      <Pick value={String(ob().node)} set={v => act({ SetNode: { ids: [ob().id], node: +v } })} options={(proj()?.nodes ?? []).filter(n => n.level === "area").map(n => [String(n.id), proj()!.nodes.find(u => u.id === n.parent)?.name ? `${proj()!.nodes.find(u => u.id === n.parent)!.name} › ${n.name}` : n.name] as [string, string])} />
+    </Row>}</Show>
     <h4>Data</h4>
     <For each={derived()?.attrs[o()?.class ?? ""] ?? s()?.fields ?? []}>{f => <FieldInput f={f} v={o()?.data[f.key]} ids={[p.it.obj]} placeholder={f.key === "loop" ? (o()?.tag.match(/\d+/)?.[0] ?? "") : undefined} />}</For>
     <Show when={conns().length}>

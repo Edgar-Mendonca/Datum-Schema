@@ -39,7 +39,15 @@ pub enum Op {
     /// Mirror items left to right.
     Flip { ids: Vec<u32> },
     /// Delete items, lines and notes. An in-line item between two lines joins them again.
-    Delete { ids: Vec<u32> },
+    Delete {
+        ids: Vec<u32>,
+        /// Keep the objects of deleted symbols and lines even when no other view shows them
+        /// (remove from the sheet only); they stay in the Plant panel, not drawn.
+        #[serde(default)]
+        keep: bool,
+    },
+    /// Delete objects and every symbol and line piece that shows them.
+    DeleteObjects { ids: Vec<u32> },
     /// Set (or with `val` None, clear) one data field on objects (ids of symbols or line pieces mean
     /// their objects).
     SetData { ids: Vec<u32>, key: String, val: Option<Val> },
@@ -371,7 +379,7 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
             }
             let id = line.id;
             *find_line(p, id)? = line;
-            purge_objects(p);
+            purge_objects(p, &[obj]);
         }
         Op::AddNote { mut note } => {
             if p.sheet(note.sheet).is_none() {
@@ -431,7 +439,16 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
                 it.flip = !it.flip;
             }
         }
-        Op::Delete { ids } => delete(p, &ids),
+        Op::Delete { ids, keep } => delete(p, &ids, keep),
+        Op::DeleteObjects { ids } => {
+            let objs: HashSet<u32> = ids.iter().filter_map(|i| p.obj_id(*i)).collect();
+            if objs.is_empty() {
+                return Err("Nothing to delete: select an object.".into());
+            }
+            let views: Vec<u32> = p.items.iter().filter(|i| objs.contains(&i.obj)).map(|i| i.id).chain(p.lines.iter().filter(|l| objs.contains(&l.obj)).map(|l| l.id)).collect();
+            delete(p, &views, true);
+            p.objects.retain(|o| !objs.contains(&o.id));
+        }
         Op::SetData { ids, key, val } => {
             if key.is_empty() || key.len() > 64 {
                 return Err("That is not a field.".into());
@@ -477,13 +494,14 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
                 return Err("Only process lines have line numbers.".into());
             }
             let data = p.data_of(l.obj).clone();
+            let was = l.obj;
             let o = p.new_obj(LINE_CLASS, "");
             if let Some(ob) = p.obj_mut(o) {
                 ob.data = data;
             }
             find_line(p, line)?.obj = o;
             created.push(o);
-            purge_objects(p);
+            purge_objects(p, &[was]);
         }
         Op::SetNode { ids, node } => {
             if !p.nodes.iter().any(|n| n.id == node && n.level == "area") {
@@ -557,7 +575,7 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
                 return Err("A project keeps at least one sheet.".into());
             }
             let ids: Vec<u32> = p.items.iter().filter(|i| i.sheet == id).map(|i| i.id).chain(p.lines.iter().filter(|l| l.sheet == id).map(|l| l.id)).chain(p.notes.iter().filter(|n| n.sheet == id).map(|n| n.id)).collect();
-            delete(p, &ids);
+            delete(p, &ids, false);
             p.sheets.retain(|s| s.id != id);
         }
         Op::MoveSheet { id, to } => {
@@ -590,8 +608,9 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
 
 /// Deletes items, lines and notes. Lines on a deleted item keep their end where the port was; an
 /// in-line item with one process line on each side gives way to one line again.
-fn delete(p: &mut Project, ids: &[u32]) {
+fn delete(p: &mut Project, ids: &[u32], keep: bool) {
     let set: HashSet<u32> = ids.iter().copied().collect();
+    let touched: Vec<u32> = p.items.iter().filter(|i| set.contains(&i.id)).map(|i| i.obj).chain(p.lines.iter().filter(|l| set.contains(&l.id)).map(|l| l.obj)).collect();
     // Join lines across deleted in-line items first.
     for &id in ids {
         let Some(it) = p.item(id).cloned() else { continue };
@@ -670,14 +689,16 @@ fn delete(p: &mut Project, ids: &[u32]) {
     p.items.retain(|i| !set.contains(&i.id));
     p.lines.retain(|l| !set.contains(&l.id));
     p.notes.retain(|n| !set.contains(&n.id));
-    purge_objects(p);
+    if !keep {
+        purge_objects(p, &touched);
+    }
 }
 
-/// Objects that no symbol and no line piece shows any more are deleted with their last view.
-/// (0.1.7 keeps them on request: "remove from this sheet only".)
-fn purge_objects(p: &mut Project) {
+/// Of these objects, those no symbol and no line piece shows any more are deleted (with their
+/// last view). Objects kept on purpose ("remove from the sheet only") are not touched.
+fn purge_objects(p: &mut Project, objs: &[u32]) {
     let shown: HashSet<u32> = p.items.iter().map(|i| i.obj).chain(p.lines.iter().map(|l| l.obj)).collect();
-    p.objects.retain(|o| shown.contains(&o.id));
+    p.objects.retain(|o| shown.contains(&o.id) || !objs.contains(&o.id));
 }
 
 /// Puts an in-line item into a line: the item is turned to the line's direction and moved onto
@@ -920,7 +941,7 @@ mod tests {
         let net = graph::Net::new(&d.p);
         assert_eq!(net.run_of[&l], net.run_of[&l2]);
         // Deleting the valve joins the halves again.
-        d.apply(Op::Delete { ids: vec![gv] }).unwrap();
+        d.apply(Op::Delete { ids: vec![gv], keep: false }).unwrap();
         assert_eq!(d.p.lines.len(), 1);
         let one = &d.p.lines[0];
         assert_eq!((one.a.clone(), one.b.clone()), (End::Port { item: t, port: 5 }, End::Port { item: v, port: 3 }));
@@ -971,5 +992,28 @@ mod tests {
         d.apply(Op::DeleteSheet { id: s2 }).unwrap();
         assert_eq!(d.p.item(a).unwrap().link, 0);
         assert!(d.apply(Op::DeleteSheet { id: d.p.sheets[0].id }).is_err());
+    }
+
+    #[test]
+    fn objects_outlive_their_symbols_on_request_and_show_on_two_sheets() {
+        let mut d = Doc::new(Project::new());
+        let v = item(&mut d, "vvessel", 50.0, 100.0);
+        let obj = d.p.item(v).unwrap().obj;
+        // A second view of the same object on a second sheet: one tag, no duplicate.
+        let s2 = d.apply(Op::AddSheet { sheet: Sheet::default() }).unwrap()[0];
+        let v2 = d.apply(Op::AddItem { item: Item { sheet: s2, sym: "vvessel".into(), x: 80.0, y: 100.0, ..Item::default() }, on: None, tag: String::new(), obj: Some(obj) }).unwrap()[0];
+        assert_eq!(d.p.item(v2).unwrap().obj, obj);
+        assert!(crate::tags::duplicates(&d.p).is_empty());
+        // Removing one view keeps the object; removing the last with keep leaves it, not drawn.
+        d.apply(Op::Delete { ids: vec![v], keep: false }).unwrap();
+        assert!(d.p.obj(obj).is_some());
+        d.apply(Op::Delete { ids: vec![v2], keep: true }).unwrap();
+        assert!(d.p.obj(obj).is_some() && d.p.items.is_empty());
+        // An object no view shows can be placed again, and deleted with every view.
+        let v3 = d.apply(Op::AddItem { item: Item { sheet: s2, sym: "vvessel".into(), ..Item::default() }, on: None, tag: String::new(), obj: Some(obj) }).unwrap()[0];
+        d.apply(Op::DeleteObjects { ids: vec![obj] }).unwrap();
+        assert!(d.p.obj(obj).is_none() && d.p.item(v3).is_none());
+        // The history recorded the object's life.
+        assert!(d.history.iter().any(|c| c.obj == obj && c.what == "add") && d.history.iter().any(|c| c.obj == obj && c.what == "delete"));
     }
 }

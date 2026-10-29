@@ -218,8 +218,8 @@ fn faults() -> Project {
         d.apply(op).unwrap_or_else(|e| panic!("{e}"));
     };
     ok(&mut d, Op::SetTag { id: f.pb, tag: "P-101A".into() });
-    ok(&mut d, Op::Delete { ids: vec![f.ckb] });
-    ok(&mut d, Op::Delete { ids: vec![f.psv, f.ri, f.ro, f.vent] });
+    ok(&mut d, Op::Delete { ids: vec![f.ckb], keep: false });
+    ok(&mut d, Op::Delete { ids: vec![f.psv, f.ri, f.ro, f.vent], keep: false });
     let out = d.p.line(f.out).unwrap().clone();
     let at = crate::graph::end_pt(&d.p, &out.b);
     ok(&mut d, Op::SetLine { line: Line { b: End::Free { x: at[0] - 12.0, y: at[1] }, ..out } });

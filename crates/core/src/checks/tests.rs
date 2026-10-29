@@ -85,7 +85,7 @@ fn r2_open_ends() {
     assert!(b.has(2));
     // A valve with one side joined is an open end too; a drain is not.
     let (mut b2, gv, l, _) = through("gate");
-    b2.d.apply(Op::Delete { ids: vec![l] }).unwrap();
+    b2.d.apply(Op::Delete { ids: vec![l], keep: false }).unwrap();
     assert!(b2.issues().iter().any(|i| i.rule == 2 && i.ids == vec![gv]));
     let _ = l1;
 }

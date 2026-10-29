@@ -192,7 +192,7 @@ export const Canvas = () => {
     if (e.button !== 0) return;
     const t = tool();
     const add = e.shiftKey || e.ctrlKey || e.metaKey;
-    if (t.k === "place") { placeAt(t.sym, p, t.tag); if (!e.shiftKey) setTool({ k: "select" }); return; }
+    if (t.k === "place") { placeAt(t.sym, p, t.tag, t.obj); if (!e.shiftKey || t.obj) setTool({ k: "select" }); return; }
     if (t.k === "note") { C.addNote(t.kind, [snap(p[0]), snap(p[1])]); setTool({ k: "select" }); return; }
     // Ports start lines (the line tool also starts them anywhere).
     const po = portAt(p);
@@ -352,13 +352,14 @@ export const Canvas = () => {
     e.preventDefault();
     const key = e.dataTransfer?.getData("text/x-datum-sym"); if (!key) return;
     const tag = e.dataTransfer?.getData("text/x-datum-tag") || undefined;
-    placeAt(key, toSheet(e.clientX, e.clientY), tag);
+    const obj = Number(e.dataTransfer?.getData("text/x-datum-obj")) || undefined;
+    placeAt(key, toSheet(e.clientX, e.clientY), tag, obj);
   };
-  const placeAt = (key: string, p: Pt, tag?: string) => {
+  const placeAt = (key: string, p: Pt, tag?: string, obj?: number) => {
     const s = symOf(key), sh = sheet(); if (!s || !sh) return;
     const on = s.inline ? lineAt(p, lines().filter(l => !["pneumatic", "electric", "data", "capillary"].includes(l.kind)), Math.max(2.5, 8 / zoom())) : null;
     const at: Pt = on ? on.at : [snap(p[0]), snap(p[1])];
-    C.place(key, at, on?.l.id ?? null, tag);
+    C.place(key, at, on?.l.id ?? null, tag, obj);
   };
 
   const off = (id: number) => { const d = drag(); return d?.k === "move" && d.ids.includes(id) ? [d.dx, d.dy] : [0, 0]; };

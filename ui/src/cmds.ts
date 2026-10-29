@@ -30,11 +30,11 @@ export const C = {
 
   // ---------- placing and editing ----------
   /** Place a symbol at a point; an in-line symbol on a line (`on`) goes into it. */
-  place: async (sym: string, at: Pt, on: number | null, tag?: string) => {
+  place: async (sym: string, at: Pt, on: number | null, tag?: string, obj?: number) => {
     const s = symOf(sym); if (!s || !sheet()) return;
     const item: Item = { id: 0, sheet: sid(), sym, x: at[0], y: at[1], rot: 0, flip: false, scale: 1, obj: 0, link: 0 };
-    let o = await act({ AddItem: { item, on, tag: tag ?? "", obj: null } });
-    if (o && (s.cat === "instrument" || s.cat === "primary")) {
+    let o = await act({ AddItem: { item, on, tag: tag ?? "", obj: obj ?? null } });
+    if (o && obj === undefined && (s.cat === "instrument" || s.cat === "primary")) {
       const placed = o.p.items.find(i => i.id === o!.created[0]);
       if (placed) o = (await act({ SetData: { ids: [placed.obj], key: "location", val: sym === "inst_dcs" ? "DCS" : sym === "inst_plc" ? "PLC" : sym === "inst_panel" ? "Control room panel" : sym === "inst_aux" ? "Local panel" : "Field" } }, true)) ?? o;
     }
@@ -46,9 +46,17 @@ export const C = {
     const o = await act({ AddNote: { note: { id: 0, sheet: sid(), kind, x: at[0], y: at[1], w: kind === "hold" ? 60 : 0, h: kind === "hold" ? 35 : 0, text, to: [at[0] + 20, at[1] + 15] } } });
     if (o?.created.length) { setSel([o.created[0]]); setTimeout(() => document.querySelector<HTMLTextAreaElement>(".insp textarea")?.focus(), 40); }
   },
+  /** Delete the selection. When that would leave objects drawn nowhere, ask: delete the objects
+   *  too, or only remove them from this sheet (they stay in the Plant panel). */
   del: () => {
-    if (!sel().length) return toast("Select a symbol, a line or a note first.");
-    act({ Delete: { ids: sel() } }).then(o => o && setSel([]));
+    const ids = sel(); const p = proj();
+    if (!ids.length || !p) return toast("Select a symbol, a line or a note first.");
+    const set = new Set(ids);
+    const objs = new Set([...p.items.filter(i => set.has(i.id)).map(i => i.obj), ...p.lines.filter(l => set.has(l.id) && l.obj).map(l => l.obj)]);
+    const lastView = [...objs].filter(o => !p.items.some(i => i.obj === o && !set.has(i.id)) && !p.lines.some(l => l.obj === o && !set.has(l.id)));
+    const run = (keep: boolean) => act({ Delete: { ids, keep } }).then(o => o && setSel([]));
+    if (!lastView.length) return run(false);
+    D.deleteChoice(lastView.length, () => run(false), () => run(true));
   },
   rotate: () => { const ids = sel().filter(id => itemOf(id)); if (!ids.length) return toast("Select a symbol to turn."); act({ Rotate: { ids } }); },
   flip: () => { const ids = sel().filter(id => itemOf(id)); if (!ids.length) return toast("Select a symbol to mirror."); act({ Flip: { ids } }); },

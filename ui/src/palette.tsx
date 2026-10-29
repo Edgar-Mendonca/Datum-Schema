@@ -6,6 +6,7 @@ import { lib, setTool, tool } from "./store";
 import { SymInfo, Cat } from "./api";
 import { PrimEl } from "./canvas";
 import { Help } from "./help";
+import { PlantPanel } from "./plant";
 
 /** Common instruments: letters and the bubble they usually sit in (ISA-5.1). */
 export const PRESETS: [string, string, string][] = [
@@ -42,9 +43,12 @@ export const Palette = () => {
   const drag = (e: DragEvent, sym: string, tag?: string) => { e.dataTransfer?.setData("text/x-datum-sym", sym); if (tag) e.dataTransfer?.setData("text/x-datum-tag", tag); e.dataTransfer!.effectAllowed = "copy"; };
   const on = (sym: string, tag?: string) => { const t = tool(); return t.k === "place" && t.sym === sym && (t.tag ?? "") === (tag ?? ""); };
   const sym = (k: string) => lib()?.symbols.find(s => s.key === k);
+  const [side, setSide] = createSignal<"symbols" | "plant">("symbols");
   return (
     <aside class="palette">
-      <header><b>Symbols</b><Help k="palette" /></header>
+      <header><button classList={{ on: side() === "symbols" }} onClick={() => setSide("symbols")}>Symbols</button><button classList={{ on: side() === "plant" }} onClick={() => setSide("plant")}>Plant</button><Help k={side() === "plant" ? "plant" : "palette"} /></header>
+      <Show when={side() === "plant"}><PlantPanel /></Show>
+      <Show when={side() === "symbols"}>
       <input class="psearch" placeholder="Find a symbol (ball valve, pump…)" value={q()} onInput={e => setQ(e.currentTarget.value)} />
       <div class="pbody">
         <For each={groups()}>{g => <section>
@@ -64,6 +68,7 @@ export const Palette = () => {
         </section></Show>
         <Show when={!groups().length && !presets().length}><p class="muted pnone">No symbol is called that.</p></Show>
       </div>
+      </Show>
     </aside>
   );
 };

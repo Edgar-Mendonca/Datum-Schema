@@ -85,7 +85,7 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
                 ("flow", "Flow", "flow", true), ("v", "Velocity", "velocity", false), ("dp100", "ΔP", "dp100", false), ("dp", "ΔP total", "dp", false), ("status", "Hydraulics", "", false),
                 ("design_p", "Design P", "press", true), ("design_t", "Design T", "temp", true), ("oper_p", "Oper P", "press", true), ("oper_t", "Oper T", "temp", true),
                 ("density", "Density", "density", true), ("viscosity", "Viscosity", "visc", true), ("length", "Length", "length", true),
-                ("ins_type", "Insulation", "", true), ("ins_thk", "Ins. thk", "thk", true), ("tracing", "Tracing", "", true), ("test_p", "Test P", "press", true), ("sheet", "Sheet", "", false),
+                ("ins_type", "Insulation", "", true), ("ins_thk", "Ins. thk", "thk", true), ("tracing", "Tracing", "", true), ("test_p", "Test P", "press", true), ("area", "Area", "", false), ("sheet", "Sheet", "", false),
             ];
             let hyd: Vec<Option<Hyd>> = hydraulics::all(p, &net);
             let mut rows: Vec<Row> = net
@@ -109,6 +109,7 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
                             "dp" => h.filter(|h| h.length > 0.0).map(|h| crate::fmt_sig(units::to_display(h.dp, q, us), 3)).unwrap_or_default(),
                             "status" => h.map(|h| ["✓", "!", "✗"][h.status.min(2) as usize].to_string()).unwrap_or_default(),
                             "sheet" => sheets.join(", "),
+                            "area" => p.obj(net.run_obj[r]).map(|o| p.node_path(o.node)).unwrap_or_default(),
                             _ => val(data, k, q, us),
                         })
                         .collect();
@@ -119,34 +120,34 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
             (cols(&specs, us), rows)
         }
         "equipment" => {
-            let specs: Vec<Spec> = vec![("tag", "Tag", "", true), ("kind", "Type", "", false), ("service", "Service", "", true), ("design_p", "Design P", "press", true), ("design_t", "Design T", "temp", true), ("oper_p", "Oper P", "press", true), ("oper_t", "Oper T", "temp", true), ("material", "Material", "", true), ("capacity", "Size / capacity", "", false), ("power", "Power", "power", true), ("sheet", "Sheet", "", false)];
+            let specs: Vec<Spec> = vec![("tag", "Tag", "", true), ("kind", "Type", "", false), ("service", "Service", "", true), ("design_p", "Design P", "press", true), ("design_t", "Design T", "temp", true), ("oper_p", "Oper P", "press", true), ("oper_t", "Oper T", "temp", true), ("material", "Material", "", true), ("capacity", "Size / capacity", "", false), ("power", "Power", "power", true), ("area", "Area", "", false), ("sheet", "Sheet", "", false)];
             let rows = items(&|c| c.equipment())
                 .into_iter()
                 .map(|(o, it)| {
                     let cap = [("flow", "flow"), ("head", "head"), ("duty", "power"), ("volume", "volume"), ("area", "area")].iter().filter_map(|(k, q)| o.data.get(*k).and_then(|v| v.num()).map(|x| units::show(x, q, us))).chain(o.data.get("size").map(|v| v.text())).filter(|s| !s.is_empty()).collect::<Vec<_>>().join(", ");
-                    let cells = specs.iter().map(|&(k, _, q, _)| match k { "tag" => o.tag.clone(), "kind" => sym_name(it), "capacity" => cap.clone(), "sheet" => sheet_no(p, it.sheet), _ => val(&o.data, k, q, us) }).collect();
+                    let cells = specs.iter().map(|&(k, _, q, _)| match k { "tag" => o.tag.clone(), "kind" => sym_name(it), "capacity" => cap.clone(), "sheet" => sheet_no(p, it.sheet), "area" => p.node_path(o.node), _ => val(&o.data, k, q, us) }).collect();
                     Row { ids: vec![it.id], sheet: it.sheet, cells, status: None }
                 })
                 .collect();
             (cols(&specs, us), rows)
         }
         "instruments" => {
-            let specs: Vec<Spec> = vec![("tag", "Tag", "", true), ("function", "Function", "", true), ("loop", "Loop", "", false), ("kind", "Type", "", false), ("location", "Location", "", true), ("range", "Range", "", true), ("setpoints", "Set points", "", true), ("signal", "Signal", "", true), ("on", "On", "", false), ("sheet", "Sheet", "", false)];
+            let specs: Vec<Spec> = vec![("tag", "Tag", "", true), ("function", "Function", "", true), ("loop", "Loop", "", false), ("kind", "Type", "", false), ("location", "Location", "", true), ("range", "Range", "", true), ("setpoints", "Set points", "", true), ("signal", "Signal", "", true), ("on", "On", "", false), ("area", "Area", "", false), ("sheet", "Sheet", "", false)];
             let rows = items(&|c| c.instrument())
                 .into_iter()
                 .map(|(o, it)| {
-                    let cells = specs.iter().map(|&(k, _, q, _)| match k { "tag" => o.tag.clone(), "loop" => crate::tags::loop_of(&o.tag).1, "kind" => sym_name(it), "on" => attached(&net, it), "sheet" => sheet_no(p, it.sheet), _ => val(&o.data, k, q, us) }).collect();
+                    let cells = specs.iter().map(|&(k, _, q, _)| match k { "tag" => o.tag.clone(), "loop" => crate::tags::loop_of(&o.tag).1, "kind" => sym_name(it), "on" => attached(&net, it), "sheet" => sheet_no(p, it.sheet), "area" => p.node_path(o.node), _ => val(&o.data, k, q, us) }).collect();
                     Row { ids: vec![it.id], sheet: it.sheet, cells, status: None }
                 })
                 .collect();
             (cols(&specs, us), rows)
         }
         "valves" => {
-            let specs: Vec<Spec> = vec![("tag", "Tag", "", true), ("kind", "Type", "", false), ("size", "Size", "", true), ("class", "Class", "", true), ("operator", "Operator", "", true), ("position", "Position", "", true), ("fail", "Fail", "", true), ("on", "Line", "", false), ("service", "Service", "", true), ("sheet", "Sheet", "", false)];
+            let specs: Vec<Spec> = vec![("tag", "Tag", "", true), ("kind", "Type", "", false), ("size", "Size", "", true), ("class", "Class", "", true), ("operator", "Operator", "", true), ("position", "Position", "", true), ("fail", "Fail", "", true), ("on", "Line", "", false), ("service", "Service", "", true), ("area", "Area", "", false), ("sheet", "Sheet", "", false)];
             let rows = items(&|c| c.valve())
                 .into_iter()
                 .map(|(o, it)| {
-                    let cells = specs.iter().map(|&(k, _, q, _)| match k { "tag" => o.tag.clone(), "kind" => sym_name(it), "on" => attached(&net, it), "sheet" => sheet_no(p, it.sheet), _ => val(&o.data, k, q, us) }).collect();
+                    let cells = specs.iter().map(|&(k, _, q, _)| match k { "tag" => o.tag.clone(), "kind" => sym_name(it), "on" => attached(&net, it), "sheet" => sheet_no(p, it.sheet), "area" => p.node_path(o.node), _ => val(&o.data, k, q, us) }).collect();
                     Row { ids: vec![it.id], sheet: it.sheet, cells, status: None }
                 })
                 .collect();

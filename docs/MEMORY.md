@@ -6,7 +6,7 @@
 | | |
 | --- | --- |
 | **Product** | Datum Schema: intelligent P&IDs and process flow diagrams: draw, check and list (symbols and lines that carry their data and connections; live line list, equipment list, instrument index and valve list; drawing checks; line hydraulics; print, SVG and DXF) |
-| **Current version** | 0.1.6 (2026-10-29) |
+| **Current version** | 0.1.7 (2026-10-29) |
 | **Repo** | `Edgar-Mendonca/Datum-Schema` · branch `claude/vigilant-hamilton-ku7r0w` (the first branch pushed, so the default branch) |
 | **Stack** | Rust engine (`crates/core`: model, symbols, graph, tags, checks, hydraulics, lists, frame, routing, DXF), Tauri 2, SolidJS + strict TypeScript; no Python |
 | **Identifier** | `com.edgarmendonca.datumschema` · files `.dschema` (SQLite, `format` 2; JSON `format` 1 from 0.1.0–0.1.4 converts) · installer `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` · publisher "Datum" |
@@ -51,7 +51,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | `ui/src/main.tsx` | Window layout (palette, sheet with its tab bar, inspector, bottom panel), status bar, keys, start-up and recovery |
 | `ui/src/store.ts` | Window state: the project, the open sheet, the engine's derived data, the library, the selection, the drawing tool, layers, panel, menus, dialogs |
 | `ui/src/canvas.tsx` | The drawing canvas (from Sim's): pan, zoom, snap, marquee, move, draw lines from ports, drag segments and ends, drop symbols (in-line ones into lines), the symbol sprite, primitives |
-| `ui/src/palette.tsx` | The symbol palette: categories, search, common instruments |
+| `ui/src/palette.tsx` | The left panel: the symbol palette (categories, search, common instruments) and the Plant tab |
+| `ui/src/plant.tsx` | The Plant panel: hierarchy tree with every object, drawn or not; drag to a sheet to draw, onto an area to move; add, rename, delete levels; delete objects |
 | `ui/src/inspector.tsx` | The Inspector: item, line (with hydraulics), note, or the sheet and title block |
 | `ui/src/panels.tsx` | The bottom panel: Checks and the four lists (sort, filter, group, click to find, edit, export) |
 | `ui/src/ribbon.tsx`, `ui/src/cmds.ts` | Title bar, quick access, Tell Me, the ribbon; every command |
@@ -83,6 +84,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 
 | Version | Decision | Why |
 | --- | --- | --- |
+| 0.1.7 | `Delete { ids, keep }`: deleting views only purges the objects of those views (and only when no other view shows them and `keep` is off); `DeleteObjects` removes objects with all their views. The window asks only when a deletion would leave an object drawn nowhere | Objects kept on purpose (not drawn) must survive later edits; a question on every delete would be noise |
 | 0.1.6 | Attribute keys stay the short internal keys (design_p, size…) with the DEXPI name alongside (`dexpi`); class names are DEXPI-style and will be checked against the DEXPI specification when export is built | No migration of existing data; DEXPI export maps names in one place |
 | 0.1.6 | The class library replaces `fields.rs`; the window gets each used class's attributes (with the project's additions) in `derived().attrs` | One owner of "what data a thing has"; project attributes show at once |
 | 0.1.5 | The release workflow's Windows tests found that saving failed on Windows (flushing the new database through a read-only handle); fixed before 0.1.5 was published | Windows refuses FlushFileBuffers on a read-only handle; Linux allows it |
@@ -127,8 +129,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.1.4 | Final check: every example opens with 0 errors, prints and exports (engine test and UI checks); README with the demo, site.json (the exhibition build). Released after the discussion | ✅ |
 | 0.1.5 | Objects and views, line-number objects, hierarchy node, SQLite file with history (PLAN-0.2 §7) | ✅ |
 | 0.1.6 | Class library JSON (DEXPI names), Options › Classes with project attributes, required attributes in check 6 | ✅ |
-| 0.1.7 | Plant panel, delete from sheet or object | 🔜 |
-| 0.1.8 | Instrument datasheets | ⬜ |
+| 0.1.7 | Plant panel (hierarchy, every object, drag to draw or move), delete the object or only the drawing, objects on several sheets, Area column in the lists | ✅ |
+| 0.1.8 | Instrument datasheets | 🔜 |
 | later | DEXPI import and export; send a line to Datum Pipe; send a loop to Datum Sim; DXF import as a background | ⬜ |
 | 0.3 | Process flow diagrams with stream tables; heat and mass balance checks; revision clouds and comparison | ⬜ |
 | 0.4 | Loop diagrams and instrument datasheets; cause-and-effect matrix; valve datasheets | ⬜ |

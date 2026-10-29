@@ -190,10 +190,14 @@ const shots = process.env.SHOTS;
   await p.keyboard.press("r"); await p.waitForTimeout(300);
   { const q = await project(); check("R turns the selection", q.items.find(i => tagOf(q, i) === "P-101C")?.rot === 1); }
   await p.keyboard.press("Delete"); await p.waitForTimeout(300);
+  check("deleting the last symbol of an object asks", !!(await p.$('.dlg header:has-text("Delete")')));
+  await p.keyboard.press("Enter"); await p.waitForTimeout(300);
+  check("…and Enter deletes the object", !(await project()).objects.some(o => o.tag === "P-101C"));
   const lines0 = (await project()).lines.length;
   const q0 = await project(); const hv = q0.items.find(i => tagOf(q0, i) === "HV-101");
   const [hx, hy] = await scr(hv.x, hv.y); await p.mouse.click(hx, hy); await p.waitForTimeout(200);
-  await p.keyboard.press("Delete"); await p.waitForTimeout(400);
+  await p.keyboard.press("Delete"); await p.waitForTimeout(300);
+  await p.keyboard.press("Enter"); await p.waitForTimeout(400);
   pr2 = await project();
   check("deleting an in-line valve joins its two lines again", !pr2.objects.some(o => o.tag === "HV-101") && pr2.lines.length === lines0 - 1);
 
@@ -236,6 +240,26 @@ const shots = process.env.SHOTS;
   const pq = await project(); const pa = pq.items.find(i => tagOf(pq, i) === "P-101A");
   const [sx, sy] = await scr(pa.x, pa.y + 2); await p.mouse.click(sx, sy); await p.waitForTimeout(300);
   check("the Inspector shows the class's new attribute", (await p.textContent(".insp")).includes("Seal plan *"));
+
+  // 23. The Plant panel: the hierarchy with every object; remove a pump from the sheet only, it
+  // stays (not drawn); draw it again from the panel.
+  await openEx("Pump transfer");
+  await p.click(".palette header button:text-is('Plant')"); await p.waitForTimeout(300);
+  const tree = await p.$$eval(".plant .ptag", els => els.map(e => e.textContent));
+  check("the Plant panel lists the objects", tree.includes("P-101A") && tree.includes("V-101") && tree.some(t => t.includes("P-1003")), JSON.stringify(tree.slice(0, 10)));
+  check("the hierarchy has its levels", (await p.$$eval(".plant .pnname", els => els.map(e => e.textContent))).join("|") === "Plant 1|Unit 100|Area 1");
+  let q1 = await project(); const pb = q1.items.find(i => tagOf(q1, i) === "P-101B");
+  const [bx, by] = await scr(pb.x, pb.y + 2); await p.mouse.click(bx, by); await p.waitForTimeout(200);
+  await p.keyboard.press("Delete"); await p.waitForTimeout(300);
+  await p.click(".dlg button:has-text('Remove from this sheet only')"); await p.waitForTimeout(400);
+  q1 = await project();
+  check("removed from the sheet, the object stays", q1.objects.some(o => o.tag === "P-101B") && !q1.items.some(i => tagOf(q1, i) === "P-101B"));
+  check("the Plant panel shows it not drawn", (await p.textContent(".plant .porow.undrawn")).includes("P-101B"));
+  await p.click(".plant .porow.undrawn", { button: "right" }); await p.click(".menu button:has-text('Draw it on this sheet')");
+  await clickAt(160, 190);
+  q1 = await project();
+  check("an object can be drawn again from the Plant panel", q1.items.some(i => tagOf(q1, i) === "P-101B") && q1.objects.filter(o => o.tag === "P-101B").length === 1);
+  await p.click(".palette header button:text-is('Symbols')");
 
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();

@@ -24,6 +24,14 @@ export const confirmClose = (quit: () => void) => openDialog(() => (
   </Dialog>
 ));
 
+/** Deleting the last symbol of objects: delete them, or keep them (not drawn, in the Plant panel). */
+export const deleteChoice = (n: number, everywhere: () => void, keep: () => void) => openDialog(() => (
+  <Dialog title="Delete" okText={n === 1 ? "Delete the object" : `Delete the ${n} objects`} ok={() => { everywhere(); }}
+    extra={<button class="btn" onClick={() => { closeDialog(); keep(); }}>Remove from this sheet only</button>}>
+    <p>{n === 1 ? "This is the only place the object is drawn." : `These are the only places ${n} objects are drawn.`} Delete {n === 1 ? "it" : "them"} with {n === 1 ? "its" : "their"} data, or only remove the drawing and keep {n === 1 ? "it" : "them"} in the Plant panel?</p>
+  </Dialog>
+));
+
 export const confirm = (text: string, okText: string, run: () => void) => openDialog(() => (
   <Dialog title="Are you sure?" okText={okText} ok={() => { run(); }}><p>{text}</p></Dialog>
 ));

@@ -373,6 +373,21 @@ impl Project {
         ar
     }
 
+    /// "Plant 1 › Unit 100 › Area 1" for an area.
+    pub fn node_path(&self, id: u32) -> String {
+        let mut v = vec![];
+        let mut at = id;
+        while let Some(n) = self.nodes.iter().find(|n| n.id == at) {
+            if v.len() > 10 {
+                break;
+            }
+            v.push(n.name.clone());
+            at = n.parent;
+        }
+        v.reverse();
+        v.join(" › ")
+    }
+
     /// The area new objects go in: the first area.
     pub fn default_area(&self) -> u32 {
         self.nodes.iter().find(|n| n.level == "area").map_or(0, |n| n.id)

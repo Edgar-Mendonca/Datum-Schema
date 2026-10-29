@@ -959,3 +959,20 @@ tr.behind td { background: var(--err-bg); }
 .addattr { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
 .addattr input { flex: 1; min-width: 160px; }
 .vmini.hist td { font-size: 10.5px; }
+.palette header button { font: 500 10.5px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding: 2px 6px; border-bottom: 2px solid transparent; }
+.palette header button.on { color: var(--blue); border-bottom-color: var(--blue); }
+.plant { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.pltools { display: flex; gap: 4px; align-items: center; padding-right: 8px; }
+.pltools .psearch { flex: 1; min-width: 0; }
+.pnrow { display: flex; align-items: center; gap: 4px; padding: 3px 4px; font-size: 12px; }
+.pnrow.plant .pnname { font-weight: 600; }
+.pnrow.unit .pnname { font-weight: 500; }
+.pnrow.area .pnname { color: var(--text2); }
+.pnrow small, .porow small { margin-left: auto; color: var(--muted); font: 10px var(--mono); }
+.pnrow:hover, .porow:hover { background: var(--pale); }
+.pnrow .tw { width: 14px; color: var(--muted); }
+.pnedit { flex: 1; min-width: 0; padding: 0 4px; }
+.porow { display: flex; align-items: baseline; gap: 6px; padding: 2px 4px; font-size: 12px; cursor: pointer; }
+.porow .ptag { font-family: var(--mono); font-size: 11.5px; }
+.porow.undrawn .ptag { color: var(--muted); font-style: italic; }
+.plhint { padding: 6px 10px; }

@@ -122,7 +122,7 @@ fn random_edits_never_panic_and_failed_ones_change_nothing() {
             0 => Op::Move { ids: vec![id], dx: [1.0, -1e9, f64::NAN, 5.0][r.below(4)], dy: 2.5 },
             1 => Op::Rotate { ids: vec![id] },
             2 => Op::Flip { ids: vec![id] },
-            3 => Op::Delete { ids: vec![id] },
+            3 => if r.below(3) == 0 { Op::DeleteObjects { ids: vec![id] } } else { Op::Delete { ids: vec![id], keep: r.below(2) == 0 } },
             4 => Op::SetTag { id, tag: HOSTILE[r.below(8)].into() },
             5 => Op::Split { line: id, item: *r.pick(&ids).unwrap() },
             6 => Op::SetPts { id, pts: vec![[r.f(-10.0, 400.0), r.f(-10.0, 300.0)]] },
@@ -301,14 +301,14 @@ mod review {
         let a = b.line((v, 5), (g, 0));
         let sheet = b.sheet();
         b.d.apply(Op::AddLine { line: Line { sheet, a: End::Port { item: g, port: 1 }, b: End::Line { line: a, x: 100.0, y: 108.0 }, ..Line::default() } }).unwrap();
-        assert!(b.d.apply(Op::Delete { ids: vec![g] }).is_ok());
+        assert!(b.d.apply(Op::Delete { ids: vec![g], keep: false }).is_ok());
         // A plain merge keeps data only the second half had.
         let mut c = B::new();
         let (v1, v2) = (c.item("vvessel", 50.0, 100.0), c.item("vvessel", 250.0, 100.0));
         let g = c.item("gate", 150.0, 108.0);
         let (l1, l2) = (c.line((v1, 5), (g, 0)), c.line((g, 1), (v2, 3)));
         c.set(&[l2], "flow", Val::Num(0.01));
-        c.d.apply(Op::Delete { ids: vec![g] }).unwrap();
+        c.d.apply(Op::Delete { ids: vec![g], keep: false }).unwrap();
         assert_eq!(c.d.p.data_of(c.d.p.line(l1).unwrap().obj).get("flow"), Some(&Val::Num(0.01)));
     }
 
