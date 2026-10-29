@@ -5,7 +5,7 @@
 // draws it and sends edits.
 import { For, Show, JSX, createSignal, createMemo, createEffect, onMount, onCleanup, batch, on } from "solid-js";
 import { Pt, Prim, ItemView, LineView, End, Kind, Item, Line, Note } from "./api";
-import { derived, sel, setSel, act, proj, sheet, opts, tool, setTool, symOf, lib, openMenu, MenuItem, hiNumber, hidden, setSheetId, lineOf } from "./store";
+import { derived, sel, setSel, act, proj, sheet, opts, tool, setTool, symOf, lib, openMenu, MenuItem, hiNumber, hidden, setSheetId, lineOf, onFit } from "./store";
 import { C } from "./cmds";
 import { helpCard } from "./help";
 
@@ -31,13 +31,25 @@ export const viewCenter = (): Pt => {
   const r = svgEl.getBoundingClientRect();
   return toSheet(r.left + r.width / 2, r.top + r.height / 2);
 };
-/** Fit the whole sheet in the window. */
-export const fit = () => {
-  const v = derived()?.view; if (!v || !svgEl) return;
+const fitBox = (x0: number, y0: number, x1: number, y1: number) => {
+  if (!svgEl) return;
   const r = svgEl.getBoundingClientRect();
   if (r.width < 10) return;
-  const z = Math.min(r.width / (v.w + 20), r.height / (v.h + 20));
-  batch(() => { setZoom(z); setPan([(r.width - v.w * z) / 2, (r.height - v.h * z) / 2]); });
+  const z = Math.min(40, r.width / (x1 - x0), r.height / (y1 - y0));
+  batch(() => { setZoom(z); setPan([(r.width - (x1 + x0) * z) / 2, (r.height - (y1 + y0) * z) / 2]); });
+};
+/** Fit the whole sheet in the window. */
+export const fitSheet = () => { const v = derived()?.view; if (v) fitBox(-10, -10, v.w + 10, v.h + 10); };
+/** Fit the drawing (everything on the sheet) in the window; a blank sheet fits whole. */
+export const fit = () => {
+  const v = derived()?.view; if (!v) return;
+  const xs: number[] = [], ys: number[] = [];
+  for (const i of v.items) { xs.push(i.bbox[0], i.bbox[2]); ys.push(i.bbox[1], i.bbox[3] + 6); }
+  for (const l of v.lines) for (const q of l.path) { xs.push(q[0]); ys.push(q[1]); }
+  for (const nt of v.notes) { xs.push(nt.bbox[0], nt.bbox[2]); ys.push(nt.bbox[1], nt.bbox[3]); }
+  if (!xs.length || v.legend) return fitSheet();
+  const pad = 12;
+  fitBox(Math.min(...xs) - pad, Math.min(...ys) - pad, Math.max(...xs) + pad, Math.max(...ys) + pad);
 };
 /** Centre the window on a point of the sheet (zooming in if it is far out). */
 export const centreOn = (p: Pt, z?: number) => {
@@ -301,8 +313,9 @@ export const Canvas = () => {
   const keyup = (e: KeyboardEvent) => { if (e.key === " ") setSpace(false); };
 
   // A newly opened sheet is fitted to the window once it arrives.
-  let fitted = -1;
-  createEffect(on(() => v()?.id, id => { if (id !== undefined && id !== fitted) { fitted = id; requestAnimationFrame(fit); } }));
+  onFit(fit);
+  // The first drawing is fitted when it arrives.
+  createEffect(on(() => !!v(), has => { if (has) requestAnimationFrame(fit); }));
   onMount(() => { addEventListener("mousemove", move); addEventListener("mouseup", up); addEventListener("keyup", keyup); });
   onCleanup(() => { removeEventListener("mousemove", move); removeEventListener("mouseup", up); removeEventListener("keyup", keyup); });
 
@@ -400,7 +413,7 @@ export const Canvas = () => {
         <div class="empty"><b>A blank sheet</b><span>Drag a symbol from the palette on the left (or double-click the sheet and type its name). Then drag from a port (the small circles on a symbol) to another to draw a line. Every symbol and line carries its data; the lists and checks below follow the drawing.</span>
           <span><button class="btn sm" onClick={() => C.examples()}>Open an example</button></span></div>
       </Show>
-      <div class="zoomctl"><button title="Zoom out" onClick={() => zoomBy(1 / 1.25)}>−</button><span>{Math.round(zoom() / 3.78 * 100)}%</span><button title="Zoom in" onClick={() => zoomBy(1.25)}>+</button><button title="Fit the sheet in the window (F)" onClick={fit}>Fit</button></div>
+      <div class="zoomctl"><button title="Zoom out" onClick={() => zoomBy(1 / 1.25)}>−</button><span>{Math.round(zoom() / 3.78 * 100)}%</span><button title="Zoom in" onClick={() => zoomBy(1.25)}>+</button><button title="Fit the drawing in the window (F)" onClick={fit}>Fit</button><button title="The whole sheet (Shift+F)" onClick={fitSheet}>Sheet</button></div>
       <Show when={mouse()}>{m => <div class="coords">{v() && sheet() ? zoneOf(m()) : ""} · {Math.round(m()[0])}, {Math.round(m()[1])} mm</div>}</Show>
       <Show when={tool().k !== "select"}><div class="toolbadge" onClick={() => setTool({ k: "select" })}>{toolText()} · Esc to stop</div></Show>
     </div>

@@ -363,6 +363,16 @@ pub fn sheet(p: &Project, s: &Sheet, net: &Net, hyd: &[Option<Hyd>]) -> SheetVie
     sorted.sort_by_key(|l| l.id);
     let paths: Vec<(u32, Kind, Vec<[f64; 2]>)> = sorted.iter().map(|l| (l.id, l.kind, routes.get(&l.id).cloned().unwrap_or_default())).collect();
     let segs = hops(&paths);
+    // One label per line number on a sheet: on the piece with the longest straight segment.
+    let mut best: HashMap<usize, (u32, f64)> = HashMap::new();
+    for (l, (_, _, path)) in sorted.iter().zip(&paths) {
+        if let Some(r) = net.run_of.get(&l.id) {
+            let len = path.windows(2).map(|w| (w[1][0] - w[0][0]).abs() + (w[1][1] - w[0][1]).abs() * 0.67).fold(0.0, f64::max);
+            if best.get(r).is_none_or(|b| len > b.1) {
+                best.insert(*r, (l.id, len));
+            }
+        }
+    }
     let lines = sorted
         .iter()
         .zip(&paths)
@@ -371,7 +381,8 @@ pub fn sheet(p: &Project, s: &Sheet, net: &Net, hyd: &[Option<Hyd>]) -> SheetVie
             let number = net.numbers.get(&l.id).cloned().unwrap_or_default();
             let run = net.run_of.get(&l.id).copied();
             let badge = run.and_then(|r| hyd.get(r)).and_then(|x| x.as_ref()).map(|x| x.status);
-            if let Some((at, vert)) = label_at(path) {
+            let labelled = run.is_some_and(|r| best.get(&r).is_some_and(|b| b.0 == l.id));
+            if let Some((at, vert)) = label_at(path).filter(|_| labelled) {
                 if !number.is_empty() {
                     let (q, anchor) = if vert { ([at[0] + 1.5, at[1]], 0) } else { ([at[0], at[1] - 1.4], 1) };
                     marks.push(text(q, 2.2, number.clone(), anchor, false));

@@ -30,9 +30,15 @@ pub fn end_dir(p: &Project, e: &End) -> Option<[f64; 2]> {
     }
 }
 
+/// A process-type line with an end on an instrument bubble (or a thermowell) is the instrument's connection to the
+/// process (an impulse line), not a pipeline: it has no line number and is not in the line list.
+pub fn instrument_connection(p: &Project, l: &Line) -> bool {
+    [&l.a, &l.b].iter().any(|e| e.item().and_then(|(i, _)| p.item(i)).and_then(|i| symbols::get(&i.sym)).is_some_and(|s| s.cat == Cat::Instrument || (s.cat == Cat::Primary && !s.inline)))
+}
+
 /// The formatted line number of a line ("" for signal lines and lines with nothing filled in).
 pub fn number(p: &Project, l: &Line) -> String {
-    if !l.kind.process() {
+    if !l.kind.process() || instrument_connection(p, l) {
         return String::new();
     }
     let get = |k: &str| l.data.get(k).map(|v| v.text().trim().to_string()).unwrap_or_default();
@@ -104,7 +110,7 @@ impl<'a> Net<'a> {
         }
         let numbers: HashMap<u32, String> = p.lines.iter().map(|l| (l.id, number(p, l))).collect();
         // Runs: process lines joined through in-line items and off-page partners when their numbers agree.
-        let proc: Vec<&Line> = p.lines.iter().filter(|l| l.kind.process()).collect();
+        let proc: Vec<&Line> = p.lines.iter().filter(|l| l.kind.process() && !instrument_connection(p, l)).collect();
         let idx: HashMap<u32, usize> = proc.iter().enumerate().map(|(i, l)| (l.id, i)).collect();
         let mut d = Dsu((0..proc.len()).collect());
         let process_lines = |item: u32, port: u8| -> Vec<u32> { at_port.get(&(item, port)).map(|v| v.iter().map(|x| x.0).filter(|l| idx.contains_key(l)).collect()).unwrap_or_default() };

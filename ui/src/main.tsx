@@ -15,7 +15,7 @@ import { out, setOut, backstage, setBackstage, setOpts, opts, dialogs, toast, lo
 import { C, setFit, setCentre, setCopy, setViewCentre } from "./cmds";
 import { TitleBar, Ribbon, palette } from "./ribbon";
 import { Backstage, update, checkUpdate } from "./backstage";
-import { Canvas, fit, goTo, copySelection, viewCenter } from "./canvas";
+import { Canvas, fit, fitSheet, goTo, copySelection, viewCenter } from "./canvas";
 import { Palette } from "./palette";
 import { Inspector } from "./inspector";
 import { Bottom } from "./panels";
@@ -81,7 +81,7 @@ const App = () => {
     else if (ctrl && k === "z" && !typing) { e.preventDefault(); C.undo(); }
     else if (ctrl && k === "y" && !typing) { e.preventDefault(); C.redo(); }
     else if (e.key === "F1") { e.preventDefault(); D.shortcuts(); }
-    else if (!typing && !ctrl && !backstage() && k === "f") C.fit();
+    else if (!typing && !ctrl && !backstage() && k === "f") (e.shiftKey ? fitSheet() : C.fit());
     else if (e.key === "Escape" && backstage() && out()) setBackstage(null);
     else if (e.key === "Escape" && tool().k !== "select") setTool({ k: "select" });
   };

@@ -15,13 +15,17 @@ export const itemOf = (id: number): Item | undefined => proj()?.items.find(i => 
 export const lineOf = (id: number): Line | undefined => proj()?.lines.find(l => l.id === id);
 
 let seq = 0;
+/** After a project is opened (or a sheet changes), the next drawing from the engine is fitted. */
+let wantFit = false;
+let fitHook = () => {};
+export const onFit = (f: () => void) => { fitHook = f; };
 /** Asks the engine for the open sheet's drawing, the checks and the hydraulics. */
 export const refresh = async () => {
   const n = ++seq, s = sheet()?.id ?? 0;
-  try { const d = await invoke<Derived>("derived", { sheet: s }); if (n === seq) setDerived(d); }
+  try { const d = await invoke<Derived>("derived", { sheet: s }); if (n === seq) { setDerived(d); if (wantFit) { wantFit = false; requestAnimationFrame(() => fitHook()); } } }
   catch (e) { toast(String(e)); }
 };
-export const setSheetId = (id: number) => { batch(() => { setSheetIdRaw(id); setSel([]); }); refresh(); };
+export const setSheetId = (id: number) => { wantFit = id !== sheetId(); batch(() => { setSheetIdRaw(id); setSel([]); }); refresh(); };
 
 export const setOut = (o: Out | null | undefined) => {
   if (!o) return;
@@ -69,11 +73,14 @@ export const act = async (op: object | string, quiet = false): Promise<Out | nul
 export const call = async <T = any>(cmd: string, args?: object): Promise<T | undefined> => {
   try { return await invoke<T>(cmd, args); } catch (e) { toast(String(e)); return undefined; }
 };
+/** Counts projects loaded, so the canvas fits each newly opened drawing. */
+export const [loads, setLoads] = createSignal(0);
 let loaded = () => {};
 export const onLoadHook = (f: () => void) => { loaded = f; };
 export const loadOut = async (cmd: string, args?: object) => {
   const o = await call<Out | null>(cmd, args);
-  if (o) batch(() => { setSel([]); setSheetIdRaw(o.p.sheets[0]?.id ?? 0); setOut(o); setBackstage(null); setTool({ k: "select" }); loaded(); });
+  if (o) wantFit = true;
+  if (o) batch(() => { setSel([]); setSheetIdRaw(o.p.sheets[0]?.id ?? 0); setOut(o); setBackstage(null); setTool({ k: "select" }); setLoads(n => n + 1); loaded(); });
   return o;
 };
 

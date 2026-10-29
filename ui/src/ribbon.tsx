@@ -151,7 +151,7 @@ export const Ribbon = () => {
         <G l="Output" h="export"><B big i="print" l="Print / PDF" run={C.print} /><B big i="dxf" l="DXF" run={C.exportDxf} /><B big i="svg" l="SVG" run={C.exportSvg} /></G>
       </Show>
       <Show when={tab() === "view"}>
-        <G l="Zoom" h="view"><B big i="fit" l="Fit" run={C.fit} /></G>
+        <G l="Zoom" h="view"><B big i="fit" l="Fit Drawing" run={C.fit} /><B big i="sheet" l="Whole Sheet" run={() => import("./canvas").then(c => c.fitSheet())} /></G>
         <G l="Layers" h="layers"><S>{layer("process", "Process")}{layer("utility", "Utility")}</S><S>{layer("instrument", "Instruments")}{layer("notes", "Notes and marks")}</S></G>
         <G l="Select" h="select"><B big i="select" l="By Type" dd={e => openMenu(e, [...(["vessel", "rotating", "heat", "valve", "control", "fitting", "instrument", "primary", "mark", "connector"] as Cat[]).map(c => ({ label: lib()?.symbols.find(s => s.cat === c)?.cat_name ?? c, run: () => C.selectType(c) })), "-" as const, ...(lib()?.kinds ?? []).map(k => ({ label: `${k[1]} lines`, run: () => C.selectType(`line:${k[0]}`) }))])} /><B big i="line" l="By Line Number" dd={numberMenu} /></G>
         <G l="Show" h="view"><S><label class="chk"><input type="checkbox" checked={opts().grid} onChange={e => setOpts({ ...opts(), grid: e.currentTarget.checked })} />Grid</label></S></G>

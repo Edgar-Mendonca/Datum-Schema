@@ -123,6 +123,7 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
     }
 
     // 4 and 5. Size and class changes, and 7. flow directions, across in-line items and off-page pairs.
+    let mut clashes: Vec<(u32, u32, u32, bool)> = vec![];
     for it in &p.items {
         let Some(s) = sym(it) else { continue };
         let Some([(la, ba), (lb, bb)]) = sides(net, it) else { continue };
@@ -138,9 +139,26 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
         }
         // A line flows into the item when the item is at its downstream end.
         let into = |l: &Line, at_b: bool| at_b != l.flip;
-        if on(7) && into(l1, ba) == into(l2, bb) {
-            let how = if into(l1, ba) { "both towards" } else { "both away from" };
-            v.push(Issue { rule: 7, level: WARNING, msg: format!("The flow arrows on either side of {} point {how} it.", name(it)), ids: vec![la, lb, it.id], sheet: it.sheet, at: [it.x, it.y] });
+        if into(l1, ba) == into(l2, bb) {
+            clashes.push((it.id, la, lb, into(l1, ba)));
+        }
+    }
+    // 7. One issue per clash; a reversed piece between two clashes is named once.
+    if on(7) {
+        let count = |l: u32| clashes.iter().filter(|c| c.1 == l || c.2 == l).count();
+        let mut done: Vec<u32> = vec![];
+        for &(it, la, lb, inward) in &clashes {
+            let item = net.items[&it];
+            if let Some(l) = [la, lb].into_iter().find(|l| count(*l) > 1) {
+                if !done.contains(&l) {
+                    done.push(l);
+                    let line = net.lines[&l];
+                    v.push(Issue { rule: 7, level: WARNING, msg: format!("The flow arrows on a piece of {} point against the rest of the line.", label(net, l)), ids: vec![l], sheet: line.sheet, at: mid(p, line) });
+                }
+                continue;
+            }
+            let how = if inward { "both towards" } else { "both away from" };
+            v.push(Issue { rule: 7, level: WARNING, msg: format!("The flow arrows on either side of {} point {how} it.", name(item)), ids: vec![la, lb, it], sheet: item.sheet, at: [item.x, item.y] });
         }
     }
 
@@ -222,7 +240,7 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
             }
             let in_loop = |f: &dyn Fn(&str, Cat) -> bool| insts.iter().any(|(o, ol, on_, oc)| o.id != it.id && on_ == n && f(ol, *oc));
             let meas = in_loop(&|ol, oc| oc.instrument() && tags::is_measurement(ol));
-            let fin = in_loop(&|ol, oc| oc == Cat::Control && tags::is_final(ol));
+            let fin = insts.iter().any(|(o, ol, on_, _)| on_ == n && matches!(o.sym.as_str(), "cv_pneu" | "cv_motor" | "cv_solenoid" | "regulator") && tags::is_final(ol));
             if !meas || !fin {
                 let what = match (meas, fin) { (false, false) => "a measurement or a final element", (false, true) => "a measurement (a transmitter or element)", _ => "a final element (a control valve)" };
                 v.push(on_item(11, WARNING, it, format!("Controller {} has no {what} in loop {n}.", it.tag)));
