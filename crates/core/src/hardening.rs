@@ -219,7 +219,7 @@ fn speed_gate_500_items() {
     let d = api::derived(&p, s);
     let ms = t.elapsed().as_millis();
     assert_eq!(d.view.unwrap().lines.len(), 499);
-    let limit = if cfg!(debug_assertions) { 20_000 } else { 2_000 };
+    let limit = if cfg!(debug_assertions) { 5_000 } else { 500 };
     assert!(ms < limit, "derived took {ms} ms");
     eprintln!("500 symbols, 499 lines: {ms} ms");
 }

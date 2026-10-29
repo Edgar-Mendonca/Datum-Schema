@@ -35,10 +35,6 @@ const MARGIN: f64 = 3.5;
 const BEND: f64 = 6.0;
 const SHARE: f64 = 8.0;
 
-fn inside(r: &Rect, x: f64, y: f64, pad: f64) -> bool {
-    x > r.x - pad && x < r.x + r.w + pad && y > r.y - pad && y < r.y + r.h + pad
-}
-
 /// Does the segment cross a block (inflated by pad)?
 fn blocked(rs: &[Rect], a: Pt, b: Pt, pad: f64) -> bool {
     rs.iter().any(|r| {
@@ -69,7 +65,9 @@ fn key(a: Pt, b: Pt) -> (i64, i64, i64, i64) {
     (a.0.round() as i64, a.1.round() as i64, b.0.round() as i64, b.1.round() as i64)
 }
 
-/// Route from s to e (both outside blocks) on a sparse grid; None if there is no way.
+/// Route from s to e (both outside blocks) on a sparse grid; None if there is no way. Cells and
+/// edges inside a symbol are marked symbol by symbol (index ranges found by binary search), so the
+/// search costs about the size of the grid, not the grid times the symbols.
 fn search(rs: &[Rect], s: Pt, e: Pt, used: &Used, group: u64, window: f64) -> Option<Vec<Pt>> {
     let (wx0, wx1) = (s.0.min(e.0) - window, s.0.max(e.0) + window);
     let (wy0, wy1) = (s.1.min(e.1) - window, s.1.max(e.1) + window);
@@ -86,13 +84,49 @@ fn search(rs: &[Rect], s: Pt, e: Pt, used: &Used, group: u64, window: f64) -> Op
         v.dedup_by(|a, b| (*a - *b).abs() < 0.5);
     }
     let (nx, ny) = (xs.len(), ys.len());
-    if nx * ny > 400_000 {
+    if nx * ny > 250_000 {
         return None;
     }
-    let near: Vec<Rect> = near.into_iter().cloned().collect();
     let pad = STUB - 1.0;
     let id = |i: usize, j: usize| i * ny + j;
-    let free: Vec<bool> = (0..nx * ny).map(|k| !near.iter().any(|r| inside(r, xs[k / ny], ys[k % ny], pad))).collect();
+    // Index ranges of the grid lines strictly inside (lo, hi), and of the segments between grid
+    // lines that overlap it.
+    let inside_range = |v: &[f64], lo: f64, hi: f64| -> (usize, usize) { (v.partition_point(|x| *x <= lo), v.partition_point(|x| *x < hi)) };
+    let seg_range = |v: &[f64], lo: f64, hi: f64| -> (usize, usize) {
+        // segment k joins v[k] and v[k+1]; it overlaps when v[k+1] > lo and v[k] < hi.
+        let a = v.partition_point(|x| *x <= lo).saturating_sub(1);
+        let b = v.partition_point(|x| *x < hi).min(v.len().saturating_sub(1));
+        (a, b)
+    };
+    let mut free = vec![true; nx * ny];
+    let mut hblk = vec![false; nx * ny];
+    let mut vblk = vec![false; nx * ny];
+    for r in &near {
+        let (x0, x1, y0, y1) = (r.x - pad, r.x + r.w + pad, r.y - pad, r.y + r.h + pad);
+        let (ia, ib) = inside_range(&xs, x0, x1);
+        let (ja, jb) = inside_range(&ys, y0, y1);
+        for i in ia..ib {
+            for j in ja..jb {
+                free[id(i, j)] = false;
+            }
+        }
+        let (sa, sb) = seg_range(&xs, x0, x1);
+        for i in sa..sb {
+            if xs[i + 1] > x0 && xs[i] < x1 {
+                for j in ja..jb {
+                    hblk[id(i, j)] = true;
+                }
+            }
+        }
+        let (ta, tb) = seg_range(&ys, y0, y1);
+        for j in ta..tb {
+            if ys[j + 1] > y0 && ys[j] < y1 {
+                for i in ia..ib {
+                    vblk[id(i, j)] = true;
+                }
+            }
+        }
+    }
     let find = |p: Pt| -> Option<usize> {
         let i = xs.iter().position(|x| (x - p.0).abs() < 0.5)?;
         let j = ys.iter().position(|y| (y - p.1).abs() < 0.5)?;
@@ -100,14 +134,15 @@ fn search(rs: &[Rect], s: Pt, e: Pt, used: &Used, group: u64, window: f64) -> Op
     };
     let (si, ei) = (find(s)?, find(e)?);
     // Dijkstra over (node, direction): 0 +x, 1 −x, 2 +y, 3 −y, 4 none yet.
-    let mut dist: HashMap<(usize, u8), f64> = HashMap::new();
-    let mut prev: HashMap<(usize, u8), (usize, u8)> = HashMap::new();
+    let st = |k: usize, d: u8| k * 5 + d as usize;
+    let mut dist = vec![f64::INFINITY; nx * ny * 5];
+    let mut prev = vec![u32::MAX; nx * ny * 5];
     let mut heap = BinaryHeap::new();
-    dist.insert((si, 4), 0.0);
+    dist[st(si, 4)] = 0.0;
     heap.push(St(0.0, si, 4));
     let mut end = None;
     while let Some(St(d, k, dir)) = heap.pop() {
-        if d > *dist.get(&(k, dir)).unwrap_or(&f64::INFINITY) {
+        if d > dist[st(k, dir)] {
             continue;
         }
         if k == ei {
@@ -115,21 +150,18 @@ fn search(rs: &[Rect], s: Pt, e: Pt, used: &Used, group: u64, window: f64) -> Op
             break;
         }
         let (i, j) = (k / ny, k % ny);
-        let nbrs: [(Option<usize>, u8); 4] = [
-            ((i + 1 < nx).then(|| id(i + 1, j)), 0),
-            ((i > 0).then(|| id(i - 1, j)), 1),
-            ((j + 1 < ny).then(|| id(i, j + 1)), 2),
-            ((j > 0).then(|| id(i, j - 1)), 3),
+        let nbrs: [(Option<usize>, u8, bool); 4] = [
+            ((i + 1 < nx).then(|| id(i + 1, j)), 0, i + 1 < nx && hblk[id(i, j)]),
+            ((i > 0).then(|| id(i - 1, j)), 1, i > 0 && hblk[id(i - 1, j)]),
+            ((j + 1 < ny).then(|| id(i, j + 1)), 2, j + 1 < ny && vblk[id(i, j)]),
+            ((j > 0).then(|| id(i, j - 1)), 3, j > 0 && vblk[id(i, j - 1)]),
         ];
-        for (n, nd) in nbrs {
+        for (n, nd, blk) in nbrs {
             let Some(n) = n else { continue };
-            if !free[n] && n != ei {
+            if blk || (!free[n] && n != ei) {
                 continue;
             }
             let (a, b) = ((xs[i], ys[j]), (xs[n / ny], ys[n % ny]));
-            if blocked(&near, a, b, pad) {
-                continue;
-            }
             let mut c = d + (a.0 - b.0).abs() + (a.1 - b.1).abs();
             if dir != 4 && dir != nd {
                 c += BEND;
@@ -139,18 +171,20 @@ fn search(rs: &[Rect], s: Pt, e: Pt, used: &Used, group: u64, window: f64) -> Op
                     c += SHARE;
                 }
             }
-            if c < *dist.get(&(n, nd)).unwrap_or(&f64::INFINITY) {
-                dist.insert((n, nd), c);
-                prev.insert((n, nd), (k, dir));
+            if c < dist[st(n, nd)] {
+                dist[st(n, nd)] = c;
+                prev[st(n, nd)] = st(k, dir) as u32;
                 heap.push(St(c, n, nd));
             }
         }
     }
-    let mut cur = end?;
-    let mut path = vec![(xs[cur.0 / ny], ys[cur.0 % ny])];
-    while let Some(p) = prev.get(&cur) {
-        cur = *p;
-        path.push((xs[cur.0 / ny], ys[cur.0 % ny]));
+    let (k, d) = end?;
+    let mut cur = st(k, d);
+    let mut path = vec![(xs[k / ny], ys[k % ny])];
+    while prev[cur] != u32::MAX {
+        cur = prev[cur] as usize;
+        let k = cur / 5;
+        path.push((xs[k / ny], ys[k % ny]));
     }
     path.reverse();
     Some(path)
@@ -204,7 +238,7 @@ pub fn route(rs: &[Rect], reqs: &[Req]) -> Vec<Vec<Pt>> {
             path.push(s);
             path.push(e);
         } else {
-            let found = search(rs, s, e, &used, r.group, 30.0).or_else(|| search(rs, s, e, &used, r.group, 200.0));
+            let found = search(rs, s, e, &used, r.group, 30.0).or_else(|| search(rs, s, e, &used, r.group, 120.0));
             path.extend(found.unwrap_or_else(|| fallback(s, e)));
         }
         path.push(r.b);
