@@ -13,7 +13,7 @@ const Row = (p: { label: string; unit?: string; children: JSX.Element; hint?: st
 );
 
 /** Shows a data value in display units and sends the typed one back in SI. */
-const FieldInput = (p: { f: Field; v: Val | undefined; ids: number[] }) => {
+const FieldInput = (p: { f: Field; v: Val | undefined; ids: number[]; placeholder?: string }) => {
   const shown = () => {
     if (p.v === undefined || p.v === "") return "";
     if (p.f.q && typeof p.v === "number") return num(toU(p.f.q, p.v), 6);
@@ -30,7 +30,7 @@ const FieldInput = (p: { f: Field; v: Val | undefined; ids: number[] }) => {
   };
   return (
     <Row label={p.f.label} unit={p.f.q ? unit(p.f.q) : undefined}>
-      <Show when={p.f.choices.length} fallback={<input value={shown()} class={p.f.q ? "mono" : undefined} onChange={e => set(e.currentTarget.value)} />}>
+      <Show when={p.f.choices.length} fallback={<input value={shown()} placeholder={p.placeholder} class={p.f.q ? "mono" : undefined} onChange={e => set(e.currentTarget.value)} />}>
         <Pick value={shown()} set={set} options={[["", "—"], ...p.f.choices.filter(c => c).map(c => [c, c] as [string, string])]} />
       </Show>
     </Row>
@@ -63,7 +63,7 @@ const ItemPanel = (p: { it: Item }) => {
       <button class="btn sm" onClick={() => C.pairDialog(p.it.id)}>{partner() ? "Change partner…" : "Pair with…"}</button>
     </Show>
     <h4>Data</h4>
-    <For each={s()?.fields ?? []}>{f => <FieldInput f={f} v={p.it.data[f.key]} ids={[p.it.id]} />}</For>
+    <For each={s()?.fields ?? []}>{f => <FieldInput f={f} v={p.it.data[f.key]} ids={[p.it.id]} placeholder={f.key === "loop" ? (p.it.tag.match(/\d+/)?.[0] ?? "") : undefined} />}</For>
     <Show when={conns().length}>
       <h4>Connections</h4>
       <table class="vmini"><tbody><For each={conns()}>{c => <tr classList={{ f: c.ids.length > 0 }} onClick={() => c.ids.length && setSel(c.ids)}><td>{c.port}</td><td class="r">{c.lines.length ? c.lines.join(", ") : <span class="muted">open</span>}</td></tr>}</For></tbody></table>

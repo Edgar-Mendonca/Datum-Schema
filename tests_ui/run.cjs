@@ -176,6 +176,37 @@ const shots = process.env.SHOTS;
   await shot("print");
   await p.click(".bs .back"); await p.waitForTimeout(300);
 
+  // 18. Keyboard: duplicate takes the next free tag, R turns, Delete of a valve joins its line again.
+  await openEx("Pump transfer");
+  pr2 = await project();
+  const pumpA = pr2.items.find(i => i.tag === "P-101A");
+  await p.click(".canvas", { position: { x: 5, y: 5 } });
+  const [pax, pay] = await scr(pumpA.x, pumpA.y + 2); await p.mouse.click(pax, pay); await p.waitForTimeout(200);
+  await p.keyboard.press("Control+d"); await p.waitForTimeout(500);
+  pr2 = await project();
+  check("Ctrl+D duplicates with the next free tag", pr2.items.some(i => i.tag === "P-101C"), JSON.stringify(pr2.items.filter(i => i.sym === "pump_cent").map(i => i.tag)));
+  await p.keyboard.press("r"); await p.waitForTimeout(300);
+  check("R turns the selection", (await project()).items.find(i => i.tag === "P-101C")?.rot === 1);
+  await p.keyboard.press("Delete"); await p.waitForTimeout(300);
+  const lines0 = (await project()).lines.length;
+  const hv = (await project()).items.find(i => i.tag === "HV-101");
+  const [hx, hy] = await scr(hv.x, hv.y); await p.mouse.click(hx, hy); await p.waitForTimeout(200);
+  await p.keyboard.press("Delete"); await p.waitForTimeout(400);
+  pr2 = await project();
+  check("deleting an in-line valve joins its two lines again", !pr2.items.some(i => i.tag === "HV-101") && pr2.lines.length === lines0 - 1);
+
+  // 19. US units: the Inspector and the lists follow; the file keeps SI.
+  await p.click(".tabs button:text-is('Home')"); await p.click(".ribbon button:has-text('US: psi')"); await p.waitForTimeout(400);
+  await p.click(".btabs button:has-text('Line list')"); await p.waitForTimeout(400);
+  const heads = await p.$$eval(".lists thead th", els => els.map(e => e.textContent));
+  check("US units in the line list", heads.some(h => h.includes("(gpm)")) && heads.some(h => h.includes("(psi)")), JSON.stringify(heads));
+  check("the file keeps SI", (await project()).lines.find(l => l.data.flow)?.data.flow < 0.01);
+
+  // 20. Tell Me finds a command.
+  await p.keyboard.press("Control+k"); await p.waitForTimeout(200);
+  await p.keyboard.type("equipment list"); await p.keyboard.press("Enter"); await p.waitForTimeout(400);
+  check("Tell Me runs a command", (await p.textContent(".btabs button.on")).includes("Equipment"));
+
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();
   await fetch(`${url}quit`).catch(() => {});
