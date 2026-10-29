@@ -3,7 +3,7 @@
 //! leaves the project exactly as it was. Undo keeps the project as it was before each edit.
 
 use crate::graph::{self, end_pt};
-use crate::model::{self, End, Item, Line, Note, Project, Settings, Sheet, Title, Val};
+use crate::model::{self, End, Item, Line, Note, Project, Settings, Sheet, Title, Val, LINE_CLASS};
 use crate::symbols::{self, Cat};
 use crate::tags;
 use serde::{Deserialize, Serialize};
@@ -14,9 +14,18 @@ const UNDO_LIMIT: usize = 200;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Op {
-    /// Place a symbol (an empty tag gets the next free one). In-line symbols dropped on a line
-    /// (`on`) split it and join both halves.
-    AddItem { item: Item, on: Option<u32> },
+    /// Place a symbol and make its object (an empty tag gets the next free one; an instrument given
+    /// only its letters gets the next loop number). With `obj`, the symbol shows an existing object
+    /// instead (an object can appear on several sheets). In-line symbols dropped on a line (`on`)
+    /// split it and join both halves.
+    AddItem {
+        item: Item,
+        on: Option<u32>,
+        #[serde(default)]
+        tag: String,
+        #[serde(default)]
+        obj: Option<u32>,
+    },
     /// Replace an item (position, turn, mirror, scale, tag, data, partner).
     SetItem { item: Item },
     AddLine { line: Line },
@@ -31,11 +40,21 @@ pub enum Op {
     Flip { ids: Vec<u32> },
     /// Delete items, lines and notes. An in-line item between two lines joins them again.
     Delete { ids: Vec<u32> },
-    /// Set (or with `val` None, clear) one data field on items or lines.
+    /// Set (or with `val` None, clear) one data field on objects (ids of symbols or line pieces mean
+    /// their objects).
     SetData { ids: Vec<u32>, key: String, val: Option<Val> },
     SetTag { id: u32, tag: String },
     /// A line's bend points (empty: route automatically).
     SetPts { id: u32, pts: Vec<[f64; 2]> },
+    /// Give one line piece a line-number object of its own (a copy of its line's data): where a
+    /// line's number changes, as at a reducer.
+    NewLineObject { line: u32 },
+    /// Move objects to another hierarchy node (an area).
+    SetNode { ids: Vec<u32>, node: u32 },
+    /// Add, rename or remove hierarchy nodes.
+    AddNode { node: model::Node },
+    SetNode2 { node: model::Node },
+    DeleteNode { id: u32 },
     /// Put an in-line item into a line.
     Split { line: u32, item: u32 },
     /// Copies of items, lines and notes on a sheet, moved by (dx, dy), with the next free tags.
@@ -54,17 +73,76 @@ pub enum Op {
     Batch { ops: Vec<Op> },
 }
 
+/// One recorded change to a plant object: who, when, what, the old and the new value.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
+pub struct Change {
+    pub seq: u64,
+    /// Seconds since 1970 (UTC).
+    pub time: u64,
+    pub user: String,
+    /// add, delete, tag, set, clear, move (to another hierarchy node), undo, redo.
+    pub what: String,
+    pub obj: u32,
+    pub uid: String,
+    pub key: String,
+    pub old: String,
+    pub new: String,
+}
+
 pub struct Doc {
     pub p: Project,
     pub path: Option<String>,
     pub dirty: bool,
+    /// Every change to the plant objects since the project began (saved with it).
+    pub history: Vec<Change>,
+    /// Who is editing (written in the history).
+    pub user: String,
     undo: Vec<Project>,
     redo: Vec<Project>,
 }
 
+/// The changes to the objects between two states of a project.
+pub fn diff(old: &Project, new: &Project, how: &str) -> Vec<Change> {
+    let mut v = vec![];
+    let ch = |what: &str, o: &model::Obj, key: &str, a: String, b: String| Change { what: if how.is_empty() { what.into() } else { format!("{how} {what}") }, obj: o.id, uid: o.uid.clone(), key: key.into(), old: a, new: b, ..Change::default() };
+    let before: HashMap<u32, &model::Obj> = old.objects.iter().map(|o| (o.id, o)).collect();
+    let after: HashMap<u32, &model::Obj> = new.objects.iter().map(|o| (o.id, o)).collect();
+    for o in &new.objects {
+        match before.get(&o.id) {
+            None => v.push(ch("add", o, "class", String::new(), o.class.clone())),
+            Some(b) => {
+                if b.tag != o.tag {
+                    v.push(ch("tag", o, "tag", b.tag.clone(), o.tag.clone()));
+                }
+                if b.node != o.node {
+                    let name = |p: &Project, n: u32| p.nodes.iter().find(|x| x.id == n).map(|x| x.name.clone()).unwrap_or_default();
+                    v.push(ch("move", o, "node", name(old, b.node), name(new, o.node)));
+                }
+                for (k, val) in &o.data {
+                    if b.data.get(k) != Some(val) {
+                        v.push(ch("set", o, k, b.data.get(k).map(|x| x.text()).unwrap_or_default(), val.text()));
+                    }
+                }
+                for (k, val) in &b.data {
+                    if !o.data.contains_key(k) {
+                        v.push(ch("clear", o, k, val.text(), String::new()));
+                    }
+                }
+            }
+        }
+    }
+    for o in &old.objects {
+        if !after.contains_key(&o.id) {
+            v.push(ch("delete", o, "tag", o.tag.clone(), String::new()));
+        }
+    }
+    v
+}
+
 impl Doc {
     pub fn new(p: Project) -> Self {
-        Self { p, path: None, dirty: false, undo: vec![], redo: vec![] }
+        Self { p, path: None, dirty: false, history: vec![], user: String::new(), undo: vec![], redo: vec![] }
     }
     pub fn can_undo(&self) -> bool {
         !self.undo.is_empty()
@@ -85,6 +163,7 @@ impl Doc {
         if q == self.p {
             return Ok(created);
         }
+        self.record(&self.p.clone(), &q, "");
         self.undo.push(std::mem::replace(&mut self.p, q));
         if self.undo.len() > UNDO_LIMIT {
             self.undo.remove(0);
@@ -94,29 +173,44 @@ impl Doc {
         Ok(created)
     }
 
+    /// Appends the changes between two states to the history.
+    fn record(&mut self, old: &Project, new: &Project, how: &str) {
+        let time = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
+        let mut seq = self.history.last().map_or(0, |c| c.seq);
+        for mut c in diff(old, new, how) {
+            seq += 1;
+            c.seq = seq;
+            c.time = time;
+            c.user = self.user.clone();
+            self.history.push(c);
+        }
+    }
+
     pub fn undo(&mut self) {
         if let Some(p) = self.undo.pop() {
+            self.record(&self.p.clone(), &p, "undo");
             self.redo.push(std::mem::replace(&mut self.p, p));
             self.dirty = true;
         }
     }
     pub fn redo(&mut self) {
         if let Some(p) = self.redo.pop() {
+            self.record(&self.p.clone(), &p, "redo");
             self.undo.push(std::mem::replace(&mut self.p, p));
             self.dirty = true;
         }
     }
 
     pub fn open(path: &Path) -> Result<(Self, Vec<String>), String> {
-        let text = read_limited(path)?;
-        let (p, w) = model::from_json(&text)?;
+        let (p, history, w) = crate::file::read(path)?;
         let mut d = Doc::new(p);
+        d.history = history;
         d.path = Some(path.display().to_string());
         Ok((d, w))
     }
 
     pub fn save(&mut self, path: &Path) -> Result<(), String> {
-        write_atomic(path, model::to_json(&self.p).as_bytes())?;
+        crate::file::write(path, &self.p, &self.history)?;
         self.path = Some(path.display().to_string());
         self.dirty = false;
         Ok(())
@@ -164,25 +258,23 @@ fn finite(v: &[f64]) -> Result<(), String> {
     if v.iter().all(|x| x.is_finite() && x.abs() <= model::MAX_COORD) { Ok(()) } else { Err("A position is out of range.".into()) }
 }
 
-/// The tag a new item gets when it has none: the next free tag for its prefix, or for an
-/// instrument given only its letters, the next free loop number.
-fn auto_tag(p: &Project, it: &Item) -> String {
-    let Some(s) = symbols::get(&it.sym) else { return it.tag.clone() };
-    let t = it.tag.trim();
+/// The tag a new object gets: the typed tag when it has a number; else the next free tag for its
+/// prefix, or for an instrument given only its letters, the next free loop number.
+fn auto_tag(p: &Project, it: &Item, typed: &str) -> String {
+    let Some(s) = symbols::get(&it.sym) else { return typed.to_string() };
+    let t = typed.trim();
     if !t.is_empty() && t.chars().any(|c| c.is_ascii_digit()) {
         return t.to_string();
     }
     if (s.cat.instrument() || s.cat == Cat::Control) && !t.is_empty() {
-        let lp = it.data.get("loop").map(|v| v.text()).filter(|x| !x.trim().is_empty());
-        let n = lp.unwrap_or_else(|| next_loop(p, it.sheet));
-        return format!("{}-{n}", t.to_uppercase());
+        return format!("{}-{}", t.to_uppercase(), next_loop(p, it.sheet));
     }
     if t.is_empty() { tags::next_free(p, s.prefix, it.sheet) } else { tags::next_free(p, t, it.sheet) }
 }
 
 /// The next loop number not used by any instrument or control valve on a sheet (101 … per sheet).
 pub fn next_loop(p: &Project, sheet: u32) -> String {
-    let used: HashSet<u64> = p.items.iter().filter(|i| symbols::get(&i.sym).is_some_and(|s| s.cat.instrument() || s.cat == Cat::Control)).filter_map(|i| tags::split(&i.tag).1).collect();
+    let used: HashSet<u64> = p.items.iter().filter(|i| symbols::get(&i.sym).is_some_and(|s| s.cat.instrument() || s.cat == Cat::Control)).filter_map(|i| tags::split(p.tag_of(i)).1).collect();
     let mut n = p.sheet_no(sheet).max(1) as u64 * 100 + 1;
     while used.contains(&n) {
         n += 1;
@@ -190,9 +282,38 @@ pub fn next_loop(p: &Project, sheet: u32) -> String {
     n.to_string()
 }
 
+/// The line-number object a new process piece belongs to: the one it continues through an in-line
+/// symbol (the line on the symbol's other process port), else a new one with the sheet's next
+/// sequence number.
+fn line_obj_for(p: &mut Project, line: &Line) -> u32 {
+    for e in [&line.a, &line.b] {
+        let End::Port { item, port } = e else { continue };
+        let Some(it) = p.item(*item) else { continue };
+        let Some(s) = symbols::get(&it.sym) else { continue };
+        // Through an in-line symbol to its other process port, or to an off-page partner.
+        let (via, other) = if s.inline {
+            (*item, s.ports.iter().enumerate().find(|(k, x)| !x.signal && *k as u8 != *port).map(|(k, _)| k as u8))
+        } else if s.cat == Cat::Connector && it.link != 0 {
+            (it.link, Some(0))
+        } else {
+            continue;
+        };
+        let found = p.lines.iter().find(|l| l.kind.process() && l.obj != 0 && [&l.a, &l.b].iter().any(|e| matches!(e, End::Port { item: i, port: q } if *i == via && Some(*q) == other))).map(|l| l.obj);
+        if let Some(o) = found {
+            return o;
+        }
+    }
+    let o = p.new_obj(LINE_CLASS, "");
+    let seq = tags::next_seq(p, line.sheet);
+    if let Some(ob) = p.obj_mut(o) {
+        ob.data.insert("seq".into(), Val::Text(seq));
+    }
+    o
+}
+
 fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
     match op {
-        Op::AddItem { mut item, on } => {
+        Op::AddItem { mut item, on, tag, obj } => {
             let s = symbols::get(&item.sym).ok_or("There is no such symbol.")?;
             finite(&[item.x, item.y, item.scale])?;
             if p.sheet(item.sheet).is_none() {
@@ -205,7 +326,13 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
             if s.cat == Cat::Connector {
                 item.link = 0;
             }
-            item.tag = auto_tag(p, &item);
+            item.obj = match obj {
+                Some(o) => p.obj(o).map(|x| x.id).ok_or("That object no longer exists.")?,
+                None => {
+                    let t = auto_tag(p, &item, &tag);
+                    p.new_obj(s.key, &t)
+                }
+            };
             let id = item.id;
             p.items.push(item);
             created.push(id);
@@ -217,8 +344,8 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
             finite(&[item.x, item.y, item.scale])?;
             symbols::get(&item.sym).ok_or("There is no such symbol.")?;
             let old = find_item(p, item.id)?;
-            let (sheet, link) = (old.sheet, old.link);
-            *old = Item { sheet, link, rot: item.rot % 4, ..item };
+            let (sheet, link, obj) = (old.sheet, old.link, old.obj);
+            *old = Item { sheet, link, obj, rot: item.rot % 4, ..item };
         }
         Op::AddLine { mut line } => {
             if p.sheet(line.sheet).is_none() {
@@ -228,17 +355,23 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
                 return Err("A line needs two different ends.".into());
             }
             line.id = p.id();
-            // New process lines on a sheet get its next sequence number.
-            if line.kind.process() && !line.data.contains_key("seq") {
-                line.data.insert("seq".into(), Val::Text(tags::next_seq(p, line.sheet)));
-            }
+            // A process line belongs to a line-number object: the one it continues, or a new one.
+            line.obj = if !line.kind.process() { 0 } else if line.obj != 0 && p.obj(line.obj).is_some() { line.obj } else { line_obj_for(p, &line) };
             created.push(line.id);
             p.lines.push(line);
         }
         Op::SetLine { line } => {
             let old = find_line(p, line.id)?;
-            let sheet = old.sheet;
-            *old = Line { sheet, ..line };
+            let (sheet, obj) = (old.sheet, old.obj);
+            let mut line = Line { sheet, obj, ..line };
+            if line.kind.process() && line.obj == 0 {
+                line.obj = line_obj_for(p, &line);
+            } else if !line.kind.process() {
+                line.obj = 0;
+            }
+            let id = line.id;
+            *find_line(p, id)? = line;
+            purge_objects(p);
         }
         Op::AddNote { mut note } => {
             if p.sheet(note.sheet).is_none() {
@@ -308,9 +441,9 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
                     return Err("That is not a number.".into());
                 }
             }
-            let set: HashSet<u32> = ids.iter().copied().collect();
+            let set: HashSet<u32> = ids.iter().filter_map(|i| p.obj_id(*i)).collect();
             let mut n = 0;
-            for d in p.items.iter_mut().filter(|i| set.contains(&i.id)).map(|i| &mut i.data).chain(p.lines.iter_mut().filter(|l| set.contains(&l.id)).map(|l| &mut l.data)) {
+            for d in p.objects.iter_mut().filter(|o| set.contains(&o.id)).map(|o| &mut o.data) {
                 n += 1;
                 match &val {
                     Some(Val::Text(t)) if t.trim().is_empty() => {
@@ -330,13 +463,58 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
         }
         Op::SetTag { id, tag } => {
             let t = crate::clip(tag.trim(), 60);
-            find_item(p, id)?.tag = t;
+            let o = p.obj_id(id).ok_or("That symbol no longer exists.")?;
+            p.obj_mut(o).ok_or("That object no longer exists.")?.tag = t;
         }
         Op::SetPts { id, pts } => {
             finite(&pts.iter().flatten().copied().collect::<Vec<_>>())?;
             find_line(p, id)?.pts = pts.into_iter().take(200).collect();
         }
         Op::Split { line, item } => created.extend(split(p, line, item)?),
+        Op::NewLineObject { line } => {
+            let l = p.line(line).cloned().ok_or("That line no longer exists.")?;
+            if !l.kind.process() {
+                return Err("Only process lines have line numbers.".into());
+            }
+            let data = p.data_of(l.obj).clone();
+            let o = p.new_obj(LINE_CLASS, "");
+            if let Some(ob) = p.obj_mut(o) {
+                ob.data = data;
+            }
+            find_line(p, line)?.obj = o;
+            created.push(o);
+            purge_objects(p);
+        }
+        Op::SetNode { ids, node } => {
+            if !p.nodes.iter().any(|n| n.id == node && n.level == "area") {
+                return Err("Objects go in an area.".into());
+            }
+            let set: HashSet<u32> = ids.iter().filter_map(|i| p.obj_id(*i)).collect();
+            for o in p.objects.iter_mut().filter(|o| set.contains(&o.id)) {
+                o.node = node;
+            }
+        }
+        Op::AddNode { mut node } => {
+            node.id = p.id();
+            if node.name.trim().is_empty() {
+                node.name = format!("{} {}", match node.level.as_str() { "plant" => "Plant", "unit" => "Unit", _ => "Area" }, p.nodes.iter().filter(|n| n.level == node.level).count() + 1);
+            }
+            created.push(node.id);
+            p.nodes.push(node);
+        }
+        Op::SetNode2 { node } => {
+            let old = p.nodes.iter_mut().find(|n| n.id == node.id).ok_or("That level no longer exists.")?;
+            old.name = crate::clip(node.name.trim(), 120);
+            old.parent = node.parent;
+        }
+        Op::DeleteNode { id } => {
+            let below: HashSet<u32> = { let mut s = HashSet::from([id]); loop { let n = s.len(); for x in &p.nodes { if s.contains(&x.parent) { s.insert(x.id); } } if s.len() == n { break s; } } };
+            if p.objects.iter().any(|o| below.contains(&o.node)) {
+                return Err("Move its objects to another area first.".into());
+            }
+            p.nodes.retain(|n| !below.contains(&n.id));
+            p.default_nodes();
+        }
         Op::Paste { sheet, items, lines, notes, dx, dy } => paste(p, sheet, items, lines, notes, dx, dy, created)?,
         Op::Link { a, b } => {
             for id in [a, b].into_iter().filter(|x| *x != 0) {
@@ -398,7 +576,7 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
         Op::SetSettings { settings } => p.settings = settings,
         Op::Renumber => {
             for (id, t) in tags::renumber(p) {
-                find_item(p, id)?.tag = t;
+                p.obj_mut(id).ok_or("That object no longer exists.")?.tag = t;
             }
         }
         Op::Batch { ops } => {
@@ -438,10 +616,16 @@ fn delete(p: &mut Project, ids: &[u32]) {
         if [far, start].iter().any(|e| matches!(e, End::Line { line, .. } if *line == l1 || *line == l2)) {
             continue;
         }
-        // Keep l1, oriented to end at the item, and give it l2's far end; data only l2 had is kept.
+        // Keep l1, oriented to end at the item, and give it l2's far end; data only l2's line
+        // number had is kept.
         let mut keep = a.clone();
-        for (k, v) in &b.data {
-            keep.data.entry(k.clone()).or_insert_with(|| v.clone());
+        if a.obj != b.obj {
+            let extra = p.data_of(b.obj).clone();
+            if let Some(o) = p.obj_mut(a.obj) {
+                for (k, v) in extra {
+                    o.data.entry(k).or_insert(v);
+                }
+            }
         }
         if !b1 {
             std::mem::swap(&mut keep.a, &mut keep.b);
@@ -486,6 +670,14 @@ fn delete(p: &mut Project, ids: &[u32]) {
     p.items.retain(|i| !set.contains(&i.id));
     p.lines.retain(|l| !set.contains(&l.id));
     p.notes.retain(|n| !set.contains(&n.id));
+    purge_objects(p);
+}
+
+/// Objects that no symbol and no line piece shows any more are deleted with their last view.
+/// (0.1.7 keeps them on request: "remove from this sheet only".)
+fn purge_objects(p: &mut Project) {
+    let shown: HashSet<u32> = p.items.iter().map(|i| i.obj).chain(p.lines.iter().map(|l| l.obj)).collect();
+    p.objects.retain(|o| shown.contains(&o.id));
 }
 
 /// Puts an in-line item into a line: the item is turned to the line's direction and moved onto
@@ -529,8 +721,11 @@ pub fn split(p: &mut Project, line_id: u32, item_id: u32) -> Result<Vec<u32>, St
         item.y = y;
         item.rot = rot;
         item.flip = false;
-        if let (Some(size), true) = (line.data.get("size").cloned(), s.cat.valve() || s.cat == Cat::Primary || s.cat == Cat::Fitting) {
-            item.data.entry("size".into()).or_insert(size);
+    }
+    if let (Some(size), true) = (p.data_of(line.obj).get("size").cloned(), s.cat.valve() || s.cat == Cat::Primary || s.cat == Cat::Fitting) {
+        let o = p.item(item_id).map_or(0, |i| i.obj);
+        if let Some(ob) = p.obj_mut(o) {
+            ob.data.entry("size".into()).or_insert(size);
         }
     }
     let id = p.id();
@@ -578,8 +773,35 @@ fn paste(p: &mut Project, sheet: u32, items: Vec<Item>, lines: Vec<Line>, notes:
         return Err("That sheet no longer exists.".into());
     }
     let mut map: HashMap<u32, u32> = HashMap::new();
+    // Copies of the objects: one new object per object pasted, with the next free tag (or, for a
+    // line number, the sheet's next sequence number).
+    let mut objs: HashMap<u32, u32> = HashMap::new();
     let mut taken: HashSet<String> = HashSet::new();
     let old = p.clone();
+    let mut copy_obj = |p: &mut Project, o: u32, class: &str, taken: &mut HashSet<String>| -> u32 {
+        if let Some(n) = objs.get(&o) {
+            return *n;
+        }
+        let src = old.obj(o).cloned().unwrap_or_else(|| model::Obj { class: class.into(), ..Default::default() });
+        let tag = tags::bump(p, &src.tag, taken);
+        if !tag.is_empty() {
+            taken.insert(tag.to_uppercase());
+        }
+        let n = p.new_obj(&src.class, &tag);
+        let mut data = src.data.clone();
+        if src.class == LINE_CLASS {
+            data.insert("seq".into(), Val::Text(tags::next_seq(p, sheet)));
+        }
+        let keep_node = p.nodes.iter().any(|x| x.id == src.node);
+        if let Some(ob) = p.obj_mut(n) {
+            ob.data = data;
+            if keep_node {
+                ob.node = src.node;
+            }
+        }
+        objs.insert(o, n);
+        n
+    };
     for mut it in items {
         symbols::get(&it.sym).ok_or("There is no such symbol.")?;
         let new = p.id();
@@ -589,16 +811,12 @@ fn paste(p: &mut Project, sheet: u32, items: Vec<Item>, lines: Vec<Line>, notes:
         it.x += dx;
         it.y += dy;
         it.link = 0;
-        it.tag = tags::bump(p, &it.tag, &taken);
-        if !it.tag.is_empty() {
-            taken.insert(it.tag.to_uppercase());
-        }
+        it.obj = copy_obj(p, it.obj, &it.sym.clone(), &mut taken);
         finite(&[it.x, it.y])?;
         created.push(new);
         p.items.push(it);
     }
     let line_ids: HashSet<u32> = lines.iter().map(|l| l.id).collect();
-    let mut seqs: HashMap<String, String> = HashMap::new();
     let mut new_lines = vec![];
     for mut l in lines {
         let new = p.id();
@@ -621,21 +839,7 @@ fn paste(p: &mut Project, sheet: u32, items: Vec<Item>, lines: Vec<Line>, notes:
             q[1] += dy;
         }
         l.sheet = sheet;
-        if l.kind.process() {
-            // One new sequence number per pasted pipeline: pieces that shared one still do.
-            let old = l.data.get("seq").map(|v| v.text()).unwrap_or_default();
-            let new = match seqs.get(&old) {
-                Some(s) => s.clone(),
-                None => {
-                    let s = tags::next_seq(p, sheet);
-                    if !old.is_empty() {
-                        seqs.insert(old, s.clone());
-                    }
-                    s
-                }
-            };
-            l.data.insert("seq".into(), Val::Text(new));
-        }
+        l.obj = if l.kind.process() { copy_obj(p, l.obj, LINE_CLASS, &mut taken) } else { 0 };
         created.push(l.id);
         p.lines.push(l);
     }
@@ -657,7 +861,7 @@ mod tests {
 
     pub fn item(d: &mut Doc, sym: &str, x: f64, y: f64) -> u32 {
         let sheet = d.p.sheets[0].id;
-        d.apply(Op::AddItem { item: Item { sheet, sym: sym.into(), x, y, ..Item::default() }, on: None }).unwrap()[0]
+        d.apply(Op::AddItem { item: Item { sheet, sym: sym.into(), x, y, ..Item::default() }, on: None, tag: String::new(), obj: None }).unwrap()[0]
     }
     pub fn connect(d: &mut Doc, a: (u32, u8), b: (u32, u8)) -> u32 {
         let sheet = d.p.sheets[0].id;
@@ -669,11 +873,11 @@ mod tests {
         let mut d = Doc::new(Project::new());
         let p1 = item(&mut d, "pump_cent", 50.0, 50.0);
         let p2 = item(&mut d, "pump_cent", 80.0, 50.0);
-        assert_eq!(d.p.item(p1).unwrap().tag, "P-101");
-        assert_eq!(d.p.item(p2).unwrap().tag, "P-102");
+        assert_eq!(d.p.tag_of(d.p.item(p1).unwrap()), "P-101");
+        assert_eq!(d.p.tag_of(d.p.item(p2).unwrap()), "P-102");
         let sheet = d.p.sheets[0].id;
-        let i = d.apply(Op::AddItem { item: Item { sheet, sym: "inst_field".into(), tag: "lt".into(), x: 10.0, y: 10.0, ..Item::default() }, on: None }).unwrap()[0];
-        assert_eq!(d.p.item(i).unwrap().tag, "LT-101");
+        let i = d.apply(Op::AddItem { item: Item { sheet, sym: "inst_field".into(), x: 10.0, y: 10.0, ..Item::default() }, on: None, tag: "lt".into(), obj: None }).unwrap()[0];
+        assert_eq!(d.p.tag_of(d.p.item(i).unwrap()), "LT-101");
         d.undo();
         assert!(d.p.item(i).is_none());
         d.redo();
@@ -701,7 +905,7 @@ mod tests {
         let l = connect(&mut d, (t, 5), (v, 3));
         d.apply(Op::SetData { ids: vec![l], key: "size".into(), val: Some(Val::Text("3".into())) }).unwrap();
         let sheet = d.p.sheets[0].id;
-        let made = d.apply(Op::AddItem { item: Item { sheet, sym: "gate".into(), x: 150.0, y: 109.0, ..Item::default() }, on: Some(l) }).unwrap();
+        let made = d.apply(Op::AddItem { item: Item { sheet, sym: "gate".into(), x: 150.0, y: 109.0, ..Item::default() }, on: Some(l), tag: String::new(), obj: None }).unwrap();
         let (gv, l2) = (made[0], made[1]);
         let g = d.p.item(gv).unwrap();
         assert_eq!((g.y, g.rot), (108.0, 0), "moved onto the line and turned along it");
@@ -710,8 +914,8 @@ mod tests {
         assert_eq!(first.b, End::Port { item: gv, port: 0 });
         assert_eq!(second.a, End::Port { item: gv, port: 1 });
         assert_eq!(second.b, End::Port { item: v, port: 3 });
-        assert_eq!(second.data.get("size"), Some(&Val::Text("3".into())), "both halves keep the line's data");
-        assert_eq!(d.p.item(gv).unwrap().data.get("size"), Some(&Val::Text("3".into())), "the valve takes the line size");
+        assert_eq!(d.p.data_of(second.obj).get("size"), Some(&Val::Text("3".into())), "both halves keep the line's data");
+        assert_eq!(d.p.data_of(d.p.item(gv).unwrap().obj).get("size"), Some(&Val::Text("3".into())), "the valve takes the line size");
         // One run (same line number through the valve).
         let net = graph::Net::new(&d.p);
         assert_eq!(net.run_of[&l], net.run_of[&l2]);
@@ -731,7 +935,7 @@ mod tests {
         let l = connect(&mut d, (a, 3), (b, 5));
         let sheet = d.p.sheets[0].id;
         let br = d.apply(Op::AddLine { line: Line { sheet, a: End::Line { line: l, x: 90.0, y: 108.0 }, b: End::Free { x: 90.0, y: 150.0 }, ..Line::default() } }).unwrap()[0];
-        let made = d.apply(Op::AddItem { item: Item { sheet, sym: "check".into(), x: 150.0, y: 108.0, ..Item::default() }, on: Some(l) }).unwrap();
+        let made = d.apply(Op::AddItem { item: Item { sheet, sym: "check".into(), x: 150.0, y: 108.0, ..Item::default() }, on: Some(l), tag: String::new(), obj: None }).unwrap();
         let g = d.p.item(made[0]).unwrap();
         assert_eq!(g.rot, 2, "the check valve points along the flow (towards −x)");
         // The branch at x = 90 is downstream of the cut, on the second half.
@@ -748,7 +952,7 @@ mod tests {
         let sheet = d.p.sheets[0].id;
         let (items, lines) = (vec![d.p.item(p1).unwrap().clone(), d.p.item(v).unwrap().clone()], vec![d.p.line(l).unwrap().clone()]);
         let made = d.apply(Op::Paste { sheet, items, lines, notes: vec![], dx: 0.0, dy: 40.0 }).unwrap();
-        assert_eq!(d.p.item(made[0]).unwrap().tag, "P-101B");
+        assert_eq!(d.p.tag_of(d.p.item(made[0]).unwrap()), "P-101B");
         let nl = d.p.line(made[2]).unwrap();
         assert_eq!(nl.a, End::Port { item: made[0], port: 1 });
         assert_eq!(nl.b, End::Port { item: made[1], port: 0 });
@@ -760,7 +964,7 @@ mod tests {
         let s2 = d.apply(Op::AddSheet { sheet: Sheet::default() }).unwrap()[0];
         assert_eq!(d.p.sheet(s2).unwrap().number, "PID-002");
         let a = item(&mut d, "offpage", 380.0, 100.0);
-        let b = d.apply(Op::AddItem { item: Item { sheet: s2, sym: "offpage".into(), x: 30.0, y: 100.0, ..Item::default() }, on: None }).unwrap()[0];
+        let b = d.apply(Op::AddItem { item: Item { sheet: s2, sym: "offpage".into(), x: 30.0, y: 100.0, ..Item::default() }, on: None, tag: String::new(), obj: None }).unwrap()[0];
         d.apply(Op::Link { a, b }).unwrap();
         assert_eq!((d.p.item(a).unwrap().link, d.p.item(b).unwrap().link), (b, a));
         assert!(d.apply(Op::Link { a, b: a }).is_err());

@@ -7,7 +7,7 @@
 //! 133–156; laminar f = 64/Re (Hagen–Poiseuille). Results are a sizing aid, checked by the engineer.
 
 use crate::graph::Net;
-use crate::model::{Limit, Line, Project};
+use crate::model::{Data, Limit, Project};
 use crate::pipes;
 use serde::Serialize;
 
@@ -66,16 +66,16 @@ pub fn calc(d: f64, q: f64, rho: f64, mu: f64, rough: f64, length: f64) -> (f64,
     (v, re, f, per_m * 100.0, per_m * length)
 }
 
-fn num(l: &Line, k: &str) -> Option<f64> {
-    l.data.get(k).and_then(|v| v.num())
+fn num(l: &Data, k: &str) -> Option<f64> {
+    l.get(k).and_then(|v| v.num())
 }
-fn text(l: &Line, k: &str) -> String {
-    l.data.get(k).map(|v| v.text()).unwrap_or_default()
+fn text(l: &Data, k: &str) -> String {
+    l.get(k).map(|v| v.text()).unwrap_or_default()
 }
 
 /// The limits that apply to a run's lead line: its own choice, else pump suction or discharge from
 /// its connections, else by its phase.
-pub fn limit_for<'a>(p: &'a Project, net: &Net, run: usize, l: &Line) -> Option<&'a Limit> {
+pub fn limit_for<'a>(p: &'a Project, net: &Net, run: usize, l: &Data) -> Option<&'a Limit> {
     let chosen = text(l, "limits");
     let key = if !chosen.is_empty() && chosen != "auto" {
         chosen
@@ -93,7 +93,7 @@ pub fn limit_for<'a>(p: &'a Project, net: &Net, run: usize, l: &Line) -> Option<
 /// The hydraulics of a run, from its lead line (the run's first line; every line of a run carries
 /// the same data). None when the flow, density, viscosity or size is missing.
 pub fn run(p: &Project, net: &Net, run: usize) -> Option<Hyd> {
-    let l = net.lines.get(net.runs.get(run)?.first()?)?;
+    let l = p.data_of(*net.run_obj.get(run)?);
     let rho = num(l, "density").filter(|x| *x > 0.0)?;
     let mu = num(l, "viscosity").filter(|x| *x > 0.0)?;
     let q = num(l, "flow").filter(|x| *x > 0.0).or_else(|| num(l, "mflow").filter(|x| *x > 0.0).map(|m| m / rho))?;

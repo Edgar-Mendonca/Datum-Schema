@@ -1,7 +1,7 @@
 // Window state: the open project, the open sheet, what the engine works out from it (the sheet's
 // drawing, the checks, the hydraulics), the selection, the drawing tool, menus, dialogs and messages.
 import { createSignal, createMemo, batch, JSX } from "solid-js";
-import { invoke, Out, Options, Project, Derived, Library, SymInfo, Kind, NoteKind, Item, Line } from "./api";
+import { invoke, Out, Options, Project, Derived, Library, SymInfo, Kind, NoteKind, Item, Line, Obj } from "./api";
 
 export const [out, setOutRaw] = createSignal<Out | null>(null);
 export const proj = (): Project | undefined => out()?.p;
@@ -13,6 +13,7 @@ export const symOf = (k: string): SymInfo | undefined => symMap().get(k);
 export const sheet = () => proj()?.sheets.find(s => s.id === sheetId()) ?? proj()?.sheets[0];
 export const itemOf = (id: number): Item | undefined => proj()?.items.find(i => i.id === id);
 export const lineOf = (id: number): Line | undefined => proj()?.lines.find(l => l.id === id);
+export const objOf = (id: number): Obj | undefined => proj()?.objects.find(o => o.id === id);
 
 let seq = 0;
 /** After a project is opened (or a sheet changes), the next drawing from the engine is fitted. */
@@ -53,7 +54,7 @@ const darkMq = typeof matchMedia === "function" ? matchMedia("(prefers-color-sch
 export const applyTheme = () => { document.documentElement.dataset.theme = theme() === "auto" ? (darkMq?.matches ? "dark" : "light") : theme(); };
 darkMq?.addEventListener("change", () => theme() === "auto" && applyTheme());
 export const setTheme = (t: string) => { setThemeRaw(t); applyTheme(); const o = { ...opts(), theme: t }; setOpts(o); invoke("set_options", { opts: o }).catch(() => {}); };
-export const [opts, setOpts] = createSignal<Options>({ autosave: 5, beta: false, theme: "auto", openLast: false, units: "SI", grid: true, paper: "sheet", company: "", defaults: null });
+export const [opts, setOpts] = createSignal<Options>({ autosave: 5, beta: false, theme: "auto", openLast: false, units: "SI", grid: true, paper: "sheet", company: "", user: "", defaults: null });
 
 export const [backstage, setBackstage] = createSignal<string | null>("home");
 export const [tab, setTab] = createSignal("home");

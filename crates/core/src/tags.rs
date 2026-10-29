@@ -25,7 +25,7 @@ pub fn loop_of(tag: &str) -> (String, String) {
 }
 
 fn used(p: &Project) -> HashSet<String> {
-    p.items.iter().map(|i| i.tag.trim().to_uppercase()).filter(|t| !t.is_empty()).collect()
+    p.objects.iter().map(|o| o.tag.trim().to_uppercase()).filter(|t| !t.is_empty()).collect()
 }
 
 /// The next free tag for a prefix on a sheet: numbers run 101, 102 … on sheet 1, 201 … on sheet 2.
@@ -47,7 +47,7 @@ pub fn next_free(p: &Project, prefix: &str, sheet: u32) -> String {
 
 /// The next free sequence number for lines on a sheet: 1001, 1002 … on sheet 1, 2001 … on sheet 2.
 pub fn next_seq(p: &Project, sheet: u32) -> String {
-    let used: HashSet<String> = p.lines.iter().filter_map(|l| l.data.get("seq")).map(|v| v.text()).collect();
+    let used: HashSet<String> = p.objects.iter().filter(|o| o.class == crate::model::LINE_CLASS).filter_map(|o| o.data.get("seq")).map(|v| v.text()).collect();
     let mut n = p.sheet_no(sheet).max(1) as u64 * 1000 + 1;
     while used.contains(&n.to_string()) {
         n += 1;
@@ -105,14 +105,17 @@ pub fn bump(p: &Project, tag: &str, extra: &HashSet<String>) -> String {
 pub fn renumber(p: &Project) -> Vec<(u32, String)> {
     type Entry = (f64, f64, u32, Option<u64>, String);
     let mut groups: BTreeMap<(String, usize), Vec<Entry>> = BTreeMap::new();
+    // Each object once, at its first symbol.
+    let mut seen = HashSet::new();
     for it in &p.items {
         let Some(s) = symbols::get(&it.sym) else { continue };
-        if it.tag.trim().is_empty() || s.cat == Cat::Connector {
+        let tag = p.tag_of(it);
+        if tag.trim().is_empty() || s.cat == Cat::Connector || !seen.insert(it.obj) {
             continue;
         }
-        let (pre, num, suf) = split(&it.tag);
+        let (pre, num, suf) = split(tag);
         let key = if s.cat.instrument() || s.cat == Cat::Control { "#loop".to_string() } else { pre.to_uppercase() };
-        groups.entry((key, p.sheet_no(it.sheet))).or_default().push((it.x, it.y, it.id, num, suf));
+        groups.entry((key, p.sheet_no(it.sheet))).or_default().push((it.x, it.y, it.obj, num, suf));
     }
     let mut out = vec![];
     for ((key, sheet), mut v) in groups {
@@ -132,7 +135,7 @@ pub fn renumber(p: &Project) -> Vec<(u32, String)> {
                     n
                 }
             };
-            let it = p.item(*id).map(|i| i.tag.clone()).unwrap_or_default();
+            let it = p.obj(*id).map(|o| o.tag.clone()).unwrap_or_default();
             let (pre, _, _) = split(&it);
             let pre = if key == "#loop" { pre } else { key.clone() };
             out.push((*id, format!("{pre}-{n}{suf}")));
@@ -141,12 +144,13 @@ pub fn renumber(p: &Project) -> Vec<(u32, String)> {
     out
 }
 
-/// Tags used by more than one item (case and spaces ignored): tag → item ids.
+/// Tags used by more than one object (case and spaces ignored): tag → a symbol of each object.
 pub fn duplicates(p: &Project) -> Vec<(String, Vec<u32>)> {
     let mut m: BTreeMap<String, Vec<u32>> = BTreeMap::new();
+    let mut seen = HashSet::new();
     for it in &p.items {
-        let t = it.tag.trim().to_uppercase();
-        if !t.is_empty() && symbols::get(&it.sym).is_some_and(|s| s.cat != Cat::Connector) {
+        let t = p.tag_of(it).trim().to_uppercase();
+        if !t.is_empty() && symbols::get(&it.sym).is_some_and(|s| s.cat != Cat::Connector) && seen.insert(it.obj) {
             m.entry(t).or_default().push(it.id);
         }
     }
@@ -202,7 +206,8 @@ mod tests {
     fn item(p: &mut Project, sym: &str, tag: &str, x: f64) -> u32 {
         let id = p.id();
         let sheet = p.sheets[0].id;
-        p.items.push(Item { id, sheet, sym: sym.into(), tag: tag.into(), x, ..Item::default() });
+        let obj = p.new_obj(sym, tag);
+        p.items.push(Item { id, sheet, sym: sym.into(), x, obj, ..Item::default() });
         id
     }
 
@@ -246,7 +251,8 @@ mod tests {
         let a = item(&mut p, "pump_cent", "P-7A", 10.0);
         let c = item(&mut p, "pump_cent", "P-3", 90.0);
         let t = item(&mut p, "inst_field", "LT-55", 30.0);
-        let r: std::collections::HashMap<u32, String> = renumber(&p).into_iter().collect();
+        let by_obj: std::collections::HashMap<u32, String> = renumber(&p).into_iter().collect();
+        let r: std::collections::HashMap<u32, String> = p.items.iter().filter_map(|i| by_obj.get(&i.obj).map(|t| (i.id, t.clone()))).collect();
         assert_eq!((r[&a].as_str(), r[&b].as_str(), r[&c].as_str()), ("P-101A", "P-101B", "P-102"));
         assert_eq!(r[&t], "LT-101");
     }

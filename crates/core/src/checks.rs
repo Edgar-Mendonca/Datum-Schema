@@ -24,8 +24,9 @@ const ERROR: &str = "error";
 const WARNING: &str = "warning";
 const NOTE: &str = "note";
 
-fn name(it: &Item) -> String {
-    if it.tag.trim().is_empty() { symbols::get(&it.sym).map_or("a symbol", |s| s.name).to_lowercase() } else { it.tag.clone() }
+fn name(p: &Project, it: &Item) -> String {
+    let tag = p.tag_of(it);
+    if tag.trim().is_empty() { symbols::get(&it.sym).map_or("a symbol", |s| s.name).to_lowercase() } else { tag.to_string() }
 }
 fn on_item(rule: u8, level: &'static str, it: &Item, msg: String) -> Issue {
     Issue { rule, level, msg, ids: vec![it.id], sheet: it.sheet, at: [it.x, it.y] }
@@ -38,8 +39,8 @@ fn on_lines(rule: u8, level: &'static str, p: &Project, net: &Net, ids: &[u32], 
     let l = net.lines[&ids[0]];
     Issue { rule, level, msg, ids: ids.to_vec(), sheet: l.sheet, at: mid(p, l) }
 }
-fn text(l: &Line, k: &str) -> String {
-    l.data.get(k).map(|v| v.text().trim().to_string()).unwrap_or_default()
+fn text(p: &Project, l: &Line, k: &str) -> String {
+    p.data_of(l.obj).get(k).map(|v| v.text().trim().to_string()).unwrap_or_default()
 }
 fn label(net: &Net, l: u32) -> String {
     let n = net.numbers.get(&l).cloned().unwrap_or_default();
@@ -102,7 +103,7 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
             }
             let used: Vec<bool> = s.ports.iter().enumerate().filter(|(_, x)| !x.signal).map(|(k, _)| !net.on_port(it.id, k as u8).is_empty()).collect();
             if used.iter().filter(|u| **u).count() == 1 {
-                v.push(on_item(2, ERROR, it, format!("{} is joined on one side only: the other side is an open end.", cap(&name(it)))));
+                v.push(on_item(2, ERROR, it, format!("{} is joined on one side only: the other side is an open end.", cap(&name(p, it)))));
             }
         }
     }
@@ -128,14 +129,14 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
         let Some(s) = sym(it) else { continue };
         let Some([(la, ba), (lb, bb)]) = sides(net, it) else { continue };
         let (l1, l2) = (net.lines[&la], net.lines[&lb]);
-        let (s1, s2) = (text(l1, "size"), text(l2, "size"));
+        let (s1, s2) = (text(p, l1, "size"), text(p, l2, "size"));
         let same_size = crate::pipes::nps_inches(&s1).zip(crate::pipes::nps_inches(&s2)).map_or(s1 == s2, |(a, b)| (a - b).abs() < 1e-9);
         if on(4) && !s1.is_empty() && !s2.is_empty() && !same_size && !s.key.starts_with("reducer") {
-            v.push(on_item(4, ERROR, it, format!("The size changes from {s1}\" to {s2}\" at {} without a reducer.", name(it))));
+            v.push(on_item(4, ERROR, it, format!("The size changes from {s1}\" to {s2}\" at {} without a reducer.", name(p, it))));
         }
-        let (c1, c2) = (text(l1, "class"), text(l2, "class"));
+        let (c1, c2) = (text(p, l1, "class"), text(p, l2, "class"));
         if on(5) && !c1.is_empty() && !c2.is_empty() && !c1.eq_ignore_ascii_case(&c2) && s.key != "specbreak" {
-            v.push(on_item(5, WARNING, it, format!("The pipe class changes from {c1} to {c2} at {} without a spec-break mark.", name(it))));
+            v.push(on_item(5, WARNING, it, format!("The pipe class changes from {c1} to {c2} at {} without a spec-break mark.", name(p, it))));
         }
         // A line flows into the item when the item is at its downstream end.
         let into = |l: &Line, at_b: bool| at_b != l.flip;
@@ -158,7 +159,7 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
                 continue;
             }
             let how = if inward { "both towards" } else { "both away from" };
-            v.push(Issue { rule: 7, level: WARNING, msg: format!("The flow arrows on either side of {} point {how} it.", name(item)), ids: vec![la, lb, it], sheet: item.sheet, at: [item.x, item.y] });
+            v.push(Issue { rule: 7, level: WARNING, msg: format!("The flow arrows on either side of {} point {how} it.", name(p, item)), ids: vec![la, lb, it], sheet: item.sheet, at: [item.x, item.y] });
         }
     }
 
@@ -167,16 +168,16 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
         for it in &p.items {
             let Some(s) = sym(it) else { continue };
             let wants = matches!(s.cat, Cat::Vessel | Cat::Rotating | Cat::Heat | Cat::Control | Cat::Instrument | Cat::Primary) || (s.cat == Cat::Valve);
-            if wants && it.tag.trim().is_empty() {
+            if wants && p.tag_of(it).trim().is_empty() {
                 v.push(on_item(6, WARNING, it, format!("This {} has no tag.", s.name.to_lowercase())));
             }
         }
         for lines in &net.runs {
             let l = net.lines[&lines[0]];
-            if !text(l, "number").is_empty() {
+            if !text(p, l, "number").is_empty() {
                 continue;
             }
-            let missing: Vec<&str> = [("size", "size"), ("fluid", "fluid code"), ("seq", "sequence number"), ("class", "pipe class")].iter().filter(|(k, _)| text(l, k).is_empty()).map(|x| x.1).collect();
+            let missing: Vec<&str> = [("size", "size"), ("fluid", "fluid code"), ("seq", "sequence number"), ("class", "pipe class")].iter().filter(|(k, _)| text(p, l, k).is_empty()).map(|x| x.1).collect();
             if !missing.is_empty() {
                 v.push(on_lines(6, WARNING, p, net, lines, format!("{} has no {}.", cap(&label(net, l.id)), join(&missing))));
             }
@@ -193,7 +194,7 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
             }
             let found = net.reach(it.id, k as u8, false, 8, |_, ns| !ns.inline && ns.cat != Cat::Connector).iter().any(|(n, _, _)| matches!(net.items[n].sym.as_str(), "check" | "nonslam"));
             if !found {
-                v.push(on_item(8, WARNING, it, format!("Pump {} has no check valve on its discharge.", name(it))));
+                v.push(on_item(8, WARNING, it, format!("Pump {} has no check valve on its discharge.", name(p, it))));
             }
         }
     }
@@ -208,12 +209,12 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
                 Cat::Heat if it.sym.starts_with("hx_") || it.sym == "jacketed" => s.ports.iter().enumerate().filter(|(_, x)| x.name.starts_with("shell") || x.name.starts_with("vapour") || x.name.starts_with("liquid") || !it.sym.starts_with("hx_")).map(|(k, _)| k as u8).collect(),
                 _ => continue,
             };
-            if it.data.get("relief").is_some_and(|x| !x.text().trim().is_empty()) {
+            if p.data_of(it.obj).get("relief").is_some_and(|x| !x.text().trim().is_empty()) {
                 continue;
             }
             let found = ports.iter().any(|&k| net.reach(it.id, k, true, 10, |_, ns| ns.cat.equipment()).iter().any(|(n, _, _)| RELIEF.contains(&net.items[n].sym.as_str())));
             if !found {
-                v.push(on_item(9, WARNING, it, format!("{} has no relief path: add a safety valve or a rupture disc, or say where relief is in its Relief path field.", cap(&name(it)))));
+                v.push(on_item(9, WARNING, it, format!("{} has no relief path: add a safety valve or a rupture disc, or say where relief is in its Relief path field.", cap(&name(p, it)))));
             }
         }
     }
@@ -225,14 +226,14 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
             let Some(s) = sym(it) else { continue };
             let sides: Vec<bool> = s.ports.iter().enumerate().filter(|(_, x)| !x.signal).map(|(k, _)| net.reach(it.id, k as u8, false, 6, |ni, ns| (!ns.inline && ns.cat != Cat::Connector) || ISOLATE.contains(&ni.sym.as_str())).iter().any(|(n, _, _)| ISOLATE.contains(&net.items[n].sym.as_str()))).collect();
             if sides.iter().any(|x| !x) {
-                v.push(on_item(10, NOTE, it, format!("Control valve {} has no isolation valve {}.", name(it), if sides.iter().all(|x| !x) { "on either side" } else { "on one side" })));
+                v.push(on_item(10, NOTE, it, format!("Control valve {} has no isolation valve {}.", name(p, it), if sides.iter().all(|x| !x) { "on either side" } else { "on one side" })));
             }
         }
     }
 
     // 11. A controller needs a measurement and a final element in its loop.
     // 12. Instrument letters that do not match the symbol or the loop.
-    let insts: Vec<(&Item, String, String, Cat)> = p.items.iter().filter_map(|i| { let s = sym(i)?; (s.cat.instrument() || s.cat == Cat::Control).then(|| { let (l, n) = tags::loop_of(&i.tag); (i, l, n, s.cat) }) }).collect();
+    let insts: Vec<(&Item, String, String, Cat)> = p.items.iter().filter_map(|i| { let s = sym(i)?; (s.cat.instrument() || s.cat == Cat::Control).then(|| { let (l, n) = tags::loop_of(p.tag_of(i)); (i, l, n, s.cat) }) }).collect();
     if on(11) {
         for (it, l, n, cat) in &insts {
             if *cat != Cat::Instrument || !tags::is_controller(l) || n.is_empty() {
@@ -243,29 +244,29 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
             let fin = insts.iter().any(|(o, ol, on_, _)| on_ == n && matches!(o.sym.as_str(), "cv_pneu" | "cv_motor" | "cv_solenoid" | "regulator") && tags::is_final(ol));
             if !meas || !fin {
                 let what = match (meas, fin) { (false, false) => "a measurement or a final element", (false, true) => "a measurement (a transmitter or element)", _ => "a final element (a control valve)" };
-                v.push(on_item(11, WARNING, it, format!("Controller {} has no {what} in loop {n}.", it.tag)));
+                v.push(on_item(11, WARNING, it, format!("Controller {} has no {what} in loop {n}.", p.tag_of(it))));
             }
         }
     }
     if on(12) {
         for (it, l, n, _) in &insts {
-            if it.tag.trim().is_empty() {
+            if p.tag_of(it).trim().is_empty() {
                 continue;
             }
             if !tags::letters_ok(l) {
-                v.push(on_item(12, NOTE, it, format!("{} does not start with ISA-5.1 letters.", it.tag)));
+                v.push(on_item(12, NOTE, it, format!("{} does not start with ISA-5.1 letters.", p.tag_of(it))));
                 continue;
             }
             if let Some(ends) = tags::expected_end(&it.sym) {
                 if !ends.iter().any(|e| l.ends_with(e)) {
                     let s = sym(it).map_or("", |s| s.name);
-                    v.push(on_item(12, NOTE, it, format!("{} is a {}; its letters would end in {}.", it.tag, s.to_lowercase(), ends.join(" or "))));
+                    v.push(on_item(12, NOTE, it, format!("{} is a {}; its letters would end in {}.", p.tag_of(it), s.to_lowercase(), ends.join(" or "))));
                     continue;
                 }
             }
-            if let Some(lp) = it.data.get("loop").map(|x| x.text()).filter(|x| !x.trim().is_empty()) {
+            if let Some(lp) = p.data_of(it.obj).get("loop").map(|x| x.text()).filter(|x| !x.trim().is_empty()) {
                 if lp.trim() != n {
-                    v.push(on_item(12, NOTE, it, format!("{} carries loop number {} in its data but {n} in its tag.", it.tag, lp.trim())));
+                    v.push(on_item(12, NOTE, it, format!("{} carries loop number {} in its data but {n} in its tag.", p.tag_of(it), lp.trim())));
                 }
             }
         }

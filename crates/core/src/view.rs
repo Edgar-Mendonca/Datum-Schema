@@ -24,6 +24,8 @@ pub struct PortView {
 #[derive(Serialize, Clone, Debug)]
 pub struct ItemView {
     pub id: u32,
+    /// The object this symbol shows.
+    pub obj: u32,
     pub sym: String,
     pub cat: Cat,
     pub x: f64,
@@ -42,6 +44,8 @@ pub struct ItemView {
 #[derive(Serialize, Clone, Debug)]
 pub struct LineView {
     pub id: u32,
+    /// The line-number object (0 for signal lines).
+    pub obj: u32,
     pub kind: Kind,
     /// The route, end to end, for picking and dragging.
     pub path: Vec<[f64; 2]>,
@@ -321,7 +325,7 @@ pub fn sheet(p: &Project, s: &Sheet, net: &Net, hyd: &[Option<Hyd>]) -> SheetVie
             let sc = it.scale;
             match cat {
                 Cat::Instrument => {
-                    let (l, n) = crate::tags::loop_of(&it.tag);
+                    let (l, n) = crate::tags::loop_of(p.tag_of(it));
                     texts.push(text([it.x, it.y - 1.5 * sc], 2.5 * sc, l, 1, true));
                     texts.push(text([it.x, it.y + 2.0 * sc], 2.2 * sc, n, 1, false));
                 }
@@ -329,25 +333,26 @@ pub fn sheet(p: &Project, s: &Sheet, net: &Net, hyd: &[Option<Hyd>]) -> SheetVie
                     let partner = p.item(it.link).and_then(|q| p.sheet(q.sheet)).map(|sh| sh.number.clone()).unwrap_or_else(|| "?".into());
                     texts.push(text([it.x - 1.0 * sc, it.y + 0.9 * sc], 2.0 * sc, partner, 1, false));
                     let line = net.on_port(it.id, 0).first().and_then(|x| net.numbers.get(&x.0)).cloned().unwrap_or_default();
-                    let note = it.data.get("to_text").map(|v| v.text()).unwrap_or_default();
+                    let note = p.data_of(it.obj).get("to_text").map(|v| v.text()).unwrap_or_default();
                     let below = [line, note].into_iter().filter(|x| !x.is_empty()).collect::<Vec<_>>().join(" · ");
                     if !below.is_empty() {
                         texts.push(text([it.x, bb[3] + 3.0], 2.0, below, 1, false));
                     }
                 }
                 _ => {
-                    if !it.tag.is_empty() {
+                    let tag = p.tag_of(it);
+                    if !tag.is_empty() {
                         let big = cat.equipment();
                         let y = if big { bb[3] + 4.0 } else { bb[1] - 1.2 };
-                        texts.push(text([it.x, y], if big { 3.0 } else { 2.2 }, it.tag.clone(), 1, big));
+                        texts.push(text([it.x, y], if big { 3.0 } else { 2.2 }, tag.to_string(), 1, big));
                         if big {
-                            if let Some(svc) = it.data.get("service").map(|v| v.text()).filter(|t| !t.is_empty()) {
+                            if let Some(svc) = p.data_of(it.obj).get("service").map(|v| v.text()).filter(|t| !t.is_empty()) {
                                 texts.push(text([it.x, y + 3.2], 2.2, crate::clip(&svc, 40), 1, false));
                             }
                         }
                     }
                     if cat == Cat::Control {
-                        if let Some(f) = it.data.get("fail").map(|v| v.text()).filter(|t| !t.is_empty()) {
+                        if let Some(f) = p.data_of(it.obj).get("fail").map(|v| v.text()).filter(|t| !t.is_empty()) {
                             texts.push(text([it.x, bb[3] + 2.6], 2.0, f, 1, false));
                         }
                     }
@@ -356,7 +361,7 @@ pub fn sheet(p: &Project, s: &Sheet, net: &Net, hyd: &[Option<Hyd>]) -> SheetVie
             let ports = sym
                 .map(|s| (0..s.ports.len()).filter_map(|k| graph::port_pos(it, k as u8).map(|(q, d)| PortView { p: q, dir: d, signal: s.ports[k].signal, used: used.contains(&(it.id, k as u8)) })).collect())
                 .unwrap_or_default();
-            ItemView { id: it.id, sym: it.sym.clone(), cat, x: it.x, y: it.y, rot: it.rot, flip: it.flip, scale: it.scale, tag: it.tag.clone(), texts, bbox: bb, ports, layer: cat.layer() }
+            ItemView { id: it.id, sym: it.sym.clone(), cat, x: it.x, y: it.y, rot: it.rot, flip: it.flip, scale: it.scale, tag: p.tag_of(it).to_string(), obj: it.obj, texts, bbox: bb, ports, layer: cat.layer() }
         })
         .collect();
     let mut sorted: Vec<&crate::model::Line> = p.lines.iter().filter(|l| l.sheet == s.id).collect();
@@ -392,7 +397,7 @@ pub fn sheet(p: &Project, s: &Sheet, net: &Net, hyd: &[Option<Hyd>]) -> SheetVie
                     marks.push(text(c, 2.4, ["✓", "!", "✗"][b.min(2) as usize], 1, true));
                 }
             }
-            LineView { id: l.id, kind: l.kind, path: path.clone(), segs: segs.get(&l.id).cloned().unwrap_or_default(), marks, number, badge, run, layer: line_layer(l.kind) }
+            LineView { id: l.id, obj: l.obj, kind: l.kind, path: path.clone(), segs: segs.get(&l.id).cloned().unwrap_or_default(), marks, number, badge, run, layer: line_layer(l.kind) }
         })
         .collect();
     let notes = p.notes.iter().filter(|n| n.sheet == s.id).map(note_view).collect();
@@ -537,7 +542,7 @@ mod tests {
     fn items_show_tags_and_ports() {
         let mut d = Doc::new(Project::new());
         let sh = d.p.sheets[0].id;
-        let t = d.apply(Op::AddItem { item: Item { sheet: sh, sym: "inst_field".into(), tag: "LIC".into(), x: 100.0, y: 100.0, ..Item::default() }, on: None }).unwrap()[0];
+        let t = d.apply(Op::AddItem { item: Item { sheet: sh, sym: "inst_field".into(), x: 100.0, y: 100.0, ..Item::default() }, on: None, tag: "LIC".into(), obj: None }).unwrap()[0];
         let net = Net::new(&d.p);
         let sv = sheet(&d.p, &d.p.sheets[0], &net, &[]);
         let it = sv.items.iter().find(|i| i.id == t).unwrap();
@@ -551,7 +556,7 @@ mod tests {
     fn legend_lists_used_symbols() {
         let mut d = Doc::new(Project::new());
         let sh = d.p.sheets[0].id;
-        d.apply(Op::AddItem { item: Item { sheet: sh, sym: "pump_cent".into(), x: 100.0, y: 100.0, ..Item::default() }, on: None }).unwrap();
+        d.apply(Op::AddItem { item: Item { sheet: sh, sym: "pump_cent".into(), x: 100.0, y: 100.0, ..Item::default() }, on: None, tag: String::new(), obj: None }).unwrap();
         let lg = d.apply(Op::AddSheet { sheet: Sheet { legend: true, ..Sheet::default() } }).unwrap()[0];
         let rows = legend(&d.p, d.p.sheet(lg).unwrap());
         assert!(rows.iter().any(|r| r.name == "Centrifugal pump"));

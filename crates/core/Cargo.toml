@@ -1,6 +1,6 @@
 [package]
 name = "datum-core"
-version = "0.1.4"
+version = "0.1.5"
 license = "MIT"
 edition = "2021"
 description = "Datum Schema engine: the P&ID model and its edits, the symbol library, connectivity, tags, checks, line hydraulics, lists, the sheet frame and the DXF writer."
@@ -10,3 +10,4 @@ serde.workspace = true
 serde_json.workspace = true
 # Excel workbooks for the lists (MIT or Apache-2.0), as in Datum Plan.
 rust_xlsxwriter = { version = "0.101.0", default-features = false }
+rusqlite = { version = "0.41.1", features = ["bundled"] }

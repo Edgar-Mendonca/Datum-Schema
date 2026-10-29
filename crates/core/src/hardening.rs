@@ -42,7 +42,8 @@ fn random_project(r: &mut Rng, n: usize) -> Project {
             0..=4 => {
                 let s = &syms[r.below(syms.len())];
                 let on = if s.inline { d.p.lines.iter().filter(|l| l.sheet == sheet).map(|l| l.id).collect::<Vec<_>>().first().copied() } else { None };
-                let _ = d.apply(Op::AddItem { item: Item { sheet, sym: s.key.into(), x: r.f(0.0, 400.0), y: r.f(0.0, 290.0), rot: r.below(4) as u8, flip: r.below(2) == 0, tag: if r.below(3) == 0 { HOSTILE[r.below(8)].into() } else { String::new() }, ..Item::default() }, on });
+                let tag: String = if r.below(3) == 0 { HOSTILE[r.below(8)].into() } else { String::new() };
+                let _ = d.apply(Op::AddItem { item: Item { sheet, sym: s.key.into(), x: r.f(0.0, 400.0), y: r.f(0.0, 290.0), rot: r.below(4) as u8, flip: r.below(2) == 0, ..Item::default() }, on, tag, obj: None });
             }
             5..=7 => {
                 let items: Vec<&Item> = d.p.items.iter().filter(|i| i.sheet == sheet).collect();
@@ -131,7 +132,7 @@ fn random_edits_never_panic_and_failed_ones_change_nothing() {
             10 => Op::Renumber,
             11 => Op::SetData { ids: vec![id], key: "flow".into(), val: Some(Val::Num(f64::INFINITY)) },
             12 => Op::MoveSheet { id: sheet, to: usize::MAX },
-            _ => Op::AddItem { item: Item { sheet, sym: "gate".into(), x: r.f(0.0, 400.0), y: r.f(0.0, 290.0), ..Item::default() }, on: Some(id) },
+            _ => Op::AddItem { item: Item { sheet, sym: "gate".into(), x: r.f(0.0, 400.0), y: r.f(0.0, 290.0), ..Item::default() }, on: Some(id), tag: String::new(), obj: None },
         };
         let before = d.p.clone();
         let res = d.apply(op);
@@ -207,12 +208,15 @@ fn speed_gate_500_items() {
     let s = p.sheets[0].id;
     for i in 0..500u32 {
         let id = p.id();
-        p.items.push(Item { id, sheet: s, sym: if i % 2 == 0 { "vvessel" } else { "gate" }.into(), x: 20.0 + (i % 25) as f64 * 15.0, y: 20.0 + (i / 25) as f64 * 13.0, tag: format!("X-{i}"), ..Item::default() });
+        let sym = if i % 2 == 0 { "vvessel" } else { "gate" };
+        let obj = p.new_obj(sym, &format!("X-{i}"));
+        p.items.push(Item { id, sheet: s, sym: sym.into(), x: 20.0 + (i % 25) as f64 * 15.0, y: 20.0 + (i / 25) as f64 * 13.0, obj, ..Item::default() });
     }
     let ids: Vec<u32> = p.items.iter().map(|i| i.id).collect();
     for w in ids.windows(2) {
         let id = p.id();
-        p.lines.push(Line { id, sheet: s, a: End::Port { item: w[0], port: 1 }, b: End::Port { item: w[1], port: 0 }, ..Line::default() });
+        let obj = p.new_obj(model::LINE_CLASS, "");
+        p.lines.push(Line { id, sheet: s, a: End::Port { item: w[0], port: 1 }, b: End::Port { item: w[1], port: 0 }, obj, ..Line::default() });
     }
     assert!(p.normalize().is_empty());
     let t = std::time::Instant::now();
@@ -261,14 +265,14 @@ mod review {
         let l = b.line((v1, 5), (v2, 3));
         b.spec(&[l], "3", "A1A");
         let sheet = b.sheet();
-        let made = b.d.apply(Op::AddItem { item: Item { sheet, sym: "gate".into(), x: 150.0, y: 108.0, ..Item::default() }, on: Some(l) }).unwrap();
+        let made = b.d.apply(Op::AddItem { item: Item { sheet, sym: "gate".into(), x: 150.0, y: 108.0, ..Item::default() }, on: Some(l), tag: String::new(), obj: None }).unwrap();
         let p = b.d.p.clone();
         let lines: Vec<Line> = p.lines.iter().filter(|x| x.id == l || x.id == made[1]).cloned().collect();
         let items = vec![p.item(made[0]).unwrap().clone()];
         let new = b.d.apply(Op::Paste { sheet, items, lines, notes: vec![], dx: 0.0, dy: 60.0 }).unwrap();
-        let seqs: Vec<String> = new[1..].iter().map(|id| b.d.p.line(*id).unwrap().data["seq"].text()).collect();
+        let seqs: Vec<String> = new[1..].iter().map(|id| b.d.p.data_of(b.d.p.line(*id).unwrap().obj)["seq"].text()).collect();
         assert_eq!(seqs[0], seqs[1]);
-        assert_ne!(seqs[0], p.line(l).unwrap().data["seq"].text());
+        assert_ne!(seqs[0], p.data_of(p.line(l).unwrap().obj)["seq"].text());
     }
 
     #[test]
@@ -278,7 +282,7 @@ mod review {
         let a = b.item("offpage", 150.0, 94.0);
         b.line((pm, 1), (a, 0));
         let s2 = b.d.apply(Op::AddSheet { sheet: Sheet::default() }).unwrap()[0];
-        let add = |b: &mut B, sym: &str, x: f64| b.d.apply(Op::AddItem { item: Item { sheet: s2, sym: sym.into(), x, y: 100.0, ..Item::default() }, on: None }).unwrap()[0];
+        let add = |b: &mut B, sym: &str, x: f64| b.d.apply(Op::AddItem { item: Item { sheet: s2, sym: sym.into(), x, y: 100.0, ..Item::default() }, on: None, tag: String::new(), obj: None }).unwrap()[0];
         let c = add(&mut b, "offpage", 30.0);
         let ck = add(&mut b, "check", 80.0);
         let v = add(&mut b, "vvessel", 200.0);
@@ -305,7 +309,7 @@ mod review {
         let (l1, l2) = (c.line((v1, 5), (g, 0)), c.line((g, 1), (v2, 3)));
         c.set(&[l2], "flow", Val::Num(0.01));
         c.d.apply(Op::Delete { ids: vec![g] }).unwrap();
-        assert_eq!(c.d.p.line(l1).unwrap().data.get("flow"), Some(&Val::Num(0.01)));
+        assert_eq!(c.d.p.data_of(c.d.p.line(l1).unwrap().obj).get("flow"), Some(&Val::Num(0.01)));
     }
 
     #[test]
@@ -314,7 +318,7 @@ mod review {
         p.next = u32::MAX;
         let mut d = Doc::new(p);
         let s = d.p.sheets[0].id;
-        let add = |d: &mut Doc| d.apply(Op::AddItem { item: Item { sheet: s, sym: "gate".into(), ..Item::default() }, on: None });
+        let add = |d: &mut Doc| d.apply(Op::AddItem { item: Item { sheet: s, sym: "gate".into(), ..Item::default() }, on: None, tag: String::new(), obj: None });
         let first = add(&mut d);
         let second = add(&mut d);
         assert!(first.is_ok() || second.is_err());

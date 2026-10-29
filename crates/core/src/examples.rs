@@ -69,7 +69,7 @@ impl X {
     /// Place a symbol (quarter turns `rot`); an empty tag takes the next free one.
     fn it(&mut self, sym: &str, x: f64, y: f64, rot: u8, tag: &str) -> u32 {
         let s = self.s;
-        self.op(Op::AddItem { item: Item { sheet: s, sym: sym.into(), x, y, rot, tag: tag.into(), ..Item::default() }, on: None })[0]
+        self.op(Op::AddItem { item: Item { sheet: s, sym: sym.into(), x, y, rot, ..Item::default() }, on: None, tag: tag.into(), obj: None })[0]
     }
     fn data(&mut self, ids: &[u32], kv: &[(&str, Val)]) {
         for (k, v) in kv {
@@ -223,6 +223,7 @@ fn faults() -> Project {
     let out = d.p.line(f.out).unwrap().clone();
     let at = crate::graph::end_pt(&d.p, &out.b);
     ok(&mut d, Op::SetLine { line: Line { b: End::Free { x: at[0] - 12.0, y: at[1] }, ..out } });
+    ok(&mut d, Op::NewLineObject { line: f.dis_a[5] });
     ok(&mut d, Op::SetData { ids: vec![f.dis_a[5]], key: "size".into(), val: Some(t("2")) });
     let rev = d.p.line(f.dis_a[1]).unwrap().clone();
     ok(&mut d, Op::SetLine { line: Line { flip: true, ..rev } });

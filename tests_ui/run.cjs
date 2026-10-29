@@ -51,14 +51,15 @@ const shots = process.env.SHOTS;
   await place("Vertical vessel", 80, 100);
   await place("Vertical vessel", 260, 100);
   let pr = await project();
-  check("placing a symbol from the palette", pr.items.length === 2 && pr.items[0].tag === "V-101" && pr.items[1].tag === "V-102", JSON.stringify(pr.items.map(i => i.tag)));
+  const tagOf = (pr, it) => pr.objects.find(o => o.id === it.obj)?.tag;
+  check("placing a symbol from the palette", pr.items.length === 2 && tagOf(pr, pr.items[0]) === "V-101" && tagOf(pr, pr.items[1]) === "V-102", JSON.stringify(pr.items.map(i => tagOf(pr, i))));
 
   // 4. Draw a line from the first vessel's right lower nozzle (90, 108) to the second's left lower (250, 108).
   await dragFrom([90, 108], [250, 108]);
   pr = await project();
   const l0 = pr.lines[0];
   check("dragging port to port draws a line", pr.lines.length === 1 && l0.a.at === "port" && l0.a.item === pr.items[0].id && l0.b.at === "port" && l0.b.item === pr.items[1].id, JSON.stringify(pr.lines));
-  check("the new line gets the sheet's next sequence number", l0?.data.seq === "1001");
+  check("the new line gets the sheet's next sequence number", pr.objects.find(o => o.id === l0?.obj)?.data.seq === "1001");
 
   // 5. Drop a gate valve on the line: it goes in, the line splits in two, both keep the data.
   await place("Gate valve", 170, 108.5);
@@ -85,6 +86,7 @@ const shots = process.env.SHOTS;
   await p.keyboard.press("Control+s"); await p.waitForTimeout(300);
   const saved = (await inv("exports")).filter(e => e.kind === "dschema").pop();
   check("save writes the project", !!saved && JSON.parse(saved.text).items.length === 3);
+  check("the project file is SQLite and reads back the same", saved?.sqlite === true);
 
   // 9. Dark theme draws without errors.
   await p.click(".theme"); await p.waitForTimeout(200);
@@ -130,7 +132,7 @@ const shots = process.env.SHOTS;
   const cell = p.locator(".lists tbody tr.f").filter({ has: p.locator("td:first-child", { hasText: '3"-P-1007-A1A' }) }).locator("td:nth-child(7) input");
   await cell.fill("Receiver outlet, edited"); await cell.press("Enter"); await p.waitForTimeout(400);
   pr2 = await project();
-  check("editing the list edits the line", pr2.lines.some(l => l.data.service === "Receiver outlet, edited"));
+  check("editing the list edits the line", pr2.objects.some(o => o.data.service === "Receiver outlet, edited"));
   await p.click(".btabs button:has-text('Equipment')"); await p.waitForTimeout(400);
   check("the equipment list", (await p.$$eval(".lists tbody tr.f td:first-child input", els => els.map(e => e.value))).includes("V-101"));
 
@@ -179,28 +181,28 @@ const shots = process.env.SHOTS;
   // 18. Keyboard: duplicate takes the next free tag, R turns, Delete of a valve joins its line again.
   await openEx("Pump transfer");
   pr2 = await project();
-  const pumpA = pr2.items.find(i => i.tag === "P-101A");
+  const pumpA = pr2.items.find(i => tagOf(pr2, i) === "P-101A");
   await p.click(".canvas", { position: { x: 5, y: 5 } });
   const [pax, pay] = await scr(pumpA.x, pumpA.y + 2); await p.mouse.click(pax, pay); await p.waitForTimeout(200);
   await p.keyboard.press("Control+d"); await p.waitForTimeout(500);
   pr2 = await project();
-  check("Ctrl+D duplicates with the next free tag", pr2.items.some(i => i.tag === "P-101C"), JSON.stringify(pr2.items.filter(i => i.sym === "pump_cent").map(i => i.tag)));
+  check("Ctrl+D duplicates with the next free tag", pr2.objects.some(o => o.tag === "P-101C"), JSON.stringify(pr2.objects.filter(o => o.class === "pump_cent").map(o => o.tag)));
   await p.keyboard.press("r"); await p.waitForTimeout(300);
-  check("R turns the selection", (await project()).items.find(i => i.tag === "P-101C")?.rot === 1);
+  { const q = await project(); check("R turns the selection", q.items.find(i => tagOf(q, i) === "P-101C")?.rot === 1); }
   await p.keyboard.press("Delete"); await p.waitForTimeout(300);
   const lines0 = (await project()).lines.length;
-  const hv = (await project()).items.find(i => i.tag === "HV-101");
+  const q0 = await project(); const hv = q0.items.find(i => tagOf(q0, i) === "HV-101");
   const [hx, hy] = await scr(hv.x, hv.y); await p.mouse.click(hx, hy); await p.waitForTimeout(200);
   await p.keyboard.press("Delete"); await p.waitForTimeout(400);
   pr2 = await project();
-  check("deleting an in-line valve joins its two lines again", !pr2.items.some(i => i.tag === "HV-101") && pr2.lines.length === lines0 - 1);
+  check("deleting an in-line valve joins its two lines again", !pr2.objects.some(o => o.tag === "HV-101") && pr2.lines.length === lines0 - 1);
 
   // 19. US units: the Inspector and the lists follow; the file keeps SI.
   await p.click(".tabs button:text-is('Home')"); await p.click(".ribbon button:has-text('US: psi')"); await p.waitForTimeout(400);
   await p.click(".btabs button:has-text('Line list')"); await p.waitForTimeout(400);
   const heads = await p.$$eval(".lists thead th", els => els.map(e => e.textContent));
   check("US units in the line list", heads.some(h => h.includes("(gpm)")) && heads.some(h => h.includes("(psi)")), JSON.stringify(heads));
-  check("the file keeps SI", (await project()).lines.find(l => l.data.flow)?.data.flow < 0.01);
+  check("the file keeps SI", (await project()).objects.find(o => o.data.flow)?.data.flow < 0.01);
 
   // 20. Tell Me finds a command.
   await p.keyboard.press("Control+k"); await p.waitForTimeout(200);

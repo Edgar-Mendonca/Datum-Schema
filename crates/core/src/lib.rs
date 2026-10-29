@@ -7,6 +7,7 @@ pub mod checks;
 pub mod doc;
 pub mod dxf;
 pub mod examples;
+pub mod file;
 pub mod fields;
 pub mod frame;
 pub mod graph;
@@ -23,7 +24,7 @@ pub mod view;
 #[cfg(test)]
 mod hardening;
 
-pub use model::{End, Item, Kind, Line, Note, Project, Sheet, Val};
+pub use model::{End, Item, Kind, Line, Note, Obj, Project, Sheet, Val};
 
 /// A number for people: no trailing zeros, at most 6 decimals.
 pub fn fmt_num(v: f64) -> String {

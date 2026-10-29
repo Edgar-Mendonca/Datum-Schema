@@ -150,6 +150,7 @@ const OptionsPage = () => {
       <Sec t="New projects" about="Defaults given to every new project. Each project keeps its own settings afterwards.">
         <Opt l="Units" hint="How values are shown and typed. Files always keep SI units."><Pick value={o().units} set={v => put("units", v as any)} options={[["SI", "SI: bar, °C, m³/h, kg/m³, cP, m"], ["US", "US: psi, °F, gpm, lb/ft³, cP, ft"]]} /></Opt>
         <Opt l="Company" hint="Written in the title block of new projects."><Text value={o().company} set={v => put("company", v)} /></Opt>
+        <Opt l="Your name" hint="Written in the history of every change you make. Empty: the computer's user name."><Text value={o().user} set={v => put("user", v)} /></Opt>
       </Sec>
       <Sec t="Updates" about="Datum Schema checks GitHub for new versions when it starts. Updates install from File › Updates.">
         <Opt l="Beta versions" hint="Get new features early. They may have bugs."><Check label="Get beta versions" value={o().beta} set={v => put("beta", v)} /></Opt>

@@ -1,8 +1,8 @@
 // The inspector: the selected item's or line's data with units, its connections and (for lines)
 // the hydraulics; with nothing selected, the sheet and the title block.
-import { For, Show, JSX, createMemo } from "solid-js";
-import { Field, Item, Line, Note, Rev, Val, num, parseNum } from "./api";
-import { sel, proj, sheet, itemOf, lineOf, symOf, lib, act, derived, setSel, toast } from "./store";
+import { For, Show, JSX, createMemo, createResource } from "solid-js";
+import { Field, Item, Line, Note, Rev, Val, Change, num, parseNum } from "./api";
+import { sel, proj, sheet, itemOf, lineOf, objOf, symOf, lib, act, derived, setSel, toast, call } from "./store";
 import { toU, fromU, unit, fmt } from "./units";
 import { Help } from "./help";
 import { C } from "./cmds";
@@ -37,8 +37,21 @@ const FieldInput = (p: { f: Field; v: Val | undefined; ids: number[]; placeholde
   );
 };
 
+/** The recorded changes of an object: who changed what, when, from and to. */
+const History = (p: { id: number }) => {
+  const [rows] = createResource(() => [p.id, proj()] as const, ([id]) => call<Change[]>("changes", { id }));
+  const when = (t: number) => new Date(t * 1000).toLocaleString([], { dateStyle: "short", timeStyle: "short" });
+  return <Show when={rows()?.length}>
+    <h4>History <Help k="history" /></h4>
+    <table class="vmini hist"><tbody><For each={rows()!.slice(0, 30)}>{c => <tr title={`${when(c.time)} · ${c.user}`}>
+      <td class="muted">{when(c.time)}</td><td>{c.what === "set" || c.what === "clear" ? c.key : c.what}</td><td class="r">{c.what === "add" ? "" : `${c.old || "—"} → ${c.new || "—"}`}</td>
+    </tr>}</For></tbody></table>
+  </Show>;
+};
+
 const ItemPanel = (p: { it: Item }) => {
   const s = () => symOf(p.it.sym);
+  const o = () => objOf(p.it.obj);
   const v = () => derived()?.view?.items.find(i => i.id === p.it.id);
   const conns = createMemo(() => {
     const pr = proj(); if (!pr) return [];
@@ -52,7 +65,7 @@ const ItemPanel = (p: { it: Item }) => {
     <div class="iwhat"><b>{s()?.name ?? p.it.sym}</b><span class="muted small"> · {s()?.cat_name}</span><Help k={`cat:${s()?.cat ?? "mark"}`} /></div>
     <Show when={s()?.cat !== "mark" || s()?.prefix}>
       <Row label="Tag" hint={s()?.cat === "instrument" || s()?.cat === "primary" ? "Letters and loop number, e.g. LIC-101 (ISA-5.1)." : undefined}>
-        <input class="mono" value={p.it.tag} onChange={e => act({ SetTag: { id: p.it.id, tag: e.currentTarget.value } })} />
+        <input class="mono" value={o()?.tag ?? ""} onChange={e => act({ SetTag: { id: p.it.obj, tag: e.currentTarget.value } })} />
       </Row>
     </Show>
     <div class="ibtns"><button class="btn sm" onClick={C.rotate} title="Turn a quarter clockwise (R)">Rotate</button><button class="btn sm" onClick={C.flip} title="Mirror left to right (M)">Mirror</button>
@@ -63,12 +76,13 @@ const ItemPanel = (p: { it: Item }) => {
       <button class="btn sm" onClick={() => C.pairDialog(p.it.id)}>{partner() ? "Change partner…" : "Pair with…"}</button>
     </Show>
     <h4>Data</h4>
-    <For each={s()?.fields ?? []}>{f => <FieldInput f={f} v={p.it.data[f.key]} ids={[p.it.id]} placeholder={f.key === "loop" ? (p.it.tag.match(/\d+/)?.[0] ?? "") : undefined} />}</For>
+    <For each={s()?.fields ?? []}>{f => <FieldInput f={f} v={o()?.data[f.key]} ids={[p.it.obj]} placeholder={f.key === "loop" ? (o()?.tag.match(/\d+/)?.[0] ?? "") : undefined} />}</For>
     <Show when={conns().length}>
       <h4>Connections</h4>
       <table class="vmini"><tbody><For each={conns()}>{c => <tr classList={{ f: c.ids.length > 0 }} onClick={() => c.ids.length && setSel(c.ids)}><td>{c.port}</td><td class="r">{c.lines.length ? c.lines.join(", ") : <span class="muted">open</span>}</td></tr>}</For></tbody></table>
     </Show>
     <Show when={v() && derived()?.issues.some(i => i.ids.includes(p.it.id))}><Issues id={p.it.id} /></Show>
+    <History id={p.it.obj} />
   </>;
 };
 
@@ -104,7 +118,9 @@ const LinePanel = (p: { l: Line }) => {
         <p class="muted small">A sizing aid: check it as the engineer.</p>
       </>}</Show>
       <h4>Data</h4>
-      <For each={lib()?.line_fields ?? []}>{f => <FieldInput f={f} v={p.l.data[f.key]} ids={ids()} />}</For>
+      <For each={lib()?.line_fields ?? []}>{f => <FieldInput f={f} v={objOf(p.l.obj)?.data[f.key]} ids={[p.l.obj]} />}</For>
+      <div class="ibtns"><button class="btn sm" title="Give this piece a line number of its own (a copy of this line's data), as after a reducer" onClick={() => act({ NewLineObject: { line: p.l.id } })}>New line number from here</button></div>
+      <History id={p.l.obj} />
     </Show>
     <Issues id={p.l.id} />
   </>;

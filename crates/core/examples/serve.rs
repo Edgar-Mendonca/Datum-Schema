@@ -32,6 +32,11 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             if a["redo"].as_bool().unwrap_or(false) { s.doc.redo() } else { s.doc.undo() }
             out(s, vec![], vec![])
         }
+        "changes" => {
+            let id = a["id"].as_u64().unwrap_or(0) as u32;
+            let obj = s.doc.p.obj_id(id).unwrap_or(0);
+            json!(s.doc.history.iter().rev().filter(|c| id == 0 || c.obj == obj).take(500).cloned().collect::<Vec<_>>())
+        }
         "derived" => serde_json::to_value(api::derived(&s.doc.p, a["sheet"].as_u64().unwrap_or(0) as u32)).unwrap(),
         "list" => serde_json::to_value(lists::build(&s.doc.p, &str_("kind"))?).unwrap(),
         "views" => serde_json::to_value(view::all(&s.doc.p)).unwrap(),
@@ -58,7 +63,10 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
         }
         "save" => {
             let json = model::to_json(&s.doc.p);
-            s.exports.push(json!({ "kind": "dschema", "text": json }));
+            // The real project file (SQLite), written and read back.
+            let path = std::env::temp_dir().join(format!("datum-schema-serve-{}.dschema", std::process::id()));
+            let sqlite = s.doc.save(&path).and_then(|_| datum_core::file::read(&path)).map(|(p, h, _)| p == s.doc.p && h == s.doc.history).unwrap_or(false);
+            s.exports.push(json!({ "kind": "dschema", "text": json, "sqlite": sqlite }));
             s.doc.dirty = false;
             s.doc.path = Some("test.dschema".into());
             out(s, vec![], vec![])

@@ -14,15 +14,19 @@ export type Data = Record<string, Val>;
 export interface Title { company: string; project: string; client: string; unit: string; by: string; checked: string; approved: string }
 export interface Rev { rev: string; date: string; desc: string; by: string; checked: string; approved: string }
 export interface Sheet { id: number; number: string; title: string; size: string; rev: string; date: string; scale: string; revs: Rev[]; legend: boolean }
-export interface Item { id: number; sheet: number; sym: string; x: number; y: number; rot: number; flip: boolean; scale: number; tag: string; data: Data; link: number }
+export interface Item { id: number; sheet: number; sym: string; x: number; y: number; rot: number; flip: boolean; scale: number; obj: number; link: number }
+/** A plant object: the master of a tag and its data; symbols and line pieces are views of it. */
+export interface Obj { id: number; uid: string; class: string; tag: string; node: number; data: Data }
+export interface PlantNode { id: number; parent: number; level: "plant" | "unit" | "area"; name: string }
+export interface Change { seq: number; time: number; user: string; what: string; obj: number; uid: string; key: string; old: string; new: string }
 export type Kind = "major" | "minor" | "utility" | "pneumatic" | "electric" | "data" | "capillary";
 export type End = { at: "port"; item: number; port: number } | { at: "line"; line: number; x: number; y: number } | { at: "free"; x: number; y: number };
-export interface Line { id: number; sheet: number; kind: Kind; a: End; b: End; pts: Pt[]; flip: boolean; data: Data }
+export interface Line { id: number; sheet: number; kind: Kind; a: End; b: End; pts: Pt[]; flip: boolean; obj: number }
 export type NoteKind = "note" | "leader" | "hold";
 export interface Note { id: number; sheet: number; kind: NoteKind; x: number; y: number; w: number; h: number; text: string; to: Pt }
 export interface Limit { service: string; name: string; vmin: number; vmax: number; dp: number }
 export interface Settings { line_format: string; off: number[]; limits: Limit[]; roughness: number; grid: number; hidden: string[] }
-export interface Project { format: number; name: string; units: "SI" | "US"; title: Title; sheets: Sheet[]; items: Item[]; lines: Line[]; notes: Note[]; settings: Settings; next: number }
+export interface Project { format: number; name: string; units: "SI" | "US"; title: Title; nodes: PlantNode[]; objects: Obj[]; sheets: Sheet[]; items: Item[]; lines: Line[]; notes: Note[]; settings: Settings; next: number }
 export interface Out { p: Project; path: string | null; dirty: boolean; undo: boolean; redo: boolean; created: number[]; warnings: string[] }
 
 // ---------- what the engine draws (view.rs) ----------
@@ -33,8 +37,8 @@ export type Prim =
   | { k: "text"; p: Pt; h: number; s: string; anchor: number; bold: boolean };
 export type Cat = "vessel" | "rotating" | "heat" | "valve" | "control" | "fitting" | "instrument" | "primary" | "mark" | "connector";
 export interface PortView { p: Pt; dir: number; signal: boolean; used: boolean }
-export interface ItemView { id: number; sym: string; cat: Cat; x: number; y: number; rot: number; flip: boolean; scale: number; tag: string; texts: Prim[]; bbox: [number, number, number, number]; ports: PortView[]; layer: string }
-export interface LineView { id: number; kind: Kind; path: Pt[]; segs: Pt[][]; marks: Prim[]; number: string; badge: number | null; run: number | null; layer: string }
+export interface ItemView { id: number; obj: number; sym: string; cat: Cat; x: number; y: number; rot: number; flip: boolean; scale: number; tag: string; texts: Prim[]; bbox: [number, number, number, number]; ports: PortView[]; layer: string }
+export interface LineView { id: number; obj: number; kind: Kind; path: Pt[]; segs: Pt[][]; marks: Prim[]; number: string; badge: number | null; run: number | null; layer: string }
 export interface NoteView { id: number; kind: NoteKind; prims: Prim[]; bbox: [number, number, number, number] }
 export interface LegendRow { sym: string | null; kind: Kind | null; x: number; y: number; name: string }
 export interface SheetView { id: number; number: string; title: string; w: number; h: number; legend: boolean; frame: Prim[]; items: ItemView[]; lines: LineView[]; notes: NoteView[]; legend_rows: LegendRow[] }
@@ -53,7 +57,7 @@ export interface Example { id: string; name: string; what: string }
 export interface Col { key: string; label: string; q: string; edit: boolean; num: boolean }
 export interface Row { ids: number[]; sheet: number; cells: string[]; status: number | null }
 export interface List { kind: string; title: string; cols: Col[]; rows: Row[] }
-export interface Options { autosave: number; beta: boolean; theme: string; openLast: boolean; units: "SI" | "US"; grid: boolean; paper: string; company: string; defaults: Settings | null }
+export interface Options { autosave: number; beta: boolean; theme: string; openLast: boolean; units: "SI" | "US"; grid: boolean; paper: string; company: string; user: string; defaults: Settings | null }
 
 /** A number typed by a person: "−" and "," are understood ("1,5" is 1.5, "1,200" is 1200); empty or
  * not a number gives null. */

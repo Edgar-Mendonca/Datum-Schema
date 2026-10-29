@@ -1,5 +1,7 @@
-//! The project: sheets, items (placed symbols), lines (drawn port to port), notes and settings,
-//! and the `.dschema` file (JSON, versioned). Positions are millimetres on the sheet, y down, so a
+//! The project: plant objects (equipment, valves, instruments, line numbers…) in a plant hierarchy,
+//! and their views: sheets, items (placed symbols, each a view of an object), lines (drawn pieces of
+//! a line-number object, port to port), notes; settings; the project file (`file.rs`: SQLite; JSON
+//! is the interchange and recovery form, and the 0.1 format). Positions are millimetres on the sheet, y down, so a
 //! drawing prints at its true size. Engineering values are SI base units (Pa, K, m³/s, kg/s,
 //! kg/m³, Pa·s, m, W); the window shows them in SI or US units.
 //!
@@ -11,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
 
 /// The file format written by this version. Older formats are migrated when read.
-pub const FORMAT: u32 = 1;
+pub const FORMAT: u32 = 2;
 /// Coordinates are kept inside ±this many millimetres (a few times the largest sheet).
 pub const MAX_COORD: f64 = 100_000.0;
 /// The most of any one kind of thing a file may hold (far more than any real drawing).
@@ -115,15 +117,15 @@ pub struct Item {
     /// Mirrored left to right (before the rotation).
     pub flip: bool,
     pub scale: f64,
-    pub tag: String,
-    pub data: Data,
+    /// The object this symbol shows (its tag and data live there).
+    pub obj: u32,
     /// Off-page connectors: the partner connector's id (0: none yet).
     pub link: u32,
 }
 
 impl Default for Item {
     fn default() -> Self {
-        Self { id: 0, sheet: 0, sym: String::new(), x: 0.0, y: 0.0, rot: 0, flip: false, scale: 1.0, tag: String::new(), data: Data::new(), link: 0 }
+        Self { id: 0, sheet: 0, sym: String::new(), x: 0.0, y: 0.0, rot: 0, flip: false, scale: 1.0, obj: 0, link: 0 }
     }
 }
 
@@ -207,7 +209,39 @@ pub struct Line {
     /// Bend points the user placed; the route passes through them. Empty: routed automatically.
     pub pts: Vec<[f64; 2]>,
     pub flip: bool,
+    /// The line-number object this piece belongs to (process lines); 0 for signal lines.
+    pub obj: u32,
+}
+
+/// A plant object: an equipment item, a valve, an instrument, a line number (DEXPI's
+/// PipingNetworkSystem)… The master of its data; symbols and line pieces are views of it.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
+pub struct Obj {
+    pub id: u32,
+    /// A universally unique id, for exchange and for merging copies of a project later.
+    pub uid: String,
+    /// The object's class (0.1.5: the symbol key it was made from, or "PipingNetworkSystem").
+    pub class: String,
+    pub tag: String,
+    /// The hierarchy node it sits in (an area).
+    pub node: u32,
     pub data: Data,
+}
+
+/// The class of a line-number object.
+pub const LINE_CLASS: &str = "PipingNetworkSystem";
+
+/// A level of the plant hierarchy: plant › unit › area.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
+pub struct Node {
+    pub id: u32,
+    /// The node above (0: the project).
+    pub parent: u32,
+    /// "plant", "unit" or "area".
+    pub level: String,
+    pub name: String,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq, Default)]
@@ -297,6 +331,9 @@ pub struct Project {
     /// "SI" or "US": how values are shown and typed. The file always keeps SI units.
     pub units: String,
     pub title: Title,
+    /// The plant hierarchy and the plant objects.
+    pub nodes: Vec<Node>,
+    pub objects: Vec<Obj>,
     pub sheets: Vec<Sheet>,
     pub items: Vec<Item>,
     pub lines: Vec<Line>,
@@ -315,10 +352,59 @@ impl Default for Project {
 impl Project {
     /// A new project with one blank A3 sheet.
     pub fn new() -> Self {
-        let mut p = Self { format: FORMAT, name: "Project1".into(), units: "SI".into(), title: Title::default(), sheets: vec![], items: vec![], lines: vec![], notes: vec![], settings: Settings::default(), next: 1 };
+        let mut p = Self { format: FORMAT, name: "Project1".into(), units: "SI".into(), title: Title::default(), nodes: vec![], objects: vec![], sheets: vec![], items: vec![], lines: vec![], notes: vec![], settings: Settings::default(), next: 1 };
         let id = p.id();
         p.sheets.push(Sheet { id, ..Sheet::default() });
+        p.default_nodes();
         p
+    }
+
+    /// Plant 1 › Unit 100 › Area 1, when there is no hierarchy yet. Returns the area to use.
+    pub fn default_nodes(&mut self) -> u32 {
+        if let Some(a) = self.nodes.iter().find(|n| n.level == "area") {
+            return a.id;
+        }
+        let (pl, un, ar) = (self.id(), self.id(), self.id());
+        self.nodes.push(Node { id: pl, parent: 0, level: "plant".into(), name: "Plant 1".into() });
+        self.nodes.push(Node { id: un, parent: pl, level: "unit".into(), name: "Unit 100".into() });
+        self.nodes.push(Node { id: ar, parent: un, level: "area".into(), name: "Area 1".into() });
+        ar
+    }
+
+    /// The area new objects go in: the first area.
+    pub fn default_area(&self) -> u32 {
+        self.nodes.iter().find(|n| n.level == "area").map_or(0, |n| n.id)
+    }
+
+    /// A new object (with a fresh uid) in the default area; returns its id.
+    pub fn new_obj(&mut self, class: &str, tag: &str) -> u32 {
+        let id = self.id();
+        let node = self.default_area();
+        self.objects.push(Obj { id, uid: uid(id, &self.name), class: class.into(), tag: tag.into(), node, data: Data::new() });
+        id
+    }
+
+    pub fn obj(&self, id: u32) -> Option<&Obj> {
+        self.objects.iter().find(|o| o.id == id)
+    }
+    pub fn obj_mut(&mut self, id: u32) -> Option<&mut Obj> {
+        self.objects.iter_mut().find(|o| o.id == id)
+    }
+    /// The tag of the object a symbol shows.
+    pub fn tag_of(&self, it: &Item) -> &str {
+        self.obj(it.obj).map_or("", |o| o.tag.as_str())
+    }
+    /// The data of the object a symbol or line piece shows.
+    pub fn data_of(&self, obj: u32) -> &Data {
+        static EMPTY: std::sync::OnceLock<Data> = std::sync::OnceLock::new();
+        self.obj(obj).map_or_else(|| EMPTY.get_or_init(Data::new), |o| &o.data)
+    }
+    /// The object behind an id: an object itself, a symbol's object or a line piece's object.
+    pub fn obj_id(&self, id: u32) -> Option<u32> {
+        if self.obj(id).is_some() {
+            return Some(id);
+        }
+        self.item(id).map(|i| i.obj).or_else(|| self.line(id).map(|l| l.obj)).filter(|o| *o != 0)
     }
 
     /// A fresh id.
@@ -372,7 +458,7 @@ impl Project {
         let mut seen = HashSet::new();
         let mut dup = 0;
         let mut max = 0u32;
-        let ids: Vec<u32> = self.sheets.iter().map(|x| x.id).chain(self.items.iter().map(|x| x.id)).chain(self.lines.iter().map(|x| x.id)).chain(self.notes.iter().map(|x| x.id)).collect();
+        let ids: Vec<u32> = self.sheets.iter().map(|x| x.id).chain(self.nodes.iter().map(|x| x.id)).chain(self.objects.iter().map(|x| x.id)).chain(self.items.iter().map(|x| x.id)).chain(self.lines.iter().map(|x| x.id)).chain(self.notes.iter().map(|x| x.id)).collect();
         for &i in &ids {
             max = max.max(i);
         }
@@ -392,6 +478,8 @@ impl Project {
             true
         };
         self.sheets.retain_mut(|s| fresh(&mut s.id, &mut seen));
+        self.nodes.retain_mut(|s| fresh(&mut s.id, &mut seen));
+        self.objects.retain_mut(|s| fresh(&mut s.id, &mut seen));
         self.items.retain_mut(|s| fresh(&mut s.id, &mut seen));
         self.lines.retain_mut(|s| fresh(&mut s.id, &mut seen));
         self.notes.retain_mut(|s| fresh(&mut s.id, &mut seen));
@@ -425,7 +513,6 @@ impl Project {
             fix(&mut it.y, -MAX_COORD, MAX_COORD, 0.0);
             fix(&mut it.scale, 0.25, 4.0, 1.0);
             it.rot %= 4;
-            it.data.retain(|_, v| !matches!(v, Val::Num(x) if !x.is_finite()));
             if crate::symbols::get(&it.sym).is_none() {
                 w.push(format!("Symbol \"{}\" is not in this version's library; it is shown as a box.", crate::clip(&it.sym, 40)));
                 it.sym = "unknown".into();
@@ -492,11 +579,11 @@ impl Project {
                 fix(&mut p[0], -MAX_COORD, MAX_COORD, 0.0);
                 fix(&mut p[1], -MAX_COORD, MAX_COORD, 0.0);
             }
-            l.data.retain(|_, v| !matches!(v, Val::Num(x) if !x.is_finite()));
         }
         if moved > 0 {
             w.push(format!("{moved} things on a missing sheet were moved to the first sheet."));
         }
+        w.extend(self.normalize_objects());
         if loose > 0 {
             w.push(format!("{loose} line ends pointed at something missing and were left open."));
         }
@@ -520,6 +607,87 @@ impl Project {
         self.format = FORMAT;
         w
     }
+
+    /// The hierarchy and the objects: nodes form a tree of known levels, every object sits in an
+    /// area, every symbol and every process line piece has an object, data values are finite.
+    fn normalize_objects(&mut self) -> Vec<String> {
+        let mut w = vec![];
+        let ids: HashSet<u32> = self.nodes.iter().map(|n| n.id).collect();
+        for n in &mut self.nodes {
+            if !["plant", "unit", "area"].contains(&n.level.as_str()) {
+                n.level = "area".into();
+            }
+            if n.parent == n.id || (n.parent != 0 && !ids.contains(&n.parent)) {
+                n.parent = 0;
+            }
+            n.name = crate::clip(&n.name, 120);
+        }
+        // Loops in the tree are broken at the node that closes them.
+        let parents: BTreeMap<u32, u32> = self.nodes.iter().map(|n| (n.id, n.parent)).collect();
+        for n in &mut self.nodes {
+            let (mut at, mut steps) = (n.parent, 0);
+            while at != 0 && steps <= parents.len() {
+                if at == n.id {
+                    n.parent = 0;
+                    break;
+                }
+                at = parents.get(&at).copied().unwrap_or(0);
+                steps += 1;
+            }
+        }
+        let area = self.default_nodes();
+        let areas: HashSet<u32> = self.nodes.iter().filter(|n| n.level == "area").map(|n| n.id).collect();
+        let mut uids = HashSet::new();
+        for o in &mut self.objects {
+            if !areas.contains(&o.node) {
+                o.node = area;
+            }
+            o.data.retain(|_, v| !matches!(v, Val::Num(x) if !x.is_finite()));
+            o.tag = crate::clip(&o.tag, 60);
+            if o.uid.is_empty() || !uids.insert(o.uid.clone()) {
+                o.uid = uid(o.id, &self.name);
+                uids.insert(o.uid.clone());
+            }
+        }
+        let objs: HashSet<u32> = self.objects.iter().map(|o| o.id).collect();
+        let mut missing: Vec<(bool, usize)> = vec![];
+        for (i, it) in self.items.iter().enumerate() {
+            if !objs.contains(&it.obj) {
+                missing.push((true, i));
+            }
+        }
+        for (i, l) in self.lines.iter().enumerate() {
+            if l.kind.process() && !objs.contains(&l.obj) {
+                missing.push((false, i));
+            } 
+        }
+        for (item, i) in &missing {
+            let class = if *item { self.items[*i].sym.clone() } else { LINE_CLASS.to_string() };
+            let o = self.new_obj(&class, "");
+            if *item { self.items[*i].obj = o } else { self.lines[*i].obj = o }
+        }
+        if !missing.is_empty() {
+            w.push(format!("{} symbols or lines had no object; blank ones were made.", missing.len()));
+        }
+        for l in &mut self.lines {
+            if !l.kind.process() && !objs.contains(&l.obj) {
+                l.obj = 0;
+            }
+        }
+        w
+    }
+}
+
+/// A version-4-style unique id made from the clock, the process and a counter (no extra crate).
+pub fn uid(seed: u32, salt: &str) -> String {
+    use std::hash::{Hash, Hasher};
+    static N: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    (seed, salt, std::process::id(), N.fetch_add(1, std::sync::atomic::Ordering::Relaxed), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_nanos())).hash(&mut h);
+    let a = h.finish();
+    a.hash(&mut h);
+    let b = h.finish();
+    format!("{:08x}-{:04x}-4{:03x}-{:04x}-{:012x}", a >> 32, (a >> 16) & 0xffff, a & 0xfff, 0x8000 | (b >> 48) & 0x3fff, b & 0xffff_ffff_ffff)
 }
 
 /// Reads a `.dschema` file: each part on its own, so a damaged one is left out instead of the
@@ -569,11 +737,104 @@ pub fn from_json(text: &str) -> Result<(Project, Vec<String>), String> {
         out
     }
     p.sheets = list(part("sheets", &mut w), "sheets", &mut w);
-    p.items = list(part("items", &mut w), "symbols", &mut w);
-    p.lines = list(part("lines", &mut w), "lines", &mut w);
+    p.nodes = list(part("nodes", &mut w), "hierarchy levels", &mut w);
+    p.objects = list(part("objects", &mut w), "objects", &mut w);
+    let raw_items = part("items", &mut w);
+    let raw_lines = part("lines", &mut w);
+    p.items = list(raw_items.clone(), "symbols", &mut w);
+    p.lines = list(raw_lines.clone(), "lines", &mut w);
     p.notes = list(part("notes", &mut w), "notes", &mut w);
+    if format < 2 {
+        migrate_1(&mut p, raw_items, raw_lines);
+        w.push("This file was made by Datum Schema 0.1.4 or earlier; it now keeps its symbols' and lines' data in plant objects (save it to keep the new form).".into());
+    }
     w.extend(p.normalize());
     Ok((p, w))
+}
+
+/// Format 1 (0.1.0–0.1.4) kept tags and data on symbols and line pieces. Each symbol becomes an
+/// object; line pieces joined through in-line symbols or off-page pairs with the same line number
+/// data become one line-number object.
+fn migrate_1(p: &mut Project, raw_items: Option<serde_json::Value>, raw_lines: Option<serde_json::Value>) {
+    let arr = |v: Option<serde_json::Value>| -> Vec<serde_json::Value> { match v { Some(serde_json::Value::Array(a)) => a, _ => vec![] } };
+    let field = |v: &serde_json::Value, k: &str| -> (u32, Option<serde_json::Value>) { (v.get("id").and_then(|x| x.as_u64()).unwrap_or(0) as u32, v.get(k).cloned()) };
+    p.default_nodes();
+    let items = arr(raw_items);
+    for raw in &items {
+        let (id, tag) = field(raw, "tag");
+        let data: Data = raw.get("data").and_then(|d| serde_json::from_value(d.clone()).ok()).unwrap_or_default();
+        let Some(i) = p.items.iter().position(|x| x.id == id) else { continue };
+        let sym = p.items[i].sym.clone();
+        let o = p.new_obj(&sym, tag.as_ref().and_then(|t| t.as_str()).unwrap_or(""));
+        if let Some(ob) = p.obj_mut(o) {
+            ob.data = data;
+        }
+        p.items[i].obj = o;
+    }
+    let lines = arr(raw_lines);
+    let mut data_of: BTreeMap<u32, Data> = BTreeMap::new();
+    for raw in &lines {
+        let id = raw.get("id").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+        let d: Data = raw.get("data").and_then(|d| serde_json::from_value(d.clone()).ok()).unwrap_or_default();
+        data_of.insert(id, d);
+    }
+    let key = |d: &Data| ["size", "fluid", "seq", "class", "number"].map(|k| d.get(k).map(|v| v.text()).unwrap_or_default());
+    // Union line pieces through in-line symbols and off-page pairs when their numbers agree.
+    let proc: Vec<u32> = p.lines.iter().filter(|l| l.kind.process()).map(|l| l.id).collect();
+    let mut parent: BTreeMap<u32, u32> = proc.iter().map(|&l| (l, l)).collect();
+    fn find(par: &mut BTreeMap<u32, u32>, x: u32) -> u32 {
+        let mut r = x;
+        while par[&r] != r {
+            r = par[&r];
+        }
+        par.insert(x, r);
+        r
+    }
+    let on = |item: u32, port: Option<u8>| -> Vec<u32> {
+        p.lines.iter().filter(|l| l.kind.process()).filter(|l| [&l.a, &l.b].iter().any(|e| matches!(e, End::Port { item: i, port: pt } if *i == item && port.is_none_or(|q| q == *pt)))).map(|l| l.id).collect()
+    };
+    let mut joins: Vec<Vec<u32>> = vec![];
+    for it in &p.items {
+        let Some(s) = crate::symbols::get(&it.sym) else { continue };
+        if s.inline {
+            joins.push(on(it.id, None));
+        } else if s.cat == crate::symbols::Cat::Connector && it.link != 0 {
+            let mut v = on(it.id, Some(0));
+            v.extend(on(it.link, Some(0)));
+            joins.push(v);
+        }
+    }
+    for j in joins {
+        for a in 0..j.len() {
+            for b in a + 1..j.len() {
+                let (da, db) = (data_of.get(&j[a]).cloned().unwrap_or_default(), data_of.get(&j[b]).cloned().unwrap_or_default());
+                if key(&da) == key(&db) {
+                    let (ra, rb) = (find(&mut parent, j[a]), find(&mut parent, j[b]));
+                    if ra != rb {
+                        parent.insert(ra.max(rb), ra.min(rb));
+                    }
+                }
+            }
+        }
+    }
+    let mut obj_of_root: BTreeMap<u32, u32> = BTreeMap::new();
+    for l in proc {
+        let r = find(&mut parent, l);
+        let o = match obj_of_root.get(&r) {
+            Some(o) => *o,
+            None => {
+                let o = p.new_obj(LINE_CLASS, "");
+                if let Some(ob) = p.obj_mut(o) {
+                    ob.data = data_of.get(&r).cloned().unwrap_or_default();
+                }
+                obj_of_root.insert(r, o);
+                o
+            }
+        };
+        if let Some(x) = p.lines.iter_mut().find(|x| x.id == l) {
+            x.obj = o;
+        }
+    }
 }
 
 pub fn to_json(p: &Project) -> String {

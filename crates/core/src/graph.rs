@@ -41,7 +41,13 @@ pub fn number(p: &Project, l: &Line) -> String {
     if !l.kind.process() || instrument_connection(p, l) {
         return String::new();
     }
-    let get = |k: &str| l.data.get(k).map(|v| v.text().trim().to_string()).unwrap_or_default();
+    obj_number(p, l.obj)
+}
+
+/// The formatted line number of a line-number object.
+pub fn obj_number(p: &Project, obj: u32) -> String {
+    let data = p.data_of(obj);
+    let get = |k: &str| data.get(k).map(|v| v.text().trim().to_string()).unwrap_or_default();
     let typed = get("number");
     if !typed.is_empty() {
         return typed;
@@ -67,30 +73,9 @@ pub struct Net<'a> {
     /// Each process line's run, and the runs (lines in order of id).
     pub run_of: HashMap<u32, usize>,
     pub runs: Vec<Vec<u32>>,
+    /// Each run's line-number object.
+    pub run_obj: Vec<u32>,
     pub numbers: HashMap<u32, String>,
-}
-
-struct Dsu(Vec<usize>);
-impl Dsu {
-    fn find(&mut self, x: usize) -> usize {
-        let mut r = x;
-        while self.0[r] != r {
-            r = self.0[r];
-        }
-        let mut y = x;
-        while self.0[y] != r {
-            let n = self.0[y];
-            self.0[y] = r;
-            y = n;
-        }
-        r
-    }
-    fn join(&mut self, a: usize, b: usize) {
-        let (a, b) = (self.find(a), self.find(b));
-        if a != b {
-            self.0[a.max(b)] = a.min(b);
-        }
-    }
 }
 
 impl<'a> Net<'a> {
@@ -109,44 +94,18 @@ impl<'a> Net<'a> {
             }
         }
         let numbers: HashMap<u32, String> = p.lines.iter().map(|l| (l.id, number(p, l))).collect();
-        // Runs: process lines joined through in-line items and off-page partners when their numbers agree.
+        // Runs: the drawn pieces of each line-number object (instrument connections are not lines).
         let proc: Vec<&Line> = p.lines.iter().filter(|l| l.kind.process() && !instrument_connection(p, l)).collect();
-        let idx: HashMap<u32, usize> = proc.iter().enumerate().map(|(i, l)| (l.id, i)).collect();
-        let mut d = Dsu((0..proc.len()).collect());
-        let process_lines = |item: u32, port: u8| -> Vec<u32> { at_port.get(&(item, port)).map(|v| v.iter().map(|x| x.0).filter(|l| idx.contains_key(l)).collect()).unwrap_or_default() };
-        for it in &p.items {
-            let Some(s) = symbols::get(&it.sym) else { continue };
-            let mut joined: Vec<u32> = vec![];
-            if s.inline {
-                for (k, port) in s.ports.iter().enumerate() {
-                    if !port.signal {
-                        joined.extend(process_lines(it.id, k as u8));
-                    }
-                }
-            } else if s.cat == Cat::Connector && it.link != 0 && it.id < it.link {
-                joined.extend(process_lines(it.id, 0));
-                joined.extend(process_lines(it.link, 0));
-            }
-            // Every pair with the same number joins, however many lines meet here.
-            let mut first: HashMap<&str, u32> = HashMap::new();
-            for l in &joined {
-                match first.get(numbers[l].as_str()) {
-                    Some(f) => d.join(idx[f], idx[l]),
-                    None => {
-                        first.insert(numbers[l].as_str(), *l);
-                    }
-                }
-            }
-        }
-        let mut groups: BTreeMap<usize, Vec<u32>> = BTreeMap::new();
-        for (i, l) in proc.iter().enumerate() {
-            groups.entry(d.find(i)).or_default().push(l.id);
+        let mut groups: BTreeMap<u32, Vec<u32>> = BTreeMap::new();
+        for l in &proc {
+            groups.entry(l.obj).or_default().push(l.id);
         }
         let mut runs: Vec<Vec<u32>> = groups.into_values().collect();
         runs.iter_mut().for_each(|r| r.sort_unstable());
         runs.sort_by_key(|r| r[0]);
         let run_of = runs.iter().enumerate().flat_map(|(i, r)| r.iter().map(move |l| (*l, i))).collect();
-        Self { p, items, lines, at_port, branches, run_of, runs, numbers }
+        let run_obj = runs.iter().map(|r| p.line(r[0]).map_or(0, |l| l.obj)).collect();
+        Self { p, items, lines, at_port, branches, run_of, runs, run_obj, numbers }
     }
 
     pub fn sym(&self, item: u32) -> Option<&'static Sym> {
@@ -241,7 +200,8 @@ impl<'a> Net<'a> {
             End::Port { item, port } => {
                 let Some(it) = self.items.get(item) else { return String::new() };
                 let s = symbols::get(&it.sym);
-                let what = if it.tag.is_empty() { s.map_or("", |s| s.name).to_string() } else { it.tag.clone() };
+                let tag = self.p.tag_of(it);
+                let what = if tag.is_empty() { s.map_or("", |s| s.name).to_string() } else { tag.to_string() };
                 if let (Some(s), true) = (s, s.is_some_and(|s| s.cat == Cat::Connector)) {
                     let _ = s;
                     let partner = self.items.get(&it.link).map(|q| format!("sheet {}", self.p.sheet(q.sheet).map_or(String::new(), |sh| sh.number.clone())));

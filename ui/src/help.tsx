@@ -52,6 +52,7 @@ export const HELP: Record<string, Topic> = {
   view: { t: "View", what: "Fit the sheet (F), zoom with Ctrl+wheel or the buttons at the bottom right, show or hide the grid." },
   layers: { t: "Layers", what: "Show or hide process lines and equipment, utility lines, instruments and signals, and notes and line marks." },
   select: { t: "Select", what: "Select everything of one type, or a whole line number; the line number is highlighted on every sheet." },
+  history: { t: "History", what: "Every change to an object is recorded with who made it, when, and the old and new value. The history is saved in the project file, so it survives closing and reopening; undo and redo are recorded too." },
   inspector: { t: "Inspector", what: "The selected item's data, with units: tag, service, design and operating conditions, sizes, connections, and for lines the hydraulics. With nothing selected, the sheet, its revisions and the title block." },
   "cat:vessel": { t: "Vessels", what: "Vertical vessels, horizontal drums, tanks, columns (trays or packing), a separator with a boot, a filter vessel, a knock-out drum and a silo. Their nozzles are ports; each carries design and operating conditions, material, volume and a relief note." },
   "cat:rotating": { t: "Rotating equipment", what: "Centrifugal, positive-displacement and vertical in-line pumps (with suction and discharge ports), centrifugal, reciprocating and screw compressors, fans, a steam turbine, an electric motor and an agitator." },

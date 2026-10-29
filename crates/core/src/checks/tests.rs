@@ -16,7 +16,7 @@ impl B {
     }
     pub fn item(&mut self, sym: &str, x: f64, y: f64) -> u32 {
         let sheet = self.sheet();
-        self.d.apply(Op::AddItem { item: Item { sheet, sym: sym.into(), x, y, ..Item::default() }, on: None }).unwrap()[0]
+        self.d.apply(Op::AddItem { item: Item { sheet, sym: sym.into(), x, y, ..Item::default() }, on: None, tag: String::new(), obj: None }).unwrap()[0]
     }
     pub fn tag(&mut self, id: u32, t: &str) {
         self.d.apply(Op::SetTag { id, tag: t.into() }).unwrap();
@@ -72,7 +72,7 @@ fn r1_duplicate_tags_and_numbers() {
     let l2 = b.line((c, 5), (x, 3));
     b.spec(&[l1, l2], "3", "A1A");
     assert!(!b.has(1), "different sequence numbers");
-    b.set(&[l2], "seq", Val::Text(crate::model::Val::text(&b.d.p.line(l1).unwrap().data["seq"])));
+    b.set(&[l2], "seq", Val::Text(crate::model::Val::text(&b.d.p.data_of(b.d.p.line(l1).unwrap().obj)["seq"])));
     assert!(b.has(1));
 }
 
@@ -96,31 +96,34 @@ fn r3_offpage_partners() {
     let a = b.item("offpage", 300.0, 100.0);
     assert!(b.has(3));
     let s2 = b.d.apply(Op::AddSheet { sheet: crate::model::Sheet::default() }).unwrap()[0];
-    let c = b.d.apply(Op::AddItem { item: Item { sheet: s2, sym: "offpage".into(), x: 50.0, y: 100.0, ..Item::default() }, on: None }).unwrap()[0];
+    let c = b.d.apply(Op::AddItem { item: Item { sheet: s2, sym: "offpage".into(), x: 50.0, y: 100.0, ..Item::default() }, on: None, tag: String::new(), obj: None }).unwrap()[0];
     b.d.apply(Op::Link { a, b: c }).unwrap();
     assert!(!b.has(3));
     // Lines on both sides with different numbers.
     let v = b.item("vvessel", 100.0, 100.0);
     let l1 = b.line((v, 5), (a, 0));
-    let w = b.d.apply(Op::AddItem { item: Item { sheet: s2, sym: "vvessel".into(), x: 200.0, y: 100.0, ..Item::default() }, on: None }).unwrap()[0];
+    let w = b.d.apply(Op::AddItem { item: Item { sheet: s2, sym: "vvessel".into(), x: 200.0, y: 100.0, ..Item::default() }, on: None, tag: String::new(), obj: None }).unwrap()[0];
     let l2 = b.d.apply(Op::AddLine { line: Line { sheet: s2, a: End::Port { item: c, port: 0 }, b: End::Port { item: w, port: 3 }, ..Line::default() } }).unwrap()[0];
     b.spec(&[l1, l2], "3", "A1A");
-    assert!(b.has(3), "{:?}", b.issues());
-    let seq = b.d.p.line(l1).unwrap().data["seq"].clone();
-    b.set(&[l2], "seq", seq);
-    assert!(!b.has(3));
-    // One run across the sheets.
+    // The line on the other sheet continues the same line number: one object, one run.
     let net = Net::new(&b.d.p);
     assert_eq!(net.run_of[&l1], net.run_of[&l2]);
+    assert!(!b.has(3));
+    // Given a number of its own, the partners disagree.
+    b.d.apply(Op::NewLineObject { line: l2 }).unwrap();
+    b.set(&[l2], "seq", Val::Text("9999".into()));
+    assert!(b.has(3), "{:?}", b.issues());
 }
 
 #[test]
 fn r4_size_change_needs_a_reducer() {
     let (mut b, _, _, l2) = through("gate");
     assert!(!b.has(4));
+    b.d.apply(Op::NewLineObject { line: l2 }).unwrap();
     b.set(&[l2], "size", Val::Text("4".into()));
     assert!(b.has(4));
     let (mut r, _, _, l2) = through("reducer_con");
+    r.d.apply(Op::NewLineObject { line: l2 }).unwrap();
     r.set(&[l2], "size", Val::Text("4".into()));
     assert!(!r.has(4));
 }
@@ -128,9 +131,11 @@ fn r4_size_change_needs_a_reducer() {
 #[test]
 fn r5_class_change_needs_a_spec_break() {
     let (mut b, _, _, l2) = through("gate");
+    b.d.apply(Op::NewLineObject { line: l2 }).unwrap();
     b.set(&[l2], "class", Val::Text("B1A".into()));
     assert!(b.has(5));
     let (mut s, _, _, l2) = through("specbreak");
+    s.d.apply(Op::NewLineObject { line: l2 }).unwrap();
     s.set(&[l2], "class", Val::Text("B1A".into()));
     assert!(!s.has(5));
 }
@@ -164,7 +169,7 @@ fn r8_pump_discharge_check_valve() {
     let l = b.line((pmp, 1), (v, 3));
     assert!(b.has(8));
     let sheet = b.sheet();
-    b.d.apply(Op::AddItem { item: Item { sheet, sym: "check".into(), x: 150.0, y: 94.0, ..Item::default() }, on: Some(l) }).unwrap();
+    b.d.apply(Op::AddItem { item: Item { sheet, sym: "check".into(), x: 150.0, y: 94.0, ..Item::default() }, on: Some(l), tag: String::new(), obj: None }).unwrap();
     assert!(!b.has(8), "{:?}", b.issues());
 }
 
@@ -188,7 +193,7 @@ fn r10_control_valve_isolation() {
     assert!(b.has(10));
     let sheet = b.sheet();
     for (l, x) in [(l1, 110.0), (l2, 190.0)] {
-        b.d.apply(Op::AddItem { item: Item { sheet, sym: "gate".into(), x, y: 108.0, ..Item::default() }, on: Some(l) }).unwrap();
+        b.d.apply(Op::AddItem { item: Item { sheet, sym: "gate".into(), x, y: 108.0, ..Item::default() }, on: Some(l), tag: String::new(), obj: None }).unwrap();
     }
     assert!(!b.issues().iter().any(|i| i.rule == 10 && i.ids == vec![cv]), "{:?}", b.issues());
 }

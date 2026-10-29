@@ -5,7 +5,7 @@
 
 use crate::graph::Net;
 use crate::hydraulics::{self, Hyd};
-use crate::model::{End, Item, Project};
+use crate::model::{End, Item, Obj, Project};
 use crate::symbols::{self, Cat};
 use crate::units;
 use serde::Serialize;
@@ -68,9 +68,12 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
     let net = Net::new(p);
     let us = p.units == "US";
     let title = KINDS.iter().find(|k| k.0 == kind).ok_or_else(|| format!("There is no list called {kind}."))?.1.to_string();
-    let items = |f: &dyn Fn(Cat) -> bool| -> Vec<&Item> {
-        let mut v: Vec<&Item> = p.items.iter().filter(|i| symbols::get(&i.sym).is_some_and(|s| f(s.cat))).collect();
-        v.sort_by(|a, b| crate::tags::split(&a.tag).0.cmp(&crate::tags::split(&b.tag).0).then(crate::tags::split(&a.tag).1.cmp(&crate::tags::split(&b.tag).1)).then(a.tag.cmp(&b.tag)));
+    // One row per object, at its first symbol.
+    let items = |f: &dyn Fn(Cat) -> bool| -> Vec<(&Obj, &Item)> {
+        let mut seen = std::collections::HashSet::new();
+        let mut v: Vec<(&Obj, &Item)> = p.items.iter().filter(|i| symbols::get(&i.sym).is_some_and(|s| f(s.cat)) && seen.insert(i.obj)).filter_map(|i| p.obj(i.obj).map(|o| (o, i))).collect();
+        let key = |o: &Obj| { let (a, n, _) = crate::tags::split(&o.tag); (a, n, o.tag.clone()) };
+        v.sort_by_key(|x| key(x.0));
         v
     };
     let sym_name = |it: &Item| symbols::get(&it.sym).map_or(String::new(), |s| s.name.to_string());
@@ -91,6 +94,7 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
                 .enumerate()
                 .map(|(r, lines)| {
                     let l = net.lines[&lines[0]];
+                    let data = p.data_of(net.run_obj[r]);
                     let (from, to) = net.run_ends(r);
                     let h = hyd[r].as_ref();
                     let sheets: Vec<String> = { let mut s: Vec<u32> = lines.iter().map(|x| net.lines[x].sheet).collect(); s.sort_by_key(|x| p.sheet_no(*x)); s.dedup(); s.iter().map(|x| sheet_no(p, *x)).collect() };
@@ -105,7 +109,7 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
                             "dp" => h.filter(|h| h.length > 0.0).map(|h| crate::fmt_sig(units::to_display(h.dp, q, us), 3)).unwrap_or_default(),
                             "status" => h.map(|h| ["✓", "!", "✗"][h.status.min(2) as usize].to_string()).unwrap_or_default(),
                             "sheet" => sheets.join(", "),
-                            _ => val(&l.data, k, q, us),
+                            _ => val(data, k, q, us),
                         })
                         .collect();
                     Row { ids: lines.clone(), sheet: l.sheet, cells, status: h.map(|h| h.status) }
@@ -118,9 +122,9 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
             let specs: Vec<Spec> = vec![("tag", "Tag", "", true), ("kind", "Type", "", false), ("service", "Service", "", true), ("design_p", "Design P", "press", true), ("design_t", "Design T", "temp", true), ("oper_p", "Oper P", "press", true), ("oper_t", "Oper T", "temp", true), ("material", "Material", "", true), ("capacity", "Size / capacity", "", false), ("power", "Power", "power", true), ("sheet", "Sheet", "", false)];
             let rows = items(&|c| c.equipment())
                 .into_iter()
-                .map(|it| {
-                    let cap = [("flow", "flow"), ("head", "head"), ("duty", "power"), ("volume", "volume"), ("area", "area")].iter().filter_map(|(k, q)| it.data.get(*k).and_then(|v| v.num()).map(|x| units::show(x, q, us))).chain(it.data.get("size").map(|v| v.text())).filter(|s| !s.is_empty()).collect::<Vec<_>>().join(", ");
-                    let cells = specs.iter().map(|&(k, _, q, _)| match k { "tag" => it.tag.clone(), "kind" => sym_name(it), "capacity" => cap.clone(), "sheet" => sheet_no(p, it.sheet), _ => val(&it.data, k, q, us) }).collect();
+                .map(|(o, it)| {
+                    let cap = [("flow", "flow"), ("head", "head"), ("duty", "power"), ("volume", "volume"), ("area", "area")].iter().filter_map(|(k, q)| o.data.get(*k).and_then(|v| v.num()).map(|x| units::show(x, q, us))).chain(o.data.get("size").map(|v| v.text())).filter(|s| !s.is_empty()).collect::<Vec<_>>().join(", ");
+                    let cells = specs.iter().map(|&(k, _, q, _)| match k { "tag" => o.tag.clone(), "kind" => sym_name(it), "capacity" => cap.clone(), "sheet" => sheet_no(p, it.sheet), _ => val(&o.data, k, q, us) }).collect();
                     Row { ids: vec![it.id], sheet: it.sheet, cells, status: None }
                 })
                 .collect();
@@ -130,8 +134,8 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
             let specs: Vec<Spec> = vec![("tag", "Tag", "", true), ("function", "Function", "", true), ("loop", "Loop", "", false), ("kind", "Type", "", false), ("location", "Location", "", true), ("range", "Range", "", true), ("setpoints", "Set points", "", true), ("signal", "Signal", "", true), ("on", "On", "", false), ("sheet", "Sheet", "", false)];
             let rows = items(&|c| c.instrument())
                 .into_iter()
-                .map(|it| {
-                    let cells = specs.iter().map(|&(k, _, q, _)| match k { "tag" => it.tag.clone(), "loop" => crate::tags::loop_of(&it.tag).1, "kind" => sym_name(it), "on" => attached(&net, it), "sheet" => sheet_no(p, it.sheet), _ => val(&it.data, k, q, us) }).collect();
+                .map(|(o, it)| {
+                    let cells = specs.iter().map(|&(k, _, q, _)| match k { "tag" => o.tag.clone(), "loop" => crate::tags::loop_of(&o.tag).1, "kind" => sym_name(it), "on" => attached(&net, it), "sheet" => sheet_no(p, it.sheet), _ => val(&o.data, k, q, us) }).collect();
                     Row { ids: vec![it.id], sheet: it.sheet, cells, status: None }
                 })
                 .collect();
@@ -141,8 +145,8 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
             let specs: Vec<Spec> = vec![("tag", "Tag", "", true), ("kind", "Type", "", false), ("size", "Size", "", true), ("class", "Class", "", true), ("operator", "Operator", "", true), ("position", "Position", "", true), ("fail", "Fail", "", true), ("on", "Line", "", false), ("service", "Service", "", true), ("sheet", "Sheet", "", false)];
             let rows = items(&|c| c.valve())
                 .into_iter()
-                .map(|it| {
-                    let cells = specs.iter().map(|&(k, _, q, _)| match k { "tag" => it.tag.clone(), "kind" => sym_name(it), "on" => attached(&net, it), "sheet" => sheet_no(p, it.sheet), _ => val(&it.data, k, q, us) }).collect();
+                .map(|(o, it)| {
+                    let cells = specs.iter().map(|&(k, _, q, _)| match k { "tag" => o.tag.clone(), "kind" => sym_name(it), "on" => attached(&net, it), "sheet" => sheet_no(p, it.sheet), _ => val(&o.data, k, q, us) }).collect();
                     Row { ids: vec![it.id], sheet: it.sheet, cells, status: None }
                 })
                 .collect();
@@ -166,7 +170,7 @@ fn attached(net: &Net, it: &Item) -> String {
             } else {
                 match if b { &line.a } else { &line.b } {
                     End::Line { line, .. } => net.numbers.get(line).cloned().unwrap_or_default(),
-                    End::Port { item, .. } => net.items.get(item).filter(|o| symbols::get(&o.sym).is_some_and(|s| s.cat.equipment())).map(|o| o.tag.clone()).unwrap_or_default(),
+                    End::Port { item, .. } => net.items.get(item).filter(|o| symbols::get(&o.sym).is_some_and(|s| s.cat.equipment())).map(|o| net.p.tag_of(o).to_string()).unwrap_or_default(),
                     End::Free { .. } => String::new(),
                 }
             };

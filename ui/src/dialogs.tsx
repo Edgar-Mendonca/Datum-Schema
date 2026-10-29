@@ -57,7 +57,7 @@ export const pairDialog = (id: number) => openDialog(() => {
   const others = () => (proj()?.items ?? []).filter(i => i.sym === "offpage" && i.id !== id && i.sheet !== me?.sheet);
   const [pick, setPick] = createSignal<number>(me?.link ?? 0);
   const sheetNo = (s: number) => proj()?.sheets.find(x => x.id === s)?.number ?? "?";
-  const lineAt = (iid: number) => { const l = proj()?.lines.find(l => (l.a.at === "port" && l.a.item === iid) || (l.b.at === "port" && l.b.item === iid)); return l ? (l.data.seq ? String(l.data.seq) : "") : ""; };
+  const lineAt = (iid: number) => { const l = proj()?.lines.find(l => (l.a.at === "port" && l.a.item === iid) || (l.b.at === "port" && l.b.item === iid)); return l ? (proj()?.objects.find(o => o.id === l.obj)?.data.seq ? String(proj()!.objects.find(o => o.id === l.obj)!.data.seq) : "") : ""; };
   return <Dialog title="Pair off-page connectors" okText="Pair" ok={() => act({ Link: { a: id, b: pick() } }).then(o => (o ? undefined : false))}
     extra={<Show when={me?.link}><button class="btn" onClick={() => { act({ Link: { a: id, b: 0 } }); closeDialog(); }}>Unpair</button></Show>}>
     <p class="muted">A pair of connectors carries a line from one sheet to another. Clicking one jumps to its partner; the checks make sure both sides carry the same line number.</p>

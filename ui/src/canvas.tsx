@@ -250,7 +250,7 @@ export const Canvas = () => {
       const to = endAt(p);
       if (JSON.stringify(to) === JSON.stringify(d.from)) return;
       const s = sheet(); if (!s) return;
-      const o = await act({ AddLine: { line: { id: 0, sheet: s.id, kind: d.kind, a: d.from, b: to, pts: [], flip: false, data: {} } as Line } });
+      const o = await act({ AddLine: { line: { id: 0, sheet: s.id, kind: d.kind, a: d.from, b: to, pts: [], flip: false, obj: 0 } as Line } });
       if (o?.created.length) setSel([o.created[0]]);
     } else if (d.k === "bend") {
       if (Math.hypot(d.b[0] - d.a[0], d.b[1] - d.a[1]) > 4 / zoom()) {

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.5 — 2026-10-29
+
+The first step to an object-based plant engineering tool: plant objects, a database file and a history.
+
+**Plant objects.** Every equipment item, valve and instrument is now an object with its own tag and data; the symbol on the sheet is a view of it. A line number is an object too, owning every drawn piece of that line: a line continued through a valve, or carried to another sheet by a pair of off-page connectors, keeps its line number, and data typed on any piece belongs to the whole line. Where a line's number changes (after a reducer), **New line number from here** gives a piece a number of its own.
+
+**Plant hierarchy.** Every object sits in a plant › unit › area tree (Plant 1 › Unit 100 › Area 1 to start with), ready for the Plant panel in a coming release.
+
+**The project file is a database.** Projects save as one SQLite database: objects, attribute values, the hierarchy, sheets, symbols and lines, each in its own table, which any SQLite tool can read. Saving is still atomic. Projects from earlier versions open and convert.
+
+**History.** Every change to an object is recorded with who made it, when, and the old and new value, and saved with the project. The Inspector shows the history of the selected object. Your name for the history is in Options (the computer's user name otherwise).
+
 ## 0.1.4 — 2026-10-29
 
 The exhibition build.

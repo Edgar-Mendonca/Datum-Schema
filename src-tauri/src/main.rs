@@ -27,13 +27,15 @@ struct Options {
     grid: bool,
     paper: String,
     company: String,
+    /// The name written in the history of changes (empty: the computer's user name).
+    user: String,
     /// Project settings (line number format, checks switched off, hydraulic limits) for new projects.
     defaults: Option<model::Settings>,
 }
 
 impl Default for Options {
     fn default() -> Self {
-        Self { autosave: 5, beta: false, theme: "auto".into(), open_last: false, units: "SI".into(), grid: true, paper: "sheet".into(), company: String::new(), defaults: None }
+        Self { autosave: 5, beta: false, theme: "auto".into(), open_last: false, units: "SI".into(), grid: true, paper: "sheet".into(), company: String::new(), user: String::new(), defaults: None }
     }
 }
 
@@ -114,6 +116,22 @@ fn apply(st: State<St>, op: Op) -> R<Out> {
     })
 }
 
+/// Who is editing: the name in Options, else the computer's user name.
+fn user_name(o: &Options) -> String {
+    if !o.user.trim().is_empty() {
+        return o.user.trim().to_string();
+    }
+    std::env::var("USERNAME").or_else(|_| std::env::var("USER")).unwrap_or_else(|_| "unknown".into())
+}
+
+/// The recorded changes of one object (or, with id 0, of the whole project), newest first.
+#[tauri::command]
+fn changes(st: State<St>, id: u32) -> Vec<doc::Change> {
+    let a = st.lock();
+    let obj = a.doc.p.obj_id(id).unwrap_or(0);
+    a.doc.history.iter().rev().filter(|c| id == 0 || c.obj == obj).take(500).cloned().collect()
+}
+
 #[tauri::command]
 fn history(st: State<St>, redo: bool) -> Out {
     let mut a = st.lock();
@@ -157,6 +175,7 @@ fn new_project(st: State<St>, example: Option<String>) -> R<Out> {
     };
     let p = fresh(&a, p);
     a.doc = Doc::new(p);
+    a.doc.user = user_name(&a.opts);
     Ok(out(&a))
 }
 
@@ -185,6 +204,7 @@ async fn open(app: AppHandle, st: State<'_, St>, path: Option<String>) -> R<Opti
     remember(&app, &path);
     let mut a = st.lock();
     a.doc = d;
+    a.doc.user = user_name(&a.opts);
     let mut o = out(&a);
     o.warnings = warnings;
     Ok(Some(o))
@@ -291,6 +311,7 @@ fn set_options(app: AppHandle, st: State<St>, opts: Options) -> Out {
     }
     let mut a = st.lock();
     a.opts = opts;
+    a.doc.user = user_name(&a.opts);
     out(&a)
 }
 
@@ -341,6 +362,7 @@ fn recover(app: AppHandle, st: State<St>, keep: bool) -> R<Option<Out>> {
     let (p, warnings) = guard(|| model::from_json(&doc::read_limited(&file)?))?;
     let mut a = st.lock();
     a.doc = Doc::new(p);
+    a.doc.user = user_name(&a.opts);
     a.doc.path = info.and_then(|i| i.path);
     a.doc.dirty = true;
     let mut o = out(&a);
@@ -443,9 +465,12 @@ fn main() {
                 }));
             }
             let opts: Options = options_file(app.handle()).and_then(|f| doc::read_limited(&f).ok()).and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default();
-            let a = App { doc: Doc::new(Project::new()), opts };
+            let mut a = App { doc: Doc::new(Project::new()), opts };
+            a.doc.user = user_name(&a.opts);
             let p = fresh(&a, Project::new());
-            app.manage(St(Mutex::new(App { doc: Doc::new(p), ..a })));
+            let mut doc = Doc::new(p);
+            doc.user = a.doc.user.clone();
+            app.manage(St(Mutex::new(App { doc, ..a })));
             Ok(())
         })
         .on_window_event(|w, e| {
@@ -459,7 +484,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            state, apply, history, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
+            state, apply, history, changes, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
             options, set_options, autosave, recovery, recover, recent, startup_file, open_url, version, quit, check_update, install_update
         ])
         .run(tauri::generate_context!())

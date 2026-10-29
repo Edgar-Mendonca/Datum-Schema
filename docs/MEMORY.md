@@ -6,10 +6,10 @@
 | | |
 | --- | --- |
 | **Product** | Datum Schema: intelligent P&IDs and process flow diagrams: draw, check and list (symbols and lines that carry their data and connections; live line list, equipment list, instrument index and valve list; drawing checks; line hydraulics; print, SVG and DXF) |
-| **Current version** | 0.1.4 (2026-10-29), the exhibition build |
+| **Current version** | 0.1.5 (2026-10-29) |
 | **Repo** | `Edgar-Mendonca/Datum-Schema` · branch `claude/vigilant-hamilton-ku7r0w` (the first branch pushed, so the default branch) |
 | **Stack** | Rust engine (`crates/core`: model, symbols, graph, tags, checks, hydraulics, lists, frame, routing, DXF), Tauri 2, SolidJS + strict TypeScript; no Python |
-| **Identifier** | `com.edgarmendonca.datumschema` · files `.dschema` (JSON, `format` 1) · installer `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` · publisher "Datum" |
+| **Identifier** | `com.edgarmendonca.datumschema` · files `.dschema` (SQLite, `format` 2; JSON `format` 1 from 0.1.0–0.1.4 converts) · installer `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` · publisher "Datum" |
 | **Accent** | Magenta `#9C1F84` (`--blue2` `#801A6C`, `--sky` `#EAB6DD`, `--pale` `#FAEBF6`, `--sel` `#F4DCEE`, `--sel2` `#E7B9DB`; dark `#E07BC9`; File sidebar `#4E1043`) |
 | **Brief** | `Edgar-Mendonca/Datum` › `briefs/DATUM-SCHEMA.md` (hub session 22): every decision made up front |
 | **Reference repos** | `Edgar-Mendonca/Datum` (FAMILY, MEMORY, brain), `Edgar-Mendonca/Datum-Plan` (shell, updater, print, Excel), `Edgar-Mendonca/Datum-Sim` (canvas, router), `Edgar-Mendonca/Datum-Calc` (units, pipe pressure-drop pack), `Edgar-Mendonca/Datum-Pipe` (pipe sizes; its shell is the newest copy of Plan's) |
@@ -26,12 +26,13 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 
 | File | What it does |
 | --- | --- |
-| `crates/core/src/model.rs` | The project: sheets (number, title, size A3/A1/ANSI B/ANSI D, revisions, legend flag), items (symbol, position, quarter turns, mirror, scale, tag, data, off-page partner), lines (type, ends on a port, on another line or free, bend points, flow flip, data), notes (note, leader, Hold cloud), settings (line number format, rules off, hydraulic limits, roughness, grid); `.dschema` read part by part with `normalize` (damaged files open as far as possible, with warnings), and write |
+| `crates/core/src/file.rs` | The project file: SQLite tables (meta, nodes, objects, attributes, sheets, items, lines, notes, history, and an `object_attributes` view), atomic write, table-by-table read with repair, JSON fallback for 0.1 files and recovery copies |
+| `crates/core/src/model.rs` | The project: plant objects (`Obj`: id, uid, class, tag, hierarchy node, data; line numbers are `PipingNetworkSystem` objects) and the hierarchy (`Node`: plant › unit › area); items and line pieces are views with `obj`; the 0.1 JSON migration (`migrate_1`); sheets (number, title, size A3/A1/ANSI B/ANSI D, revisions, legend flag), items (symbol, position, quarter turns, mirror, scale, tag, data, off-page partner), lines (type, ends on a port, on another line or free, bend points, flow flip, data), notes (note, leader, Hold cloud), settings (line number format, rules off, hydraulic limits, roughness, grid); `.dschema` read part by part with `normalize` (damaged files open as far as possible, with warnings), and write |
 | `crates/core/src/symbols.rs` | The symbol library (about 80 of our own drawings in a small drawing language: polylines, outlines, fills, dashes, circles, arcs, ellipses, rectangles, text), ports with directions, categories, tag prefixes, in-line and terminal flags; placement (turn, mirror, scale); primitives and their SVG |
 | `crates/core/src/fields.rs` | The data each kind of thing carries, with the quantity of each number (for units) and choices |
 | `crates/core/src/units.rs` | Calc's unit table (NIST SP 811) with unit expressions and Schema's display table |
 | `crates/core/src/pipes.rs` | Pipe's sizes ½"–24" and schedules (ASME B36.10M/B36.19M dimensions); inside diameters |
-| `crates/core/src/doc.rs` | Edit operations (add, set, move, rotate, mirror, delete with merge of in-line items, set data, tags, bend points, split, paste with the next free tags, pair connectors, sheets, title, project, settings, renumber, batch) on a copy, kept only if `normalize` finds nothing to repair; undo/redo; size-limited reads and atomic writes |
+| `crates/core/src/doc.rs` | The history (`Change`: who, when, what, object, old, new; recorded by diffing objects after every edit, undo and redo). Edit operations (NewLineObject, SetNode, AddNode, SetNode2, DeleteNode, add, set, move, rotate, mirror, delete with merge of in-line items, set data, tags, bend points, split, paste with the next free tags, pair connectors, sheets, title, project, settings, renumber, batch) on a copy, kept only if `normalize` finds nothing to repair; undo/redo; size-limited reads and atomic writes |
 | `crates/core/src/graph.rs` | Connectivity: port positions, line numbers from the format, the network (lines per port, branches), runs (one line number through in-line items and off-page pairs), walks along the piping (`reach`), from/to, pump suction/discharge |
 | `crates/core/src/tags.rs` | Tags: split, next free per prefix and sheet, copies (P-101A → P-101B), renumber, duplicates, ISA-5.1 letters, controllers, measurements, final elements |
 | `crates/core/src/route.rs` | Sim's orthogonal router, extended to ports facing four directions and open ends |
@@ -82,6 +83,11 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 
 | Version | Decision | Why |
 | --- | --- | --- |
+| 0.1.5 | Objects own tags and data; items and line pieces point at them (`obj`). A process line joined to an in-line symbol or a paired off-page connector whose other side has a line continues that line's object; otherwise it gets a new one with the sheet's next sequence number; `NewLineObject` splits a piece off | The user's "objects are the master"; a line number is a real object, so the run inference (and its bugs) is gone |
+| 0.1.5 | Objects no view shows are deleted with their last view (until 0.1.7 offers "remove from sheet only") | No orphans until the Plant panel can show them |
+| 0.1.5 | The history is kept in the document (not in the undo snapshots) and saved in the file; undo and redo are recorded as changes too | An audit trail must not disappear with an undo |
+| 0.1.5 | SQLite via rusqlite (bundled); objects and attribute values are real tables (queryable); geometry rows keep JSON columns; recovery copies stay JSON | The user's single-database file; JSON for the parts nobody queries keeps the writer small |
+| 0.1.5 | Ids stay u32 inside the file; every object also has a uid (UUID form) for exchange and later merging | Small ids keep the engine and window simple; the uid carries identity across projects |
 | 0.1.3 (agreed) | Versions stay consecutive (0.1.4 released, then 0.1.5…); the object core order and defaults are in `docs/PLAN-0.2.md` §7; no reverse engineering of commercial software, only public documentation and open standards | The user's answers after the proposal |
 | 0.1.3 (course change) | **Datum Schema becomes an object-based plant engineering tool, not a drawing tool**: objects are the master and symbols are views of them; a plant hierarchy (project › plant › unit › area); classes and attributes as data (a JSON class library, user attributes in Options); the project as one SQLite database with a history of every change; DEXPI names. The proposal and open questions are in `docs/PLAN-0.2.md`; 0.1.4 is held until they are discussed | The user's direction after 0.1.3: an open-source tool in the class of the enterprise object-based plant engineering suites, for students, researchers and engineers |
 | plan | Everything in the brief §1 (name, magenta accent, identifier, `.dschema`, stack, units, ribbon tabs, layout, own symbols after ISO 10628-2 and ISA-5.1, logo, public words) | Made with the user in the hub, session 22 |
@@ -116,8 +122,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.1.2 | Speed (router marks blocked cells per symbol: 5 s → 0.07 s on a crowded 500-symbol sheet), coloured badges, selected line number highlighted on every sheet, screenshots | ✅ |
 | 0.1.3 | An independent engine review (a separate agent, report only): 8 findings fixed with regression tests in `hardening.rs` › `review`; more UI checks; list pages with a title block; DXF checked with ezdxf | ✅ |
 | 0.1.4 | Final check: every example opens with 0 errors, prints and exports (engine test and UI checks); README with the demo, site.json (the exhibition build). Released after the discussion | ✅ |
-| 0.1.5 | Objects and views, line-number objects, hierarchy node, SQLite file with history (PLAN-0.2 §7) | 🔜 |
-| 0.1.6 | Class library JSON (DEXPI names) | ⬜ |
+| 0.1.5 | Objects and views, line-number objects, hierarchy node, SQLite file with history (PLAN-0.2 §7) | ✅ |
+| 0.1.6 | Class library JSON (DEXPI names) | 🔜 |
 | 0.1.7 | Plant panel, delete from sheet or object | ⬜ |
 | 0.1.8 | Instrument datasheets | ⬜ |
 | later | DEXPI import and export; send a line to Datum Pipe; send a loop to Datum Sim; DXF import as a background | ⬜ |
@@ -154,3 +160,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 ### 2026-10-29: Session 1, course change
 - The user changed direction after 0.1.3: an object-based plant engineering application, not a drawing tool (objects master, views on sheets, plant hierarchy, class library as data, SQLite with history, DEXPI names). 0.1.4 is committed but not released.
 - Read the public documentation of the enterprise suites (object database across the lifecycle, base objects and classes, rules with real-time consistency and propagation, task lists, claims and working layers, revisions, 3D comparison) and of DEXPI (Proteus XML, specification CC BY 4.0, pyDEXPI). Wrote `docs/PLAN-0.2.md` with the proposal, the release order and seven questions for the user.
+
+### 2026-10-29: Session 1, 0.1.5 (the object core begins)
+- 0.1.4 released as agreed. Built 0.1.5: objects and views, line-number objects, the plant hierarchy model, the history, the SQLite file with 0.1 conversion. Engine 58 tests (new: SQLite round trip with history, 0.1 conversion, damaged databases); 48 UI checks including the SQLite file read back.
+- Did not use the reverse-engineering toolkit the user pointed to: it is for inspecting other software, and the rule is to build from public documentation and open standards only.

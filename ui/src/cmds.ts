@@ -32,9 +32,12 @@ export const C = {
   /** Place a symbol at a point; an in-line symbol on a line (`on`) goes into it. */
   place: async (sym: string, at: Pt, on: number | null, tag?: string) => {
     const s = symOf(sym); if (!s || !sheet()) return;
-    const item: Item = { id: 0, sheet: sid(), sym, x: at[0], y: at[1], rot: 0, flip: false, scale: 1, tag: tag ?? "", data: {}, link: 0 };
-    if (s.cat === "instrument" || s.cat === "primary") item.data.location = sym === "inst_dcs" ? "DCS" : sym === "inst_plc" ? "PLC" : sym === "inst_panel" ? "Control room panel" : sym === "inst_aux" ? "Local panel" : "Field";
-    const o = await act({ AddItem: { item, on } });
+    const item: Item = { id: 0, sheet: sid(), sym, x: at[0], y: at[1], rot: 0, flip: false, scale: 1, obj: 0, link: 0 };
+    let o = await act({ AddItem: { item, on, tag: tag ?? "", obj: null } });
+    if (o && (s.cat === "instrument" || s.cat === "primary")) {
+      const placed = o.p.items.find(i => i.id === o!.created[0]);
+      if (placed) o = (await act({ SetData: { ids: [placed.obj], key: "location", val: sym === "inst_dcs" ? "DCS" : sym === "inst_plc" ? "PLC" : sym === "inst_panel" ? "Control room panel" : sym === "inst_aux" ? "Local panel" : "Field" } }, true)) ?? o;
+    }
     if (o?.created.length) setSel([o.created[0]]);
     if (o && on !== null && s.inline) toast(`${s.name} put into the line; both halves keep its data.`, true);
   },
