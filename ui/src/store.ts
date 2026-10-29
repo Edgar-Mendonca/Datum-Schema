@@ -25,7 +25,13 @@ export const refresh = async () => {
   try { const d = await invoke<Derived>("derived", { sheet: s }); if (n === seq) { setDerived(d); if (wantFit) { wantFit = false; requestAnimationFrame(() => fitHook()); } } }
   catch (e) { toast(String(e)); }
 };
-export const setSheetId = (id: number) => { wantFit = id !== sheetId(); batch(() => { setSheetIdRaw(id); setSel([]); }); refresh(); };
+export const setSheetId = (id: number) => {
+  wantFit = id !== sheetId();
+  // A selected line's number stays highlighted on the other sheets.
+  const one = sel().length === 1 ? derived()?.numbers[sel()[0]] : "";
+  batch(() => { if (one) setHiNumber(one); setSheetIdRaw(id); setSel([]); });
+  refresh();
+};
 
 export const setOut = (o: Out | null | undefined) => {
   if (!o) return;

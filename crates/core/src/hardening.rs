@@ -222,4 +222,11 @@ fn speed_gate_500_items() {
     let limit = if cfg!(debug_assertions) { 5_000 } else { 500 };
     assert!(ms < limit, "derived took {ms} ms");
     eprintln!("500 symbols, 499 lines: {ms} ms");
+    // A realistic large sheet: the pump transfer tiled 23 times on an A1 sheet (about 500 symbols).
+    let big = crate::examples::big(23);
+    let t = std::time::Instant::now();
+    let d = api::derived(&big, big.sheets[0].id);
+    let ms = t.elapsed().as_millis();
+    eprintln!("{} symbols, {} lines tiled: {ms} ms", big.items.len(), d.view.unwrap().lines.len());
+    assert!(ms < limit, "derived took {ms} ms");
 }

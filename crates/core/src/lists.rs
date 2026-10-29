@@ -79,10 +79,10 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
             let specs: Vec<Spec> = vec![
                 ("number", "Line number", "", false), ("size", "Size", "", true), ("sched", "Sched", "", true), ("fluid", "Fluid", "", true), ("seq", "Seq", "", true), ("class", "Class", "", true),
                 ("service", "Service", "", true), ("from", "From", "", false), ("to", "To", "", false),
+                ("flow", "Flow", "flow", true), ("v", "Velocity", "velocity", false), ("dp100", "ΔP", "dp100", false), ("dp", "ΔP total", "dp", false), ("status", "Hydraulics", "", false),
                 ("design_p", "Design P", "press", true), ("design_t", "Design T", "temp", true), ("oper_p", "Oper P", "press", true), ("oper_t", "Oper T", "temp", true),
-                ("ins_type", "Insulation", "", true), ("ins_thk", "Ins. thk", "thk", true), ("tracing", "Tracing", "", true), ("test_p", "Test P", "press", true),
-                ("flow", "Flow", "flow", true), ("density", "Density", "density", true), ("viscosity", "Viscosity", "visc", true), ("length", "Length", "length", true),
-                ("v", "Velocity", "velocity", false), ("dp100", "ΔP", "dp100", false), ("dp", "ΔP total", "dp", false), ("status", "Hydraulics", "", false), ("sheet", "Sheet", "", false),
+                ("density", "Density", "density", true), ("viscosity", "Viscosity", "visc", true), ("length", "Length", "length", true),
+                ("ins_type", "Insulation", "", true), ("ins_thk", "Ins. thk", "thk", true), ("tracing", "Tracing", "", true), ("test_p", "Test P", "press", true), ("sheet", "Sheet", "", false),
             ];
             let hyd: Vec<Option<Hyd>> = hydraulics::all(p, &net);
             let mut rows: Vec<Row> = net

@@ -30,6 +30,7 @@ pub fn get(id: &str) -> Option<Project> {
         "compressor" => Some(compressor()),
         "exchanger" => Some(exchanger()),
         "faults" => Some(faults()),
+        "big" => Some(big(23)),
         _ => None,
     }
 }
@@ -231,6 +232,23 @@ fn faults() -> Project {
     d.p.title.project = "Find the faults".into();
     d.p.sheets[0].title = "Pump transfer, with mistakes to find".into();
     d.p.sheets[0].number = "PID-900".into();
+    d.p
+}
+
+/// A large drawing for speed tests: `n` copies of the pump transfer tiled on one A1 sheet
+/// (22 symbols each, so 23 copies make about 500). Not in the Examples list.
+pub fn big(n: usize) -> Project {
+    let (one, _) = pump();
+    let mut d = Doc::new(one.clone());
+    let s = d.p.sheets[0].id;
+    let mut sh = d.p.sheets[0].clone();
+    sh.size = "A1".into();
+    d.apply(Op::SetSheet { sheet: sh }).unwrap();
+    let (cols, w, h) = (2, 400.0, 115.0);
+    for k in 1..n {
+        let (dx, dy) = ((k % cols) as f64 * w, (k / cols) as f64 * h);
+        d.apply(Op::Paste { sheet: s, items: one.items.clone(), lines: one.lines.clone(), notes: vec![], dx, dy }).unwrap();
+    }
     d.p
 }
 

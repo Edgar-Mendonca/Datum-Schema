@@ -944,3 +944,10 @@ tr.behind td { background: var(--err-bg); }
 .sympic .sym polyline, .sympic .sym polygon, .sympic .sym circle, .sympic .sym path { vector-effect: non-scaling-stroke; stroke-width: 1.1px; }
 .sym.print polyline, .sym.print polygon, .sym.print circle, .sym.print path { vector-effect: non-scaling-stroke; stroke-width: 1px; fill: none; }
 .sym.print .sf { fill: #000; }
+.badge circle { stroke: none; }
+.badge.ok circle { fill: var(--ok-bg); }
+.badge.warn circle { fill: var(--warn-bg); }
+.badge.bad circle { fill: var(--err-bg); }
+.badge.ok .pt { fill: var(--ok-fg) !important; }
+.badge.warn .pt { fill: var(--warn-fg) !important; }
+.badge.bad .pt { fill: var(--err-fg) !important; }

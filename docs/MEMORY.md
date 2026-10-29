@@ -6,7 +6,7 @@
 | | |
 | --- | --- |
 | **Product** | Datum Schema: intelligent P&IDs and process flow diagrams: draw, check and list (symbols and lines that carry their data and connections; live line list, equipment list, instrument index and valve list; drawing checks; line hydraulics; print, SVG and DXF) |
-| **Current version** | 0.1.1 (2026-10-29) |
+| **Current version** | 0.1.2 (2026-10-29) |
 | **Repo** | `Edgar-Mendonca/Datum-Schema` · branch `claude/vigilant-hamilton-ku7r0w` (the first branch pushed, so the default branch) |
 | **Stack** | Rust engine (`crates/core`: model, symbols, graph, tags, checks, hydraulics, lists, frame, routing, DXF), Tauri 2, SolidJS + strict TypeScript; no Python |
 | **Identifier** | `com.edgarmendonca.datumschema` · files `.dschema` (JSON, `format` 1) · installer `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` · publisher "Datum" |
@@ -58,6 +58,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | `ui/src/help.tsx`, `ui/src/dialogs.tsx` | The `?` cards and the rule list; dialogs (save changes, recovery, add a symbol by name, pair connectors, shortcuts, getting started, glossary) |
 | `ui/src/styles.css`, `ui/src/ui.tsx`, `ui/index.html` | Plan's styles (magenta accent) and components; the icon sprite |
 | `tests_ui/run.cjs` | UI checks of the built window against the real engine (through the test server) |
+| `tests_ui/screens.cjs` | The four README and site screenshots (1440×900, `docs/images/`) |
+| `crates/core/examples/bench.rs` | Where the time goes on a 500-symbol sheet |
 | `docs/PLAN-0.1.md`, `docs/site.json`, `CHANGELOG.md` | The plan, the public summary and roadmap, the change log |
 
 ### Release flow
@@ -92,6 +94,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | plan | Tags number 101 … on sheet 1, 201 … on sheet 2 (line sequence 1001 …, 2001 …) | "Automatic numbering per prefix and sheet" in the brief |
 | 0.1.0 | Manual valves take the prefix HV (hand valve), not V | V is the vessels' prefix; the first test placed a valve tagged V-103 among vessels V-101 and V-102 |
 | 0.1.1 | The build ran ahead of the brief's step plan (checks, lists, hydraulics, DXF and examples were ready with the canvas), so 0.1.1 carries brief steps 3–6 and the next releases are speed, polish and the exhibition build; each CHANGELOG section says what its release really contains | Releases stay small and true; holding finished work back to match a plan would only delay it |
+| 0.1.2 | The router marks cells and edges inside symbols by index ranges (binary search on the grid lines) and keeps distances in arrays, and its second search window is 120 mm | Routing was 5 s on a crowded 500-symbol sheet; now 0.07 s with the same routes |
 | 0.1.1 | One line number label and one hydraulic badge per run per sheet, on its longest straight segment | Labels on every short piece between valves cluttered the examples |
 | 0.1.1 | A process-type line with an end on an instrument bubble or a thermowell is an instrument connection: no number, not in the line list, not checked as a pipeline | Impulse lines are part of the instrument, not the piping |
 | 0.1.1 | Final elements for check 11 are control valves and regulators only (by symbol), not relief devices | PSV and breather tags end in V too, and hid a missing control valve in Find the faults |
@@ -106,8 +109,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | plan | Read the hub, Plan, Sim, Calc and Pipe; PLAN-0.1, MEMORY, CLAUDE, icon | ✅ |
 | 0.1.0 | Shell, updater, File page, Options; model, symbols (about 80), units, pipe sizes, edits with undo, routing, the frame; canvas, palette, inspector; CI and release | ✅ |
 | 0.1.1 | Graph, tags, numbering, hardening tests; off-page connectors, legend sheet, notes and Hold clouds; the 13 checks and the Checks panel; hydraulics with badges; the four lists with CSV and Excel; print, SVG, DXF; the examples and Find the faults | ✅ |
-| 0.1.2 | Speed (the 500-symbol drawing), editing polish | 🔜 |
-| 0.1.3 | More UI checks, keyboard shortcuts, empty states, ? cards | ⬜ |
+| 0.1.2 | Speed (router marks blocked cells per symbol: 5 s → 0.07 s on a crowded 500-symbol sheet), coloured badges, selected line number highlighted on every sheet, screenshots | ✅ |
+| 0.1.3 | More UI checks, keyboard shortcuts, empty states, ? cards | 🔜 |
 | 0.1.4 | Polish, speed with 500 items, screenshots, README, site.json; final check (the exhibition build) | ⬜ |
 | 0.2 | DEXPI import and export; send a line to Datum Pipe; send a loop to Datum Sim; DXF import as a background | ⬜ |
 | 0.3 | Process flow diagrams with stream tables; heat and mass balance checks; revision clouds and comparison | ⬜ |

@@ -125,6 +125,11 @@ const movedPath = (path: Pt[], i: number, dx: number, dy: number): Pt[] | null =
   return out;
 };
 
+const BADGE: Record<string, string> = { "✓": "ok", "!": "warn", "✗": "bad" };
+
+/** The line number of the one selected line: highlighted wherever it runs, on every sheet. */
+const selNumber = createMemo(() => { const s = sel(); return s.length === 1 ? derived()?.numbers[s[0]] ?? "" : ""; });
+
 // ---------- the canvas ----------
 type Drag =
   | { k: "move"; ids: number[]; a: Pt; dx: number; dy: number }
@@ -377,10 +382,10 @@ export const Canvas = () => {
           <Show when={sv().legend}><g class="legend"><For each={sv().legend_rows}>{r => <LegendEl r={r} />}</For></g></Show>
           <g class="lines"><For each={lines()}>{l => {
             const pv = () => preview(l);
-            return <g class={`ln ${l.kind}`} classList={{ ...cls(l.id), hi: !!hiNumber() && l.number === hiNumber() }}>
+            return <g class={`ln ${l.kind}`} classList={{ ...cls(l.id), hi: !!l.number && l.number === (hiNumber() || selNumber()) }}>
               <path d={pathD(l.path)} class="lhit" />
               <Show when={pv()} fallback={<For each={l.segs}>{s => <polyline points={s.map(q => `${n(q[0])},${n(q[1])}`).join(" ")} class="lstroke" />}</For>}><path d={pv()!} class="lstroke" /></Show>
-              <For each={l.marks}>{m => <PrimEl p={m} cls="lmark" />}</For>
+              <For each={l.marks}>{m => m.k === "text" && BADGE[m.s] ? <g class={`badge ${BADGE[m.s]}`}><circle cx={m.p[0]} cy={m.p[1]} r={1.9} /><PrimEl p={m} /></g> : <PrimEl p={m} cls="lmark" />}</For>
               <Show when={l.badge !== null}><title>{(() => { const h = l.run !== null ? derived()?.hyd[l.run] : null; return h ? `${["Within limits", "Close to or just outside the limits", "Outside the limits"][h.status]}${h.reason ? ": " + h.reason : ""}` : ""; })()}</title></Show>
             </g>;
           }}</For></g>

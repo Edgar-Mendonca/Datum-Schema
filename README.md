@@ -21,6 +21,8 @@
   <a href="docs/MEMORY.md"><img src="https://img.shields.io/badge/Memory_&_roadmap-5B6878?style=for-the-badge" alt="Memory and roadmap"></a>
 </p>
 
+![Datum Schema: a gas compressor package with its anti-surge loop, knock-out drum level control and after-cooler](docs/images/compressor.png)
+
 Draw the plant with real symbols, and every symbol and line carries its data and knows what it is connected to. So Datum Schema writes the line list, equipment list, instrument index and valve list for you, always in step with the drawing; checks the drawing as you work; and sizes every line, with its velocity and pressure drop against limits. It is for process, chemical, mechanical, piping and instrument engineers, operators and students. It is free and open source (MIT), Windows first, installs in seconds and updates itself. More on the family site: [edgar-mendonca.github.io/Datum/apps/schema](https://edgar-mendonca.github.io/Datum/apps/schema).
 
 > **Hydraulic results are a sizing aid.** Velocities and pressure drops help you size lines; they are checked by the engineer before they are used.
@@ -31,7 +33,16 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Lines that know their ends**: drawn port to port, routed at right angles around symbols, with flow arrows and hops; a valve dropped on a line goes into it; off-page connectors carry a line to another sheet.
 - **Data on everything**: tags, services, design and operating conditions, sizes, line numbers built from size, fluid, sequence and class, in SI or US units.
 - **Sheets**: A3, A1, ANSI B and ANSI D with border, grid zones, title block and revision table; a legend sheet.
+- **Live checks**: thirteen rules on every change (duplicate tags, open ends, size changes without a reducer, class changes without a spec break, pumps without check valves, vessels without relief, control loops, hydraulic limits and more), each a click away from the problem.
+- **Line hydraulics**: inside diameter from size and schedule, velocity, Reynolds number, Colebrook friction factor, pressure drop per 100 m and over the line, with a ✓ ! ✗ badge against the limits for its service.
+- **Lists**: line list, equipment list, instrument index and valve list, always in step with the drawing; edit them, export to Excel or CSV, print them.
+- **Print and export**: PDF (sheets at their size or fitted to A3, lists, legend), SVG, and DXF (R12) that opens in any CAD program.
+- **Examples**: a pump transfer, a compressor package, a steam heater loop, and "Find the faults".
 - **Safe files**: `.dschema` projects (JSON), atomic saves, recovery of unsaved work, undo and redo for everything.
+
+![The Checks panel on "Find the faults": duplicate tag, open end, a size change without a reducer, a pump without a check valve, a vessel without relief](docs/images/checks.png)
+
+![The line list with hydraulics, and a line's velocity and pressure drop in the Inspector](docs/images/line-list.png)
 
 ## Build
 

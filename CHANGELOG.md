@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.2 — 2026-10-29
+
+Fast with big drawings; hydraulic badges in colour.
+
+**Speed.** Lines route much faster: a sheet with 500 symbols and 500 lines is drawn again in well under a tenth of a second after each change (it took seconds on a crowded sheet).
+
+**Badges in colour.** The hydraulic badge on each line is green ✓ within its limits, amber ! close to them, red ✗ well outside.
+
+**Line numbers.** Selecting a line highlights its line number through every drawn piece, and it stays highlighted on the other sheets.
+
+**Line list.** The flow and the hydraulic results come right after From and To.
+
 ## 0.1.1 — 2026-10-29
 
 The drawing now checks itself, lists itself and sizes its lines; the examples, printing and DXF.
