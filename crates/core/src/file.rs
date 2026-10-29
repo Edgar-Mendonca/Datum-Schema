@@ -70,7 +70,8 @@ pub fn write(path: &Path, p: &Project, history: &[Change]) -> Result<(), String>
         t.commit().map_err(sql)?;
         c.close().map_err(|(_, e)| sql(e))?;
         // Make sure the bytes are on disk before the rename.
-        std::fs::File::open(&tmp).and_then(|f| f.sync_all()).map_err(|e| format!("Could not save {}: {e}", path.display()))?;
+        // (Windows refuses to flush a read-only handle, so open it for writing.)
+        std::fs::OpenOptions::new().write(true).open(&tmp).and_then(|f| f.sync_all()).map_err(|e| format!("Could not save {}: {e}", path.display()))?;
         Ok(())
     })();
     if let Err(e) = res {

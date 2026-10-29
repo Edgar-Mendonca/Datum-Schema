@@ -1,0 +1,1250 @@
+{
+ "version": 1,
+ "source": "Datum Schema built-in classes; names follow the DEXPI P&ID data model where a matching class is known (to be checked against the DEXPI specification in the exchange release).",
+ "classes": [
+  {
+   "name": "PlantItem",
+   "label": "Plant item",
+   "attributes": []
+  },
+  {
+   "name": "Equipment",
+   "label": "Equipment",
+   "parent": "PlantItem",
+   "attributes": [
+    {
+     "key": "service",
+     "label": "Name or service",
+     "type": "text",
+     "dexpi": "EquipmentDescription"
+    },
+    {
+     "key": "type",
+     "label": "Type",
+     "type": "text"
+    },
+    {
+     "key": "design_p",
+     "label": "Design pressure",
+     "q": "press",
+     "type": "number",
+     "dexpi": "DesignPressure"
+    },
+    {
+     "key": "design_t",
+     "label": "Design temperature",
+     "q": "temp",
+     "type": "number",
+     "dexpi": "DesignTemperature"
+    },
+    {
+     "key": "oper_p",
+     "label": "Operating pressure",
+     "q": "press",
+     "type": "number",
+     "dexpi": "OperatingPressure"
+    },
+    {
+     "key": "oper_t",
+     "label": "Operating temperature",
+     "q": "temp",
+     "type": "number",
+     "dexpi": "OperatingTemperature"
+    },
+    {
+     "key": "material",
+     "label": "Material",
+     "type": "text",
+     "dexpi": "MaterialOfConstructionCode"
+    },
+    {
+     "key": "nozzles",
+     "label": "Nozzles",
+     "type": "text"
+    }
+   ]
+  },
+  {
+   "name": "Vessel",
+   "label": "Vessel",
+   "parent": "Equipment",
+   "attributes": [
+    {
+     "key": "volume",
+     "label": "Volume",
+     "q": "volume",
+     "type": "number",
+     "dexpi": "NominalCapacityVolume"
+    },
+    {
+     "key": "size",
+     "label": "Size (diameter × length)",
+     "type": "text"
+    },
+    {
+     "key": "relief",
+     "label": "Relief path (if not drawn)",
+     "type": "text"
+    }
+   ],
+   "symbols": [
+    "vvessel",
+    "hdrum",
+    "jacketed"
+   ],
+   "prefix": "V"
+  },
+  {
+   "name": "Tank",
+   "label": "Tank",
+   "parent": "Vessel",
+   "attributes": [],
+   "symbols": [
+    "tank_cone",
+    "tank_flat"
+   ],
+   "prefix": "T"
+  },
+  {
+   "name": "Column",
+   "label": "Column",
+   "parent": "Vessel",
+   "attributes": []
+  },
+  {
+   "name": "Pump",
+   "label": "Pump",
+   "parent": "Equipment",
+   "attributes": [
+    {
+     "key": "flow",
+     "label": "Rated flow",
+     "q": "flow",
+     "type": "number",
+     "dexpi": "NominalVolumeFlowRate"
+    },
+    {
+     "key": "head",
+     "label": "Head",
+     "q": "head",
+     "type": "number",
+     "dexpi": "NominalHead"
+    },
+    {
+     "key": "power",
+     "label": "Power",
+     "q": "power",
+     "type": "number",
+     "dexpi": "NominalPower"
+    }
+   ]
+  },
+  {
+   "name": "Compressor",
+   "label": "Compressor or fan",
+   "parent": "Equipment",
+   "attributes": [
+    {
+     "key": "flow",
+     "label": "Rated flow",
+     "q": "flow",
+     "type": "number",
+     "dexpi": "NominalVolumeFlowRate"
+    },
+    {
+     "key": "head",
+     "label": "Head",
+     "q": "head",
+     "type": "number"
+    },
+    {
+     "key": "power",
+     "label": "Power",
+     "q": "power",
+     "type": "number",
+     "dexpi": "NominalPower"
+    }
+   ]
+  },
+  {
+   "name": "Driver",
+   "label": "Driver",
+   "parent": "Equipment",
+   "attributes": [
+    {
+     "key": "power",
+     "label": "Power",
+     "q": "power",
+     "type": "number",
+     "dexpi": "NominalPower"
+    }
+   ]
+  },
+  {
+   "name": "Mover",
+   "label": "Mixer or agitator",
+   "parent": "Equipment",
+   "attributes": [
+    {
+     "key": "power",
+     "label": "Power",
+     "q": "power",
+     "type": "number"
+    }
+   ]
+  },
+  {
+   "name": "HeatExchanger",
+   "label": "Heat exchanger",
+   "parent": "Equipment",
+   "attributes": [
+    {
+     "key": "duty",
+     "label": "Duty",
+     "q": "power",
+     "type": "number",
+     "dexpi": "HeatTransferDuty"
+    },
+    {
+     "key": "area",
+     "label": "Area",
+     "q": "area",
+     "type": "number",
+     "dexpi": "HeatTransferArea"
+    },
+    {
+     "key": "relief",
+     "label": "Relief path (if not drawn)",
+     "type": "text"
+    }
+   ]
+  },
+  {
+   "name": "Heater",
+   "label": "Heater",
+   "parent": "Equipment",
+   "attributes": [
+    {
+     "key": "duty",
+     "label": "Duty",
+     "q": "power",
+     "type": "number"
+    },
+    {
+     "key": "area",
+     "label": "Area",
+     "q": "area",
+     "type": "number"
+    }
+   ]
+  },
+  {
+   "name": "PipingItem",
+   "label": "Piping item",
+   "parent": "PlantItem",
+   "attributes": [
+    {
+     "key": "size",
+     "label": "Size (NPS)",
+     "type": "text",
+     "dexpi": "NominalDiameter"
+    }
+   ]
+  },
+  {
+   "name": "Valve",
+   "label": "Valve",
+   "parent": "PipingItem",
+   "attributes": [
+    {
+     "key": "class",
+     "label": "Class or rating",
+     "type": "text",
+     "dexpi": "PipingClassCode"
+    },
+    {
+     "key": "operator",
+     "label": "Operator",
+     "type": "choice",
+     "choices": [
+      "Handwheel",
+      "Lever",
+      "Gear",
+      "Pneumatic",
+      "Motor",
+      "Solenoid",
+      "Self-acting"
+     ]
+    },
+    {
+     "key": "service",
+     "label": "Service",
+     "type": "text"
+    }
+   ]
+  },
+  {
+   "name": "ManualValve",
+   "label": "Manual valve",
+   "parent": "Valve",
+   "attributes": [
+    {
+     "key": "position",
+     "label": "Normal position",
+     "type": "choice",
+     "choices": [
+      "NO",
+      "NC",
+      "LO",
+      "LC"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "ControlValve",
+   "label": "Control valve",
+   "parent": "Valve",
+   "attributes": [
+    {
+     "key": "fail",
+     "label": "Fail position",
+     "type": "choice",
+     "choices": [
+      "FO",
+      "FC",
+      "FL"
+     ],
+     "dexpi": "FailAction"
+    },
+    {
+     "key": "set_p",
+     "label": "Set pressure",
+     "q": "press",
+     "type": "number"
+    },
+    {
+     "key": "loop",
+     "label": "Loop number",
+     "type": "text"
+    }
+   ]
+  },
+  {
+   "name": "ReliefDevice",
+   "label": "Relief device",
+   "parent": "Valve",
+   "attributes": [
+    {
+     "key": "set_p",
+     "label": "Set pressure",
+     "q": "press",
+     "type": "number",
+     "dexpi": "SetPressureHigh"
+    },
+    {
+     "key": "loop",
+     "label": "Loop number",
+     "type": "text"
+    }
+   ]
+  },
+  {
+   "name": "PipingComponent",
+   "label": "Fitting or special",
+   "parent": "PipingItem",
+   "attributes": [
+    {
+     "key": "service",
+     "label": "Notes",
+     "type": "text"
+    }
+   ]
+  },
+  {
+   "name": "Instrument",
+   "label": "Instrument",
+   "parent": "PlantItem",
+   "attributes": [
+    {
+     "key": "function",
+     "label": "Function",
+     "type": "text"
+    },
+    {
+     "key": "loop",
+     "label": "Loop number",
+     "type": "text"
+    },
+    {
+     "key": "range",
+     "label": "Range",
+     "type": "text"
+    },
+    {
+     "key": "setpoints",
+     "label": "Set points (alarms, trips)",
+     "type": "text"
+    },
+    {
+     "key": "signal",
+     "label": "Signal",
+     "type": "choice",
+     "choices": [
+      "4–20 mA",
+      "4–20 mA HART",
+      "Fieldbus",
+      "Pneumatic 0.2–1 bar",
+      "Discrete",
+      "Software link",
+      "Capillary"
+     ]
+    },
+    {
+     "key": "location",
+     "label": "Location",
+     "type": "choice",
+     "choices": [
+      "Field",
+      "Local panel",
+      "Control room panel",
+      "DCS",
+      "PLC"
+     ],
+     "dexpi": "Location"
+    }
+   ]
+  },
+  {
+   "name": "PrimaryElement",
+   "label": "Primary element",
+   "parent": "Instrument",
+   "attributes": [
+    {
+     "key": "size",
+     "label": "Size (NPS)",
+     "type": "text",
+     "dexpi": "NominalDiameter"
+    }
+   ]
+  },
+  {
+   "name": "LineMark",
+   "label": "Line mark",
+   "parent": "PlantItem",
+   "attributes": [
+    {
+     "key": "service",
+     "label": "Notes",
+     "type": "text"
+    }
+   ]
+  },
+  {
+   "name": "Connector",
+   "label": "Connector",
+   "parent": "PlantItem",
+   "attributes": [
+    {
+     "key": "to_text",
+     "label": "Continues to (text)",
+     "type": "text"
+    }
+   ]
+  },
+  {
+   "name": "Annotation",
+   "label": "Annotation",
+   "parent": "PlantItem",
+   "attributes": []
+  },
+  {
+   "name": "PipingNetworkSystem",
+   "label": "Line number",
+   "parent": "PlantItem",
+   "line": true,
+   "attributes": [
+    {
+     "key": "size",
+     "label": "Size (NPS)",
+     "type": "text",
+     "dexpi": "NominalDiameter"
+    },
+    {
+     "key": "sched",
+     "label": "Schedule",
+     "type": "text",
+     "dexpi": "Schedule"
+    },
+    {
+     "key": "fluid",
+     "label": "Fluid code",
+     "type": "text",
+     "dexpi": "FluidCode"
+    },
+    {
+     "key": "seq",
+     "label": "Sequence number",
+     "type": "text",
+     "dexpi": "LineNumber"
+    },
+    {
+     "key": "class",
+     "label": "Pipe class",
+     "type": "text",
+     "dexpi": "PipingClassCode"
+    },
+    {
+     "key": "service",
+     "label": "Service",
+     "type": "text"
+    },
+    {
+     "key": "phase",
+     "label": "Phase",
+     "type": "choice",
+     "choices": [
+      "Liquid",
+      "Gas",
+      "Steam",
+      "Two-phase"
+     ]
+    },
+    {
+     "key": "limits",
+     "label": "Hydraulic limits",
+     "type": "choice",
+     "choices": [
+      "auto",
+      "liquid",
+      "suction",
+      "discharge",
+      "drain",
+      "gas",
+      "steam",
+      "twophase"
+     ]
+    },
+    {
+     "key": "flow",
+     "label": "Volume flow",
+     "q": "flow",
+     "type": "number"
+    },
+    {
+     "key": "mflow",
+     "label": "Mass flow",
+     "q": "mflow",
+     "type": "number"
+    },
+    {
+     "key": "density",
+     "label": "Density",
+     "q": "density",
+     "type": "number"
+    },
+    {
+     "key": "viscosity",
+     "label": "Viscosity",
+     "q": "visc",
+     "type": "number"
+    },
+    {
+     "key": "length",
+     "label": "Length for hydraulics",
+     "q": "length",
+     "type": "number"
+    },
+    {
+     "key": "fittings",
+     "label": "Fittings allowance (% of length)",
+     "type": "number"
+    },
+    {
+     "key": "design_p",
+     "label": "Design pressure",
+     "q": "press",
+     "type": "number",
+     "dexpi": "DesignPressure"
+    },
+    {
+     "key": "design_t",
+     "label": "Design temperature",
+     "q": "temp",
+     "type": "number",
+     "dexpi": "DesignTemperature"
+    },
+    {
+     "key": "oper_p",
+     "label": "Operating pressure",
+     "q": "press",
+     "type": "number",
+     "dexpi": "OperatingPressure"
+    },
+    {
+     "key": "oper_t",
+     "label": "Operating temperature",
+     "q": "temp",
+     "type": "number",
+     "dexpi": "OperatingTemperature"
+    },
+    {
+     "key": "test_p",
+     "label": "Test pressure",
+     "q": "press",
+     "type": "number",
+     "dexpi": "TestPressure"
+    },
+    {
+     "key": "ins_type",
+     "label": "Insulation type",
+     "type": "text",
+     "dexpi": "InsulationTypeSpecification"
+    },
+    {
+     "key": "ins_thk",
+     "label": "Insulation thickness",
+     "q": "thk",
+     "type": "number",
+     "dexpi": "InsulationThickness"
+    },
+    {
+     "key": "tracing",
+     "label": "Tracing",
+     "type": "text",
+     "dexpi": "HeatTracingTypeSpecification"
+    },
+    {
+     "key": "number",
+     "label": "Line number (typed, overrides the format)",
+     "type": "text"
+    }
+   ],
+   "required": [
+    "size",
+    "fluid",
+    "seq",
+    "class"
+   ]
+  },
+  {
+   "name": "ProcessColumn",
+   "label": "Process column",
+   "parent": "Column",
+   "symbols": [
+    "column_trays",
+    "column_packed"
+   ],
+   "prefix": "C",
+   "attributes": []
+  },
+  {
+   "name": "Separator",
+   "label": "Separator",
+   "parent": "Vessel",
+   "symbols": [
+    "separator",
+    "ko_drum"
+   ],
+   "prefix": "V",
+   "attributes": []
+  },
+  {
+   "name": "Filter",
+   "label": "Filter vessel",
+   "parent": "Vessel",
+   "symbols": [
+    "filter"
+   ],
+   "prefix": "F",
+   "attributes": []
+  },
+  {
+   "name": "Silo",
+   "label": "Silo",
+   "parent": "Vessel",
+   "symbols": [
+    "silo"
+   ],
+   "prefix": "SI",
+   "attributes": []
+  },
+  {
+   "name": "CentrifugalPump",
+   "label": "Centrifugal pump",
+   "parent": "Pump",
+   "symbols": [
+    "pump_cent",
+    "pump_vil"
+   ],
+   "prefix": "P",
+   "attributes": []
+  },
+  {
+   "name": "ReciprocatingPump",
+   "label": "Positive-displacement pump",
+   "parent": "Pump",
+   "symbols": [
+    "pump_pd"
+   ],
+   "prefix": "P",
+   "attributes": []
+  },
+  {
+   "name": "CentrifugalCompressor",
+   "label": "Centrifugal compressor",
+   "parent": "Compressor",
+   "symbols": [
+    "comp_cent"
+   ],
+   "prefix": "K",
+   "attributes": []
+  },
+  {
+   "name": "ReciprocatingCompressor",
+   "label": "Reciprocating compressor",
+   "parent": "Compressor",
+   "symbols": [
+    "comp_recip"
+   ],
+   "prefix": "K",
+   "attributes": []
+  },
+  {
+   "name": "RotaryCompressor",
+   "label": "Screw compressor",
+   "parent": "Compressor",
+   "symbols": [
+    "comp_screw"
+   ],
+   "prefix": "K",
+   "attributes": []
+  },
+  {
+   "name": "Fan",
+   "label": "Fan or blower",
+   "parent": "Compressor",
+   "symbols": [
+    "fan"
+   ],
+   "prefix": "B",
+   "attributes": []
+  },
+  {
+   "name": "SteamTurbine",
+   "label": "Steam turbine",
+   "parent": "Driver",
+   "symbols": [
+    "turbine"
+   ],
+   "prefix": "ST",
+   "attributes": []
+  },
+  {
+   "name": "ElectricMotor",
+   "label": "Electric motor",
+   "parent": "Driver",
+   "symbols": [
+    "motor"
+   ],
+   "prefix": "M",
+   "attributes": []
+  },
+  {
+   "name": "Agitator",
+   "label": "Agitator",
+   "parent": "Mover",
+   "symbols": [
+    "agitator"
+   ],
+   "prefix": "AG",
+   "attributes": []
+  },
+  {
+   "name": "ShellAndTubeHeatExchanger",
+   "label": "Shell-and-tube heat exchanger",
+   "parent": "HeatExchanger",
+   "symbols": [
+    "hx_fixed",
+    "hx_u",
+    "hx_kettle"
+   ],
+   "prefix": "E",
+   "attributes": []
+  },
+  {
+   "name": "PlateHeatExchanger",
+   "label": "Plate exchanger",
+   "parent": "HeatExchanger",
+   "symbols": [
+    "hx_plate"
+   ],
+   "prefix": "E",
+   "attributes": []
+  },
+  {
+   "name": "AirCoolingSystem",
+   "label": "Air cooler",
+   "parent": "HeatExchanger",
+   "symbols": [
+    "air_cooler"
+   ],
+   "prefix": "E",
+   "attributes": []
+  },
+  {
+   "name": "Furnace",
+   "label": "Fired heater",
+   "parent": "Heater",
+   "symbols": [
+    "fired_heater"
+   ],
+   "prefix": "H",
+   "attributes": []
+  },
+  {
+   "name": "ElectricHeater",
+   "label": "Electric heater",
+   "parent": "Heater",
+   "symbols": [
+    "elec_heater"
+   ],
+   "prefix": "EH",
+   "attributes": []
+  },
+  {
+   "name": "CoolingTower",
+   "label": "Cooling tower",
+   "parent": "HeatExchanger",
+   "symbols": [
+    "cooling_tower"
+   ],
+   "prefix": "CT",
+   "attributes": []
+  },
+  {
+   "name": "GateValve",
+   "label": "Gate valve",
+   "parent": "ManualValve",
+   "symbols": [
+    "gate"
+   ],
+   "prefix": "HV",
+   "attributes": []
+  },
+  {
+   "name": "GlobeValve",
+   "label": "Globe valve",
+   "parent": "ManualValve",
+   "symbols": [
+    "globe"
+   ],
+   "prefix": "HV",
+   "attributes": []
+  },
+  {
+   "name": "BallValve",
+   "label": "Ball valve",
+   "parent": "ManualValve",
+   "symbols": [
+    "ball"
+   ],
+   "prefix": "HV",
+   "attributes": []
+  },
+  {
+   "name": "ButterflyValve",
+   "label": "Butterfly valve",
+   "parent": "ManualValve",
+   "symbols": [
+    "butterfly"
+   ],
+   "prefix": "HV",
+   "attributes": []
+  },
+  {
+   "name": "PlugValve",
+   "label": "Plug valve",
+   "parent": "ManualValve",
+   "symbols": [
+    "plug"
+   ],
+   "prefix": "HV",
+   "attributes": []
+  },
+  {
+   "name": "NeedleValve",
+   "label": "Needle valve",
+   "parent": "ManualValve",
+   "symbols": [
+    "needle"
+   ],
+   "prefix": "HV",
+   "attributes": []
+  },
+  {
+   "name": "DiaphragmValve",
+   "label": "Diaphragm valve",
+   "parent": "ManualValve",
+   "symbols": [
+    "diaphragm"
+   ],
+   "prefix": "HV",
+   "attributes": []
+  },
+  {
+   "name": "CheckValve",
+   "label": "Check valve",
+   "parent": "ManualValve",
+   "symbols": [
+    "check",
+    "nonslam"
+   ],
+   "prefix": "HV",
+   "attributes": []
+  },
+  {
+   "name": "ThreeWayValve",
+   "label": "Three-way valve",
+   "parent": "ManualValve",
+   "symbols": [
+    "threeway"
+   ],
+   "prefix": "HV",
+   "attributes": []
+  },
+  {
+   "name": "OperatedValve",
+   "label": "Control valve",
+   "parent": "ControlValve",
+   "symbols": [
+    "cv_pneu",
+    "cv_motor",
+    "cv_solenoid"
+   ],
+   "prefix": "CV",
+   "attributes": []
+  },
+  {
+   "name": "SpringLoadedGlobeSafetyValve",
+   "label": "Pressure safety valve",
+   "parent": "ReliefDevice",
+   "symbols": [
+    "psv"
+   ],
+   "prefix": "PSV",
+   "attributes": []
+  },
+  {
+   "name": "PressureRegulator",
+   "label": "Pressure regulator",
+   "parent": "ControlValve",
+   "symbols": [
+    "regulator"
+   ],
+   "prefix": "PCV",
+   "attributes": []
+  },
+  {
+   "name": "RuptureDisc",
+   "label": "Rupture disc",
+   "parent": "ReliefDevice",
+   "symbols": [
+    "rupture"
+   ],
+   "prefix": "PSE",
+   "attributes": []
+  },
+  {
+   "name": "BreatherValve",
+   "label": "Breather valve",
+   "parent": "ReliefDevice",
+   "symbols": [
+    "breather"
+   ],
+   "prefix": "PVSV",
+   "attributes": []
+  },
+  {
+   "name": "ConcentricPipeReducer",
+   "label": "Concentric reducer",
+   "parent": "PipingComponent",
+   "symbols": [
+    "reducer_con"
+   ],
+   "prefix": "",
+   "attributes": []
+  },
+  {
+   "name": "EccentricPipeReducer",
+   "label": "Eccentric reducer",
+   "parent": "PipingComponent",
+   "symbols": [
+    "reducer_ecc"
+   ],
+   "prefix": "",
+   "attributes": []
+  },
+  {
+   "name": "BlindFlange",
+   "label": "Blind flange",
+   "parent": "PipingComponent",
+   "symbols": [
+    "blind"
+   ],
+   "prefix": "",
+   "attributes": []
+  },
+  {
+   "name": "SpectacleBlind",
+   "label": "Spectacle blind",
+   "parent": "PipingComponent",
+   "symbols": [
+    "spectacle"
+   ],
+   "prefix": "",
+   "attributes": []
+  },
+  {
+   "name": "LineBlind",
+   "label": "Ring spacer",
+   "parent": "PipingComponent",
+   "symbols": [
+    "spacer"
+   ],
+   "prefix": "",
+   "attributes": []
+  },
+  {
+   "name": "Strainer",
+   "label": "Strainer",
+   "parent": "PipingComponent",
+   "symbols": [
+    "strainer_y",
+    "strainer_basket"
+   ],
+   "prefix": "S",
+   "attributes": []
+  },
+  {
+   "name": "SteamTrap",
+   "label": "Steam trap",
+   "parent": "PipingComponent",
+   "symbols": [
+    "steam_trap"
+   ],
+   "prefix": "TR",
+   "attributes": []
+  },
+  {
+   "name": "SightGlass",
+   "label": "Sight glass",
+   "parent": "PipingComponent",
+   "symbols": [
+    "sight_glass"
+   ],
+   "prefix": "SG",
+   "attributes": []
+  },
+  {
+   "name": "FlameArrestor",
+   "label": "Flame arrester",
+   "parent": "PipingComponent",
+   "symbols": [
+    "flame_arrester"
+   ],
+   "prefix": "FA",
+   "attributes": []
+  },
+  {
+   "name": "Hose",
+   "label": "Flexible hose",
+   "parent": "PipingComponent",
+   "symbols": [
+    "flex_hose"
+   ],
+   "prefix": "",
+   "attributes": []
+  },
+  {
+   "name": "RestrictionOrifice",
+   "label": "Restriction orifice",
+   "parent": "PipingComponent",
+   "symbols": [
+    "ro"
+   ],
+   "prefix": "RO",
+   "attributes": []
+  },
+  {
+   "name": "Compensator",
+   "label": "Expansion joint",
+   "parent": "PipingComponent",
+   "symbols": [
+    "exp_joint"
+   ],
+   "prefix": "EJ",
+   "attributes": []
+  },
+  {
+   "name": "Drain",
+   "label": "Drain",
+   "parent": "PipingComponent",
+   "symbols": [
+    "drain"
+   ],
+   "prefix": "",
+   "attributes": []
+  },
+  {
+   "name": "Vent",
+   "label": "Vent",
+   "parent": "PipingComponent",
+   "symbols": [
+    "vent"
+   ],
+   "prefix": "",
+   "attributes": []
+  },
+  {
+   "name": "SampleConnection",
+   "label": "Sample point",
+   "parent": "PipingComponent",
+   "symbols": [
+    "sample"
+   ],
+   "prefix": "SC",
+   "attributes": []
+  },
+  {
+   "name": "ProcessInstrumentationFunction",
+   "label": "Instrument function",
+   "parent": "Instrument",
+   "symbols": [
+    "inst_field",
+    "inst_panel",
+    "inst_aux",
+    "inst_dcs",
+    "inst_plc",
+    "inst_interlock"
+   ],
+   "prefix": "",
+   "attributes": []
+  },
+  {
+   "name": "FlowMeasuringElement",
+   "label": "Flow element",
+   "parent": "PrimaryElement",
+   "symbols": [
+    "orifice",
+    "magmeter",
+    "coriolis",
+    "vortex",
+    "ultrasonic"
+   ],
+   "prefix": "FE",
+   "attributes": []
+  },
+  {
+   "name": "Thermowell",
+   "label": "Thermowell",
+   "parent": "PrimaryElement",
+   "symbols": [
+    "thermowell"
+   ],
+   "prefix": "TW",
+   "attributes": []
+  },
+  {
+   "name": "Insulation",
+   "label": "Insulation",
+   "parent": "LineMark",
+   "symbols": [
+    "insulation"
+   ],
+   "prefix": "",
+   "attributes": []
+  },
+  {
+   "name": "Tracing",
+   "label": "Tracing",
+   "parent": "LineMark",
+   "symbols": [
+    "trace_steam",
+    "trace_elec"
+   ],
+   "prefix": "",
+   "attributes": []
+  },
+  {
+   "name": "Jacketing",
+   "label": "Jacketing",
+   "parent": "LineMark",
+   "symbols": [
+    "jacket"
+   ],
+   "prefix": "",
+   "attributes": []
+  },
+  {
+   "name": "PipingSpecificationBreak",
+   "label": "Spec break",
+   "parent": "LineMark",
+   "symbols": [
+    "specbreak"
+   ],
+   "prefix": "",
+   "attributes": []
+  },
+  {
+   "name": "BatteryLimit",
+   "label": "Battery limit",
+   "parent": "LineMark",
+   "symbols": [
+    "battery_limit"
+   ],
+   "prefix": "",
+   "attributes": []
+  },
+  {
+   "name": "TieInPoint",
+   "label": "Tie-in point",
+   "parent": "LineMark",
+   "symbols": [
+    "tiein"
+   ],
+   "prefix": "TP",
+   "attributes": []
+  },
+  {
+   "name": "PackageBoundary",
+   "label": "Package boundary",
+   "parent": "LineMark",
+   "symbols": [
+    "package"
+   ],
+   "prefix": "",
+   "attributes": []
+  },
+  {
+   "name": "PipeOffPageConnector",
+   "label": "Off-page connector",
+   "parent": "Connector",
+   "symbols": [
+    "offpage"
+   ],
+   "prefix": "",
+   "attributes": []
+  },
+  {
+   "name": "UnknownItem",
+   "label": "Unknown symbol",
+   "parent": "Annotation",
+   "symbols": [
+    "unknown"
+   ],
+   "prefix": "",
+   "attributes": []
+  }
+ ]
+}
