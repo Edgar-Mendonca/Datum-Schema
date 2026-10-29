@@ -283,7 +283,7 @@ pub fn parse(draw: &str) -> Vec<Prim> {
             continue;
         }
         let n: Vec<f64> = rest.split_whitespace().filter_map(|x| x.parse().ok()).collect();
-        let pts = || n.chunks_exact(2).map(|c| [c[0], c[1]]).collect::<Vec<_>>();
+        let pts = || n.as_chunks::<2>().0.to_vec();
         match op {
             "l" | "p" | "f" | "d" => out.push(Prim::Poly { pts: pts(), closed: op == "p" || op == "f", fill: op == "f", dash: op == "d", w: STROKE }),
             "c" | "fc" if n.len() == 3 => out.push(Prim::Circle { c: [n[0], n[1]], r: n[2], fill: op == "fc", w: STROKE }),
