@@ -92,6 +92,8 @@ pub struct SheetView {
     pub legend_rows: Vec<LegendRow>,
     /// An old drawing behind the sheet (its drawing is fetched by `rev`, with `underlay_svg`).
     pub underlay: Option<crate::model::Underlay>,
+    /// Revision clouds round the changes since the issued revision the sheet clouds against.
+    pub clouds: Vec<Prim>,
 }
 
 /// The layer a line type is drawn on.
@@ -410,7 +412,7 @@ pub fn sheet(p: &Project, s: &Sheet, net: &Net, hyd: &[Option<Hyd>]) -> SheetVie
         })
         .collect();
     let notes = p.notes.iter().filter(|n| n.sheet == s.id).map(note_view).collect();
-    SheetView { id: s.id, number: s.number.clone(), title: s.title.clone(), w, h, legend: s.legend, frame: { let mut f = frame::frame(p, s); f.extend(crate::pfd::table(p, s)); f }, items, lines, notes, legend_rows: if s.legend { legend(p, s) } else { vec![] }, underlay: s.underlay.clone().filter(|u| u.show) }
+    SheetView { id: s.id, number: s.number.clone(), title: s.title.clone(), w, h, legend: s.legend, frame: { let mut f = frame::frame(p, s); f.extend(crate::pfd::table(p, s)); f }, items, lines, notes, legend_rows: if s.legend { legend(p, s) } else { vec![] }, underlay: s.underlay.clone().filter(|u| u.show), clouds: crate::revs::clouds(p, s) }
 }
 
 /// Text lines of a note, and their box.

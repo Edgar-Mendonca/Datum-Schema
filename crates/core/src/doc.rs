@@ -88,6 +88,9 @@ pub enum Op {
     Link { a: u32, b: u32 },
     AddSheet { sheet: Sheet },
     SetSheet { sheet: Sheet },
+    /// Issue a sheet at a revision: a row in its revision table, and the sheet as it is now kept
+    /// to compare and cloud later changes against.
+    IssueRevision { sheet: u32, rev: model::Rev },
     DeleteSheet { id: u32 },
     MoveSheet { id: u32, to: usize },
     SetTitle { title: Title },
@@ -612,7 +615,27 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
                     None => sheet.underlay = None,
                 }
             }
+            // Issued snapshots come from the engine only: keep the sheet's own.
+            for x in &mut sheet.snaps {
+                x.body = old.snaps.iter().find(|o| o.rev == x.rev).and_then(|o| o.body.clone());
+            }
             *old = sheet;
+        }
+        Op::IssueRevision { sheet, rev } => {
+            let r = crate::clip(rev.rev.trim(), 12);
+            if r.is_empty() {
+                return Err("Give the revision a letter or number.".into());
+            }
+            let body = std::sync::Arc::new(crate::revs::snapshot(p, sheet));
+            let s = p.sheets.iter_mut().find(|s| s.id == sheet).ok_or("That sheet no longer exists.")?;
+            s.revs.retain(|x| x.rev != r);
+            s.revs.push(model::Rev { rev: r.clone(), ..rev.clone() });
+            s.rev = r.clone();
+            if !rev.date.is_empty() {
+                s.date = rev.date.clone();
+            }
+            s.snaps.retain(|x| x.rev != r);
+            s.snaps.push(model::Snap { rev: r, date: rev.date, body: Some(body) });
         }
         Op::DeleteSheet { id } => {
             if p.sheets.len() < 2 {

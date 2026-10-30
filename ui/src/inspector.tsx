@@ -7,6 +7,7 @@ import { toU, fromU, unit, fmt } from "./units";
 import { Help } from "./help";
 import { C } from "./cmds";
 import { Check, Pick } from "./ui";
+import { issueRevision, compareSheet } from "./revisions";
 import { openDatasheet } from "./datasheet";
 import { openLoops } from "./loops";
 
@@ -186,13 +187,19 @@ const SheetPanel = () => {
         <div class="ibtns"><button class="btn sm" onClick={C.underlay}>Replace…</button><button class="btn sm" onClick={() => setS("underlay", null)}>Remove</button></div>
       </div>;
     }}</Show>
-    <h4>Revisions <button class="btn sm" onClick={() => setS("revs", [...s().revs, { rev: String.fromCharCode(65 + s().revs.length), date: new Date().toLocaleDateString(), desc: "", by: p().title.by, checked: "", approved: "" }])}>Add</button></h4>
+    <h4>Revisions <button class="btn sm" title="Issue this sheet at a new revision: a row in the table, and a copy kept to compare later changes with" onClick={() => issueRevision(s())}>Issue…</button><button class="btn sm" title="A row in the revision table only" onClick={() => setS("revs", [...s().revs, { rev: String.fromCharCode(65 + s().revs.length), date: new Date().toLocaleDateString(), desc: "", by: p().title.by, checked: "", approved: "" }])}>Add row</button><Help k="revisions" /></h4>
     <For each={s().revs}>{(r, i) => <div class="revrow">
       <input class="mono" value={r.rev} onChange={e => setRev(i(), "rev", e.currentTarget.value)} style={{ width: "34px" }} />
       <input value={r.date} onChange={e => setRev(i(), "date", e.currentTarget.value)} style={{ width: "80px" }} />
       <input value={r.desc} placeholder="Description" onChange={e => setRev(i(), "desc", e.currentTarget.value)} />
       <button class="x" title="Remove" onClick={() => setS("revs", s().revs.filter((_, j) => j !== i()))}>×</button>
     </div>}</For>
+    <Show when={s().snaps.length}>
+      <Row label="Revision clouds" hint="Clouds round everything changed since the chosen issue, with the next revision in a triangle. Printed and exported.">
+        <Pick value={s().clouds} set={v => setS("clouds", v)} options={[["", "None"], ...s().snaps.map(x => [x.rev, `Changes since revision ${x.rev}`] as [string, string])]} />
+      </Row>
+      <div class="ibtns"><For each={s().snaps}>{x => <button class="btn sm" onClick={() => compareSheet(s().id, x.rev)}>Compare with {x.rev}…</button>}</For></div>
+    </Show>
     <h4>Title block (every sheet)</h4>
     <For each={[["company", "Company"], ["project", "Project"], ["client", "Client"], ["unit", "Unit or area"], ["by", "Drawn by"], ["checked", "Checked by"], ["approved", "Approved by"]] as [string, string][]}>{([k, l]) =>
       <Row label={l}><input value={(p().title as any)[k]} onChange={e => setT(k, e.currentTarget.value)} /></Row>}</For>

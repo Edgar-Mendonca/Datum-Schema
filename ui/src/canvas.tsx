@@ -417,6 +417,7 @@ export const Canvas = () => {
               <Show when={showPorts() || hover() === it.id || selSet().has(it.id)}><For each={it.ports}>{q => <circle cx={q.p[0]} cy={q.p[1]} r={0.9} class="port" classList={{ used: q.used, sig: q.signal }} />}</For></Show>
             </g>;
           }}</For></g>
+          <Show when={sv().clouds.length}><g class="revclouds"><For each={sv().clouds}>{p => <PrimEl p={p} />}</For></g></Show>
           <g class="notes"><For each={notes()}>{nt => {
             const o = () => off(nt.id);
             return <g class={`note ${nt.kind}`} classList={cls(nt.id)} transform={`translate(${o()[0]} ${o()[1]})`}>

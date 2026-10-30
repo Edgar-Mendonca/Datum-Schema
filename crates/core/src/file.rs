@@ -22,6 +22,7 @@ CREATE TABLE sheets (id INTEGER PRIMARY KEY, position INTEGER NOT NULL, sheet TE
 CREATE TABLE items (id INTEGER PRIMARY KEY, sheet INTEGER NOT NULL, object INTEGER NOT NULL, symbol TEXT NOT NULL, x REAL NOT NULL, y REAL NOT NULL, rot INTEGER NOT NULL, flip INTEGER NOT NULL, scale REAL NOT NULL, link INTEGER NOT NULL, base TEXT NOT NULL DEFAULT '');
 CREATE TABLE lines (id INTEGER PRIMARY KEY, sheet INTEGER NOT NULL, object INTEGER NOT NULL, line TEXT NOT NULL);
 CREATE TABLE underlays (sheet INTEGER PRIMARY KEY, draw TEXT NOT NULL);
+CREATE TABLE snapshots (sheet INTEGER NOT NULL, rev TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY (sheet, rev));
 CREATE TABLE notes (id INTEGER PRIMARY KEY, sheet INTEGER NOT NULL, note TEXT NOT NULL);
 CREATE TABLE issues (seq INTEGER PRIMARY KEY, object INTEGER NOT NULL, rev TEXT NOT NULL, status TEXT NOT NULL, date TEXT NOT NULL, issued_by TEXT NOT NULL, note TEXT NOT NULL, snapshot TEXT NOT NULL);
 CREATE TABLE history (seq INTEGER PRIMARY KEY, time INTEGER NOT NULL, user TEXT NOT NULL, what TEXT NOT NULL, object INTEGER NOT NULL, uid TEXT NOT NULL, name TEXT NOT NULL, old TEXT NOT NULL, new TEXT NOT NULL);
@@ -59,6 +60,11 @@ pub fn write(path: &Path, p: &Project, history: &[Change]) -> Result<(), String>
             t.execute("INSERT INTO sheets VALUES (?1, ?2, ?3)", params![s.id, i as i64, js(s)]).map_err(sql)?;
             if let Some(u) = &s.underlay {
                 t.execute("INSERT INTO underlays VALUES (?1, ?2)", params![s.id, u.draw.as_str()]).map_err(sql)?;
+            }
+            for x in &s.snaps {
+                if let Some(b) = &x.body {
+                    t.execute("INSERT OR REPLACE INTO snapshots VALUES (?1, ?2, ?3)", params![s.id, x.rev, js(b.as_ref())]).map_err(sql)?;
+                }
             }
         }
         for it in &p.items {
@@ -174,6 +180,15 @@ fn read_sqlite(path: &Path) -> Result<(Project, Vec<Change>, Vec<String>), Strin
     let mut sheets: Vec<(i64, Sheet)> = table(&c, "SELECT position, sheet FROM sheets", "sheets", &mut w, |r| Ok(serde_json::from_str::<Sheet>(&r.get::<_, String>(1)?).ok().map(|s| (r.get::<_, i64>(0).unwrap_or(0), s))));
     sheets.sort_by_key(|x| x.0);
     p.sheets = sheets.into_iter().map(|x| x.1).collect();
+    // Issued snapshots (from format 4).
+    if p.sheets.iter().any(|s| !s.snaps.is_empty()) {
+        let bodies: std::collections::HashMap<(u32, String), String> = table(&c, "SELECT sheet, rev, body FROM snapshots", "issued revisions", &mut w, |r| Ok(Some(((r.get(0)?, r.get(1)?), r.get(2)?)))).into_iter().collect();
+        for s in &mut p.sheets {
+            for x in &mut s.snaps {
+                x.body = bodies.get(&(s.id, x.rev.clone())).and_then(|b| serde_json::from_str(b).ok()).map(std::sync::Arc::new);
+            }
+        }
+    }
     // Old drawings behind sheets (from format 4).
     if p.sheets.iter().any(|s| s.underlay.is_some()) {
         let draws: std::collections::HashMap<u32, String> = table(&c, "SELECT sheet, draw FROM underlays", "background drawings", &mut w, |r| Ok(Some((r.get(0)?, r.get(1)?)))).into_iter().collect();

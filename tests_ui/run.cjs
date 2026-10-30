@@ -508,6 +508,26 @@ const shots = process.env.SHOTS;
   await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title='This sheet in the DEXPI P&ID exchange format (XML)']"); await p.waitForTimeout(300);
   check("DEXPI says it is for P&ID sheets", ((await p.textContent("#toast").catch(() => "")) || "").includes("P&ID exchange"));
 
+  // 36. Issue a sheet at revision B, change it, compare and cloud the changes.
+  await openEx("Pump transfer");
+  await p.click(".insp h4 button:has-text('Issue')"); await p.waitForSelector(".dlg");
+  check("the next revision is offered", (await p.inputValue(".dlg .form input >> nth=0")) === "B");
+  await p.click(".dlg footer button:has-text('Issue')"); await p.waitForTimeout(400);
+  { const q = await project(); check("the sheet is issued at B", q.sheets[0].rev === "B" && q.sheets[0].snaps.some(x => x.rev === "B") && q.sheets[0].revs.some(r => r.rev === "B")); }
+  { const q = await project(); const v = q.items.find(i => tagOf(q, i) === "V-101");
+    const [vx, vy] = await scr(v.x, v.y); await p.mouse.click(vx, vy); await p.waitForTimeout(200);
+    for (let i = 0; i < 4; i++) await p.keyboard.press("ArrowRight");
+    await p.waitForTimeout(300); await p.keyboard.press("Escape"); await p.waitForTimeout(300); }
+  await p.click(".insp button:has-text('Compare with B')"); await p.waitForSelector(".dlg .cmptbl tr");
+  { const rows = await p.$$eval(".dlg .cmptbl tr", els => els.map(e => e.textContent));
+    check("the comparison lists the moved vessel and its rerouted lines", rows.some(r => r.includes("V-101") && r.includes("moved")) && rows.some(r => r.includes("rerouted")), JSON.stringify(rows)); }
+  await p.click(".dlg footer button:has-text('Cloud them')"); await p.waitForTimeout(400);
+  { const t = await p.$$eval(".dsvg .revclouds text", els => els.map(e => e.textContent));
+    if (process.env.SHOT) await p.screenshot({ path: `${process.env.SHOT}/clouds.png`, clip: { x: 236, y: 166, width: 922, height: 452 } });
+    check("the changes are clouded with revision C", t.length >= 1 && t.every(x => x === "C") && (await p.$$(".dsvg .revclouds path, .dsvg .revclouds polyline, .dsvg .revclouds polygon")).length > 10, JSON.stringify(t)); }
+  await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title='DXF']"); await p.waitForTimeout(400);
+  { const dx = (await inv("exports")).filter(e => e.kind === "dxf").pop(); check("the clouds go on the REVISION layer", !!dx && dx.text.includes("  8\r\nREVISION\r\n")); }
+
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();
   await fetch(`${url}quit`).catch(() => {});

@@ -89,6 +89,33 @@ pub struct Sheet {
     pub underlay: Option<Underlay>,
     /// A process flow diagram: its process lines are streams, with a stream table on the sheet.
     pub pfd: bool,
+    /// The sheet as issued at each revision (Issue revision), oldest first.
+    pub snaps: Vec<Snap>,
+    /// Revision clouds round the changes since this issued revision ("" for none).
+    pub clouds: String,
+}
+
+/// The sheet as issued at a revision. Its contents are shared, not copied, by undo; kept in the
+/// file's own table and never sent to the window.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
+pub struct Snap {
+    pub rev: String,
+    pub date: String,
+    #[serde(skip)]
+    pub body: Option<std::sync::Arc<SnapBody>>,
+}
+
+/// What a sheet held when it was issued: its symbols, lines (with their drawn routes) and notes,
+/// and the tag and data of every object drawn on it.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
+pub struct SnapBody {
+    pub items: Vec<Item>,
+    pub lines: Vec<Line>,
+    pub notes: Vec<Note>,
+    pub routes: BTreeMap<u32, Vec<[f64; 2]>>,
+    pub objs: BTreeMap<u32, (String, Data)>,
 }
 
 /// An old drawing behind a sheet: its shapes in their own millimetres (top left at 0, 0), placed
@@ -157,7 +184,7 @@ impl Underlay {
 
 impl Default for Sheet {
     fn default() -> Self {
-        Self { id: 0, number: "PID-001".into(), title: "Piping and instrument diagram".into(), size: "A3".into(), rev: "A".into(), date: String::new(), scale: "NTS".into(), revs: vec![], legend: false, underlay: None, pfd: false }
+        Self { id: 0, number: "PID-001".into(), title: "Piping and instrument diagram".into(), size: "A3".into(), rev: "A".into(), date: String::new(), scale: "NTS".into(), revs: vec![], legend: false, underlay: None, pfd: false, snaps: vec![], clouds: String::new() }
     }
 }
 
@@ -674,6 +701,18 @@ impl Project {
             }
             if s.underlay.as_ref().is_some_and(|u| u.draw.is_empty() || u.draw.len() > MAX_UNDERLAY) {
                 s.underlay = None;
+            }
+            // Snapshots without their contents (never issued here) are dropped; one per revision.
+            s.snaps.retain(|x| x.body.is_some() && !x.rev.trim().is_empty());
+            s.snaps.truncate(60);
+            let mut seen = HashSet::new();
+            s.snaps.retain(|x| seen.insert(x.rev.clone()));
+            for x in &mut s.snaps {
+                x.rev = crate::clip(&x.rev, 12);
+                x.date = crate::clip(&x.date, 20);
+            }
+            if !s.clouds.is_empty() && !s.snaps.iter().any(|x| x.rev == s.clouds) {
+                s.clouds.clear();
             }
         }
         let sheets: HashSet<u32> = self.sheets.iter().map(|s| s.id).collect();

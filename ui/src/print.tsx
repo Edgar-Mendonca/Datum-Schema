@@ -53,6 +53,7 @@ export const svgString = (v: SheetView, opts: { width?: number; height?: number 
     body.push(it.texts.map(t => prim(t)).join(""));
   }
   for (const nt of v.notes) body.push(nt.prims.map(p => prim(p)).join(""));
+  if (v.clouds?.length) body.push(`<g>${v.clouds.map(p => prim(p)).join("")}</g>`);
   for (const r of v.legend_rows) {
     const s = r.sym ? symOf(r.sym) : undefined;
     if (s) { const sc = Math.min(1, 30 / s.w); body.push(`<g transform="translate(${n(r.x + 15)} ${n(r.y)}) scale(${n(sc)})"><use href="#s-${s.key}"/>${s.texts.map(t => prim(t)).join("")}</g>`); }

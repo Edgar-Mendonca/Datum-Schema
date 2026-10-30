@@ -1086,3 +1086,12 @@ tr.behind td { background: var(--err-bg); }
 .dsvg .underlay .st { fill: var(--text3); stroke: none; dominant-baseline: central; }
 .ubox { display: flex; flex-direction: column; gap: 6px; }
 .ubox .uname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text2); }
+/* Revision clouds and the comparison. */
+.dsvg .revclouds { stroke: var(--magenta, #9C1F84); fill: none; pointer-events: none; }
+.dsvg .revclouds text { fill: var(--magenta, #9C1F84); stroke: none; dominant-baseline: central; }
+.cmpscroll { max-height: 360px; overflow: auto; }
+.cmptbl tr { cursor: pointer; }
+.cmptbl td.k { width: 80px; font-weight: 600; }
+.cmptbl tr.added td.k { color: #2E7D32; }
+.cmptbl tr.removed td.k { color: #B3261E; }
+.cmptbl tr.changed td.k { color: #C88A12; }

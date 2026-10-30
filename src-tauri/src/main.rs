@@ -309,6 +309,14 @@ async fn underlay_import(app: AppHandle, st: State<'_, St>, sheet: u32) -> R<Opt
     })
 }
 
+/// What has changed on a sheet since it was issued at a revision.
+#[tauri::command]
+fn sheet_compare(st: State<St>, sheet: u32, rev: String) -> R<datum_core::revs::Compare> {
+    let a = st.lock();
+    let s = a.doc.p.sheet(sheet).ok_or("That sheet no longer exists.")?;
+    datum_core::revs::compare(&a.doc.p, s, &rev)
+}
+
 /// The old drawing behind a sheet, as SVG in its own millimetres.
 #[tauri::command]
 fn underlay_svg(st: State<St>, sheet: u32) -> String {
@@ -676,7 +684,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
+            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
             options, set_options, autosave, recovery, recover, recent, startup_file, open_url, version, quit, check_update, install_update
         ])
         .run(tauri::generate_context!())

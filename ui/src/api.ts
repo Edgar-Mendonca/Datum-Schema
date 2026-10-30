@@ -13,7 +13,11 @@ export type Val = number | string;
 export type Data = Record<string, Val>;
 export interface Title { company: string; project: string; client: string; unit: string; by: string; checked: string; approved: string }
 export interface Rev { rev: string; date: string; desc: string; by: string; checked: string; approved: string }
-export interface Sheet { id: number; number: string; title: string; size: string; rev: string; date: string; scale: string; revs: Rev[]; legend: boolean; underlay: Underlay | null; pfd: boolean }
+export interface Sheet { id: number; number: string; title: string; size: string; rev: string; date: string; scale: string; revs: Rev[]; legend: boolean; underlay: Underlay | null; pfd: boolean; snaps: Snap[]; clouds: string }
+/** A sheet as issued at a revision (its contents stay in the engine). */
+export interface Snap { rev: string; date: string }
+export interface SheetChange { kind: "added" | "removed" | "changed"; what: string; ids: number[]; bbox: [number, number, number, number] }
+export interface Compare { rev: string; next: string; changes: SheetChange[]; areas: [number, number, number, number][] }
 /** An old drawing behind a sheet, placed at (x, y) mm and scaled by k; its drawing is fetched by rev. */
 export interface Underlay { name: string; w: number; h: number; x: number; y: number; k: number; show: boolean; print: boolean; rev: string }
 export interface Item { id: number; sheet: number; sym: string; x: number; y: number; rot: number; flip: boolean; scale: number; obj: number; link: number; base: string }
@@ -54,7 +58,7 @@ export interface ItemView { id: number; obj: number; sym: string; cat: Cat; x: n
 export interface LineView { id: number; obj: number; kind: Kind; path: Pt[]; segs: Pt[][]; marks: Prim[]; number: string; badge: number | null; run: number | null; layer: string }
 export interface NoteView { id: number; kind: NoteKind; prims: Prim[]; bbox: [number, number, number, number] }
 export interface LegendRow { sym: string | null; kind: Kind | null; x: number; y: number; name: string }
-export interface SheetView { id: number; number: string; title: string; w: number; h: number; legend: boolean; frame: Prim[]; items: ItemView[]; lines: LineView[]; notes: NoteView[]; legend_rows: LegendRow[]; underlay: Underlay | null }
+export interface SheetView { id: number; number: string; title: string; w: number; h: number; legend: boolean; frame: Prim[]; items: ItemView[]; lines: LineView[]; notes: NoteView[]; legend_rows: LegendRow[]; underlay: Underlay | null; clouds: Prim[] }
 export interface Issue { rule: number; level: "error" | "warning" | "note"; msg: string; ids: number[]; sheet: number; at: Pt }
 export interface Hyd { id: number; v: number; re: number; f: number; dp100: number; dp: number; length: number; service: string; service_name: string; vmin: number; vmax: number; dpmax: number; status: number; reason: string }
 export interface Derived { view: SheetView | null; issues: Issue[]; hyd: (Hyd | null)[]; runs: number[][]; numbers: Record<string, string>; attrs: Record<string, Field[]> }

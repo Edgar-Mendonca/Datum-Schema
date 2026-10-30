@@ -166,6 +166,11 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             s.exports.push(json!({ "kind": str_("kind"), "what": what, "text": sent.text }));
             json!({ "path": sent.file, "notes": sent.notes })
         }
+        "sheet_compare" => {
+            let id = a["sheet"].as_u64().unwrap_or(0) as u32;
+            let sh = s.doc.p.sheet(id).ok_or("no sheet")?;
+            serde_json::to_value(datum_core::revs::compare(&s.doc.p, sh, &str_("rev"))?).unwrap()
+        }
         "underlay_svg" => {
             let id = a["sheet"].as_u64().unwrap_or(0) as u32;
             json!(s.doc.p.sheets.iter().find(|x| x.id == id).and_then(|x| x.underlay.as_ref()).map(|u| datum_core::symbols::svg(&datum_core::symbols::parse(&u.draw))).unwrap_or_default())

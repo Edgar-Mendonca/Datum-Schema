@@ -143,7 +143,7 @@ pub fn write(p: &Project, s: &Sheet) -> String {
     let v = view::sheet(p, s, &net, &hyd);
     let mut w = W { s: String::with_capacity(1 << 16), h: v.h };
     let syms: BTreeSet<&str> = v.items.iter().map(|i| i.sym.as_str()).chain(v.legend_rows.iter().filter_map(|r| r.sym.as_deref())).collect();
-    let mut layers: Vec<String> = vec!["FRAME".into(), "TEXT".into(), "NOTES".into(), "MARKS".into(), "BACKGROUND".into()];
+    let mut layers: Vec<String> = vec!["FRAME".into(), "TEXT".into(), "NOTES".into(), "MARKS".into(), "BACKGROUND".into(), "REVISION".into()];
     layers.extend(Kind::ALL.iter().map(|k| line_layer(*k)));
     layers.extend(Cat::ALL.iter().map(|c| sym_layer(*c)));
     head(&mut w, &layers, v.w, v.h);
@@ -183,6 +183,9 @@ pub fn write(p: &Project, s: &Sheet) -> String {
     // An old drawing behind the sheet, when it is set to print, on a layer of its own.
     for pr in s.underlay.iter().filter(|u| u.show && u.print).flat_map(|u| u.prims()) {
         w.prim(&pr, "BACKGROUND", true, false);
+    }
+    for pr in &v.clouds {
+        w.prim(pr, if matches!(pr, Prim::Text { .. }) { "TEXT" } else { "REVISION" }, true, false);
     }
     for pr in &v.frame {
         w.prim(pr, if matches!(pr, Prim::Text { .. }) { "TEXT" } else { "FRAME" }, true, false);
