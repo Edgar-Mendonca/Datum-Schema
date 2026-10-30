@@ -263,6 +263,25 @@ async fn open(app: AppHandle, st: State<'_, St>, path: Option<String>) -> R<Opti
     Ok(Some(o))
 }
 
+/// Opens a DEXPI P&ID exchange file as a new, unsaved project (Save keeps it as a .dschema).
+#[tauri::command]
+async fn import_dexpi(app: AppHandle, st: State<'_, St>, path: Option<String>) -> R<Option<Out>> {
+    let Some(path) = path.map(PathBuf::from).or_else(|| pick(&app, "DEXPI P&ID exchange file", &["xml"])) else { return Ok(None) };
+    let text = doc::read_limited(&path)?;
+    let (mut p, warnings) = guard(|| datum_core::dexpi::read(&text))?;
+    if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+        p.name = datum_core::clip(stem, 200);
+    }
+    let mut a = st.lock();
+    let p = fresh(&a, p);
+    a.doc = Doc::new(p);
+    a.doc.user = user_name(&a.opts);
+    a.doc.dirty = true;
+    let mut o = out(&a);
+    o.warnings = warnings;
+    Ok(Some(o))
+}
+
 #[tauri::command]
 async fn save(app: AppHandle, st: State<'_, St>, as_new: bool) -> R<Option<Out>> {
     let (known, name) = {
@@ -289,7 +308,7 @@ async fn save_file(app: AppHandle, name: String, data: String) -> R<Option<Strin
     let ext = name.rsplit('.').next().unwrap_or("txt").to_string();
     let Some(path) = app.dialog().file().add_filter(ext.to_uppercase(), &[&ext]).set_file_name(&name).blocking_save_file().and_then(|f| f.into_path().ok()) else { return Ok(None) };
     let bytes = match data.strip_prefix("data:").and_then(|d| d.split_once(";base64,")) {
-        Some((_, b64)) => base64_decode(b64)?,
+        Some((_, b64)) => datum_core::base64_decode(b64)?,
         None => data.into_bytes(),
     };
     doc::write_atomic(&path, &bytes)?;
@@ -333,27 +352,6 @@ async fn export(app: AppHandle, st: State<'_, St>, kind: String, what: String, s
     Ok(Some(path.display().to_string()))
 }
 
-fn base64_decode(s: &str) -> R<Vec<u8>> {
-    let val = |c: u8| match c {
-        b'A'..=b'Z' => Some(c - b'A'),
-        b'a'..=b'z' => Some(c - b'a' + 26),
-        b'0'..=b'9' => Some(c - b'0' + 52),
-        b'+' => Some(62),
-        b'/' => Some(63),
-        _ => None,
-    };
-    let mut out = Vec::with_capacity(s.len() * 3 / 4);
-    let (mut acc, mut bits) = (0u32, 0);
-    for c in s.bytes().filter(|c| !c.is_ascii_whitespace() && *c != b'=') {
-        acc = acc << 6 | val(c).ok_or("The picture data is damaged.")? as u32;
-        bits += 6;
-        if bits >= 8 {
-            bits -= 8;
-            out.push((acc >> bits) as u8);
-        }
-    }
-    Ok(out)
-}
 
 // ---------------------------------------------------------------- options, recovery, recent
 
@@ -546,7 +544,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
+            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
             options, set_options, autosave, recovery, recover, recent, startup_file, open_url, version, quit, check_update, install_update
         ])
         .run(tauri::generate_context!())

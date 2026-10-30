@@ -207,9 +207,20 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
             if net.on_port(it.id, k as u8).is_empty() {
                 continue;
             }
-            let found = net.reach(it.id, k as u8, false, 8, |_, ns| !ns.inline && ns.cat != Cat::Connector).iter().any(|(n, _, _)| matches!(net.items[n].sym.as_str(), "check" | "nonslam"));
-            if !found {
-                v.push(on_item(8, WARNING, it, format!("Pump {} has no check valve on its discharge.", name(p, it))));
+            // A check valve counts when the flow from the pump reaches its inlet; reached at its
+            // outlet it is fitted the wrong way round and would stop the flow.
+            let checks: Vec<(u32, u8)> = net.reach(it.id, k as u8, false, 8, |_, ns| !ns.inline && ns.cat != Cat::Connector).into_iter().filter(|(n, _, _)| matches!(net.items[n].sym.as_str(), "check" | "nonslam")).map(|(n, np, _)| (n, np)).collect();
+            if checks.iter().any(|&(_, np)| np == 0) {
+                continue;
+            }
+            match checks.first() {
+                Some(&(n, _)) => {
+                    let cv = net.items[&n];
+                    let mut i = on_item(8, WARNING, cv, format!("Check valve {} on the discharge of pump {} is fitted the wrong way round: it would stop the flow (right-click it › Turn round).", name(p, cv), name(p, it)));
+                    i.ids.push(it.id);
+                    v.push(i);
+                }
+                None => v.push(on_item(8, WARNING, it, format!("Pump {} has no check valve on its discharge.", name(p, it)))),
             }
         }
     }

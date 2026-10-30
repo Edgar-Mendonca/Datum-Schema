@@ -37,7 +37,7 @@
     "Live line list, equipment list, instrument index, valve list and datasheet index",
     "Thirteen drawing checks, each with a click to the problem",
     "Line hydraulics: velocity, Reynolds number, Colebrook friction factor and pressure drop against limits",
-    "SI and US units; DXF, SVG, PDF, Excel, CSV and the DEXPI P&ID exchange format",
+    "SI and US units; DXF, SVG, PDF, Excel, CSV and the DEXPI P&ID exchange format (export and import)",
     "Automatic tags and loop numbers, renumbering, a legend sheet"
   ],
   "screenshots": [
@@ -52,7 +52,6 @@
       "title": "Exchange and links",
       "when": "Next",
       "items": [
-        "Open P&ID data exchange: import of DEXPI files (export is in)",
         "Send a line to Datum Pipe as a stress model",
         "Send a loop to Datum Sim (pump, valve, tank, controller) as a dynamic model",
         "DXF import of an old drawing as a background"

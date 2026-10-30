@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.12 — 2026-10-30
+
+Tell Me shows the drawing behind it, DEXPI import, a check valve's direction, bend points kept, the logo in Excel.
+
+**Tell Me (Ctrl+K).** The command search now opens over the window, dimmed behind it, instead of hiding everything else.
+
+**DEXPI import.** File › New › From a DEXPI file opens a P&ID saved in the DEXPI exchange format (XML) as a new project: equipment, valves and instruments with their tags, positions, turns and data (converted to SI from the file's units), each line number with its pieces, valves in their lines and connections to nozzles, and the signal and impulse lines. Files from Datum Schema come back exactly as they were exported; files from other programs are read as far as their content allows, with classes Datum Schema does not know drawn with a stand-in symbol and listed, and drawings larger than the sheet scaled to fit. The DEXPI export now also keeps each symbol's turn and mirror, the exact symbol and the line types, and writes attribute values at full precision.
+
+**Check valves the right way round.** Check 8 now looks at which way a check valve on a pump's discharge is fitted: one that would stop the flow is reported. Right-click any in-line symbol › **Turn round** swaps its inlet and outlet, keeping its lines where they are.
+
+**Bend points kept.** Dropping a valve onto a line keeps the bend points you placed: those before the valve stay on the first piece, those after it go to the second. Deleting the valve joins the pieces with all their bend points.
+
+**Logo in Excel.** Datasheets exported to Excel carry your company logo (PNG or JPEG) on every sheet.
+
 ## 0.1.11 — 2026-10-30
 
 Drawing fixes, the cause-and-effect matrix, the DEXPI exchange format, and loop diagrams in DXF.

@@ -349,6 +349,7 @@ export const Canvas = () => {
     const items_: MenuItem[] = it ? [
       ...(it.cat === "connector" ? [{ label: "Go to partner", run: () => C.goPartner(it.id) } as MenuItem, { label: "Pair with…", run: () => C.pairDialog(it.id) } as MenuItem, "-" as MenuItem] : []),
       { label: "Rotate", icon: "rotate", run: C.rotate, keys: "R" }, { label: "Mirror", icon: "flip", run: C.flip, keys: "M" },
+      ...(symOf(it.sym)?.inline ? [{ label: "Turn round (swap inlet and outlet)", icon: "flow", run: () => act({ TurnRound: { id: it.id } }) } as MenuItem] : []),
       "-", { label: "Copy", icon: "copy", run: C.copy, keys: "Ctrl+C" }, { label: "Duplicate", run: C.duplicate, keys: "Ctrl+D" }, { label: "Delete", icon: "del", run: C.del, keys: "Del" },
       "-", { label: `About ${symOf(it.sym)?.name ?? "this symbol"}`, icon: "help", run: () => helpCard(`cat:${it.cat}`) },
     ] : ln ? [

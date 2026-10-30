@@ -409,6 +409,7 @@ pub fn xlsx(p: &Project) -> Result<Vec<u8>, String> {
         ix.set_column_width(1, 22).map_err(e)?;
         ix.set_column_width(3, 22).map_err(e)?;
     }
+    let logo = p.settings.ds_layout.logo.split_once(";base64,").filter(|(h, _)| *h == "data:image/png" || *h == "data:image/jpeg").and_then(|(_, b)| crate::base64_decode(b).ok());
     let mut names = std::collections::HashSet::new();
     for d in &sheets {
         let ws = wb.add_worksheet();
@@ -427,6 +428,12 @@ pub fn xlsx(p: &Project) -> Result<Vec<u8>, String> {
         ws.write_string(1, 0, format!("{} · {}", p.title.company, if p.title.project.is_empty() { &p.name } else { &p.title.project })).map_err(e)?;
         if !d.form.is_empty() {
             ws.write_string(0, 3, format!("Form {}", d.form)).map_err(e)?;
+        }
+        // The company logo (PNG or JPEG; Excel takes no SVG), in the top right corner.
+        if let Some(bytes) = logo.as_ref() {
+            if let Ok(img) = rust_xlsxwriter::Image::new_from_buffer(bytes) {
+                ws.insert_image(0, 4, &img.set_scale_to_size(160, 40, true)).map_err(e)?;
+            }
         }
         ws.write_string(1, 3, if d.rev.is_empty() { "Not issued".to_string() } else { format!("Rev {} · {} · {}", d.rev, d.status, d.date) }).map_err(e)?;
         let mut r = 3u32;
@@ -618,6 +625,11 @@ mod tests {
         p.obj_mut(lt).unwrap().data.insert("manufacturer".into(), Val::Text("Acme".into()));
         assert_eq!(build(&p, lt).unwrap().changed, 0);
         assert_eq!(full(&p, &Net::new(&p), lt).unwrap().changed, 1);
+        // A PNG logo goes into every datasheet's worksheet.
+        p.settings.ds_layout.logo = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==".into();
+        assert!(p.clone().normalize().is_empty());
+        let book = xlsx(&p).unwrap();
+        assert!(book.windows(19).any(|w| w == b"xl/media/image1.png"), "the logo is in the workbook");
         // A logo that is not an image is refused.
         p.settings.ds_layout.logo = "javascript:alert(1)".into();
         assert!(p.normalize().iter().any(|w| w.contains("logo")) && p.settings.ds_layout.logo.is_empty());

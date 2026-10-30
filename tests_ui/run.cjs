@@ -234,6 +234,9 @@ const shots = process.env.SHOTS;
 
   // 20. Tell Me finds a command.
   await p.keyboard.press("Control+k"); await p.waitForTimeout(200);
+  { const bg = await p.$eval(".ov.high", e => getComputedStyle(e).backgroundColor);
+    const alpha = +(bg.match(/rgba\([^)]*,\s*([\d.]+)\)/)?.[1] ?? 1);
+    check("Tell Me dims the window behind it instead of hiding it", alpha > 0 && alpha < 0.5 && await p.isVisible(".ribbon"), bg); }
   await p.keyboard.type("equipment list"); await p.keyboard.press("Enter"); await p.waitForTimeout(400);
   check("Tell Me runs a command", (await p.textContent(".btabs button.on")).includes("Equipment"));
 
@@ -395,6 +398,25 @@ const shots = process.env.SHOTS;
   { const ex = await inv("exports"); const dx = ex.filter(e => e.kind === "loopdxf").pop();
     check("a loop diagram exports to DXF", !!dx && dx.text.includes("LD-") && dx.text.trimEnd().endsWith("EOF")); }
   await p.keyboard.press("Escape"); await p.waitForTimeout(200);
+
+  // 30. DEXPI import: the compressor package exported above opens again as a new project.
+  const before30 = await project();
+  await p.click(".tabs .file"); await p.click(".bs .tile:has-text('From a DEXPI file')"); await p.waitForTimeout(300);
+  if (await p.$(".dlg header:has-text('Save changes')")) { await p.click(".dlg footer button:has-text(\"Don't save\")"); await p.waitForTimeout(500); }
+  await p.waitForTimeout(500);
+  { const q = await project(); const tags = pr => pr.objects.map(o => o.tag).filter(Boolean).sort().join(",");
+    check("a DEXPI file opens as a new project with the same plant", tags(q) === tags(before30) && q.lines.length === before30.lines.length, JSON.stringify([q.objects.length, before30.objects.length, q.lines.length, before30.lines.length]));
+    check("the imported project checks clean", (await p.textContent(".status")).includes("0 errors")); }
+
+  // 31. A check valve fitted the wrong way round: check 8 says so; Turn round fixes it.
+  await openEx("Pump transfer");
+  { const q = await project(); const hv = q.items.find(i => tagOf(q, i) === "HV-103");
+    const [hx, hy] = await scr(hv.x, hv.y);
+    await p.mouse.click(hx, hy, { button: "right" }); await p.click(".menu button:has-text('Turn round')"); await p.waitForTimeout(400);
+    await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
+    check("check 8 finds a check valve fitted the wrong way round", (await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("wrong way round")));
+    await p.mouse.click(hx, hy, { button: "right" }); await p.click(".menu button:has-text('Turn round')"); await p.waitForTimeout(400);
+    check("Turn round puts it right", !(await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("wrong way round"))); }
 
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();

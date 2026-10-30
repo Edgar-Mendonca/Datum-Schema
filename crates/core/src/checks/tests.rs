@@ -174,6 +174,23 @@ fn r8_pump_discharge_check_valve() {
 }
 
 #[test]
+fn r8_a_check_valve_fitted_the_wrong_way_round() {
+    let mut b = B::new();
+    let pmp = b.item("pump_cent", 50.0, 100.0);
+    let cv = b.item("check", 150.0, 94.0);
+    let v = b.item("vvessel", 250.0, 100.0);
+    // The pump reaches the check valve's outlet.
+    b.line((pmp, 1), (cv, 1));
+    b.line((cv, 0), (v, 3));
+    let i = b.issues().into_iter().find(|i| i.rule == 8).expect("rule 8");
+    assert!(i.msg.contains("wrong way round") && i.ids.contains(&cv), "{i:?}");
+    // Turned round, it passes.
+    b.d.apply(Op::TurnRound { id: cv }).unwrap();
+    assert!(!b.has(8), "{:?}", b.issues());
+    assert!(b.d.p.item(cv).unwrap().flip);
+}
+
+#[test]
 fn r9_relief_path() {
     let mut b = B::new();
     let v = b.item("vvessel", 100.0, 100.0);

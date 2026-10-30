@@ -6,7 +6,7 @@
 | | |
 | --- | --- |
 | **Product** | Datum Schema: intelligent P&IDs and process flow diagrams: draw, check and list (symbols and lines that carry their data and connections; live line list, equipment list, instrument index and valve list; drawing checks; line hydraulics; print, SVG and DXF) |
-| **Current version** | 0.1.11 (2026-10-30) |
+| **Current version** | 0.1.12 (2026-10-30) |
 | **Repo** | `Edgar-Mendonca/Datum-Schema` · branch `claude/vigilant-hamilton-ku7r0w` (the first branch pushed, so the default branch) |
 | **Stack** | Rust engine (`crates/core`: model, symbols, graph, tags, checks, hydraulics, lists, frame, routing, DXF), Tauri 2, SolidJS + strict TypeScript; no Python |
 | **Identifier** | `com.edgarmendonca.datumschema` · files `.dschema` (SQLite, `format` 3 (2 before 0.1.9: no `issues` table); JSON `format` 1 from 0.1.0–0.1.4 converts) · installer `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` · publisher "Datum" |
@@ -34,7 +34,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | `crates/core/src/import.rs` | Datasheet import from Excel (calamine): `read` (sheets as text grids, capped), `plan` (match by tag; a table with a Tag header, or one datasheet per worksheet; labels by `norm`; units by `unit_expr`/`quantity`; kinds set, same, conflict, bad; unmatched tags, unknown labels). The window applies the "set" rows as one `Op::Batch` of `SetData` |
 | `crates/core/src/loops.rs` | Loop diagrams: `all` (loops of ≥ 2 members by first letter and number, relief devices left out), `diagram` (A3 sheet with the frame: field devices with their own symbols, JB terminal block, I/O box, control-system functions; wiring from the "Wiring" attributes `jb`, `jb_terminals`, `cable`, `system`, `io`; a To complete list) |
 | `crates/core/src/cause.rs` | Cause and effect: `matrix` (each interlock symbol: the items signalled to it, effects = valves, drives, equipment, final elements; the rest are causes; a switch wired straight to a final element is its own group, cell "X"); actions from the fail position (FC close, FO open, FL hold), drives stop, `trip_action` overrides; `xlsx` |
-| `crates/core/src/dexpi.rs` | DEXPI (Proteus XML) export of a sheet: Equipment with Nozzles, PipingNetworkSystem per line-number object, PipingNetworkSegment per piece with CenterLine, PipingComponent (each once) and Connection; ProcessInstrumentationFunction; InformationFlow for signal and impulse lines; GenericAttributes (DEXPI names in SI, the rest in DatumSchemaAttributes); y up |
+| `crates/core/src/dexpi.rs` | DEXPI (Proteus XML) import (`read`: element tree with limits, units and fit-to-sheet, symbols from DatumSchemaSymbol, the class or a stand-in, nozzles matched by position, segments as pieces From → components → To, branches onto segments, flows as signal or impulse lines, attributes back to keys in SI) and export of a sheet: Equipment with Nozzles, PipingNetworkSystem per line-number object, PipingNetworkSegment per piece with CenterLine, PipingComponent (each once) and Connection; ProcessInstrumentationFunction; InformationFlow for signal and impulse lines; GenericAttributes (DEXPI names in SI, the rest in DatumSchemaAttributes); y up |
 | `crates/core/src/units.rs` | Calc's unit table (NIST SP 811) with unit expressions and Schema's display table |
 | `crates/core/src/pipes.rs` | Pipe's sizes ½"–24" and schedules (ASME B36.10M/B36.19M dimensions); inside diameters |
 | `crates/core/src/doc.rs` | The history (`Change`: who, when, what, object, old, new; recorded by diffing objects after every edit, undo and redo). Edit operations (NewLineObject, SetNode, AddNode, SetNode2, DeleteNode, add, set, move, rotate, mirror, delete with merge of in-line items, set data, tags, bend points, split, paste with the next free tags, pair connectors, sheets, title, project, settings, renumber, batch) on a copy, kept only if `normalize` finds nothing to repair; undo/redo; size-limited reads and atomic writes |
@@ -89,6 +89,9 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 
 | Version | Decision | Why |
 | --- | --- | --- |
+| 0.1.12 | The Tell Me overlay was `class="ov top"`; the title bar's `.top { background }` rule, later in the stylesheet, made it opaque and hid the window. Renamed the overlay's class to `high` (the same clash exists in Datum Plan's stylesheet but is harmless there) | The user saw the window vanish behind Ctrl+K |
+| 0.1.12 | DEXPI round trip: our export writes DatumSchemaSymbol, LineKind, FlowDirection and the turn (Reference) and mirror (Axis Z = −1); numbers at full precision; impulse lines carry their line object's data. The import uses them when present, else the class, else a stand-in by kind | A file we write must come back exactly; tested on every example (tags, line numbers, connections, positions, data, check results) |
+| 0.1.12 | Check 8: a check valve counts only when the pump's flow reaches its inlet (port 0); reached at its outlet it is reported on the valve. `Op::TurnRound` mirrors an in-line item and swaps the lines on its two process ports | Lines drawn by hand can meet a check valve backwards; splitting always orients it |
 | 0.1.11 | The canvas's drag overlay is a keyed Show: a non-keyed Show's child ran once, so the line under the mouse (and the selection box) never followed the mouse. A click on a port (no drag) leaves the wire "sticky" until the next click | The user saw lines appear only when finished |
 | 0.1.11 | Quick insert is a popover at the point with a transparent backdrop, not a modal over the window | The drawing must stay visible while choosing where a symbol goes |
 | 0.1.11 | Cause and effect is derived from the drawing only: interlocks are the interlock logic symbol (and switches wired straight to a final element); classification of each neighbour by category, not by line direction | Nothing to keep in step; robust to lines drawn either way |
@@ -151,7 +154,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.1.9 | Datasheet revisions and status (issue with rev, status, date, author, note; Δ since the last issue; revision block on screen, print and Excel; datasheet index list with bulk issue); file format 3 | ✅ |
 | 0.1.10 | Datasheet import from Excel (by tag, preview, never overwriting P&ID values, one undo step); company datasheet layout (form number, logo, footer, hidden rows, section order, default for new projects); loop diagrams (A3, wiring per device, print one or all). The three planned steps released as one version, as the user asked | ✅ |
 | 0.1.11 | Fixes from the user: the line being drawn is shown under the mouse (a click on a port starts a line that follows the mouse until the next click); the symbol search is a small popover beside the point. Cause-and-effect matrix; DEXPI export; loop diagrams in DXF | ✅ |
-| 0.1.12 | Next, proposed: DEXPI import (read a DEXPI file into objects and a sheet); datasheet logo in Excel; check-valve direction (check 8) and bend points kept on split (known limits) | ⬜ |
+| 0.1.12 | Tell Me overlay fixed (class clash); DEXPI import; check 8 checks a check valve's direction, Turn round; bend points kept on split and join; the logo in the Excel datasheets | ✅ |
+| 0.1.13 | Next, proposed: to discuss with the user | ⬜ |
 | later | DEXPI import and export; send a line to Datum Pipe; send a loop to Datum Sim; DXF import as a background | ⬜ |
 | 0.3 | Process flow diagrams with stream tables; heat and mass balance checks; revision clouds and comparison | ⬜ |
 | 0.4 | Loop diagrams; cause-and-effect matrix; valve datasheets | ⬜ |
@@ -160,8 +164,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 
 ## 4. Known limits
 
-- Splitting a line with a valve (and deleting the valve again) re-routes both halves: bend points the user placed on that line are dropped (review finding 9, not fixed).
-- Check 8 accepts a check valve whatever way round it is fitted.
+- DEXPI import reads one drawing per file and does not pair off-page connectors across files; line pieces are re-routed (centre lines are not kept as bend points).
 - Lines keep their bend points when symbols move; drag a segment again or Straighten to re-route.
 - Hydraulics are single-phase Darcy–Weisbach per line number (from its first piece); two-phase lines only get the two-phase velocity limits, not a two-phase pressure drop.
 - DXF text beyond ASCII is written as \U+XXXX escapes (CAD programs decode them; some simple viewers show them literally); the hydraulic badges are written OK, ! and X.
@@ -213,4 +216,10 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 - Added the cause-and-effect matrix (`cause.rs`, an interlock UY-202 in the compressor example), the DEXPI export (`dexpi.rs`) and loop diagrams in DXF (`dxf::write_prims`, sharing `head` with the sheet writer).
 - Tests: engine 79 (matrix from the example and a direct switch; DEXPI well-formed with unique IDs and resolving references on every example, classes and attributes on the pump; loop DXF read back; hardening runs all three on random projects and found a byte-slicing panic on an emoji tag in the matrix code and a dangling DEXPI reference for branches onto signal lines, both fixed); UI checks for drag and click line drawing, the popover, the matrix, its print, DEXPI and loop DXF.
 - The disk filled with build output during the session; cleared target/debug/incremental.
+
+### 2026-10-30: Session 1, 0.1.12
+- The user showed Ctrl+K hiding the whole window (and compared with Datum Plan). Reproduced in the test browser: the overlay's `top` class picked up the title bar's opaque background. Fixed, with a UI check that the overlay is translucent and the ribbon visible.
+- Built the planned items: DEXPI import (with round-trip additions to the export), check 8 direction with Turn round (menu), bend points kept on split and join, the logo in Excel datasheets (base64 decoding moved into the engine).
+- The round-trip test found two real export bugs, both fixed: attribute values rounded to 4 decimals (a gas viscosity became 0) and impulse lines losing their line-number data.
+- Tests: engine 84 (DEXPI round trip on every example, a foreign file in metres with an unknown class, damaged XML; check 8 both ways; bend points; Excel logo; hardening imports every random project's export); UI checks for Tell Me, DEXPI import and Turn round.
 

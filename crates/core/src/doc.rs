@@ -77,6 +77,9 @@ pub enum Op {
         #[serde(default)]
         by: String,
     },
+    /// Turn an in-line item round: its inlet becomes its outlet (the symbol is mirrored and the
+    /// lines on its two process ports change places, so they stay where they are drawn).
+    TurnRound { id: u32 },
     /// Put an in-line item into a line.
     Split { line: u32, item: u32 },
     /// Copies of items, lines and notes on a sheet, moved by (dx, dy), with the next free tags.
@@ -637,6 +640,27 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
             }
             p.issues.extend(out);
         }
+        Op::TurnRound { id } => {
+            let it = p.item(id).cloned().ok_or("That symbol no longer exists.")?;
+            let s = symbols::get(&it.sym).ok_or("There is no such symbol.")?;
+            let process: Vec<u8> = s.ports.iter().enumerate().filter(|(_, q)| !q.signal).map(|(k, _)| k as u8).collect();
+            if !s.inline || process.len() != 2 {
+                return Err(format!("A {} has no inlet and outlet to turn round.", s.name.to_lowercase()));
+            }
+            let (a, b) = (process[0], process[1]);
+            for l in &mut p.lines {
+                for e in [&mut l.a, &mut l.b] {
+                    if let End::Port { item, port } = e {
+                        if *item == id && (*port == a || *port == b) {
+                            *port = if *port == a { b } else { a };
+                        }
+                    }
+                }
+            }
+            if let Some(x) = p.items.iter_mut().find(|x| x.id == id) {
+                x.flip = !x.flip;
+            }
+        }
         Op::SetTitle { title } => p.title = title,
         Op::SetProject { name, units } => {
             if units != "SI" && units != "US" {
@@ -706,7 +730,12 @@ fn delete(p: &mut Project, ids: &[u32], keep: bool) {
             keep.pts.reverse();
         }
         keep.b = if b2 { b.a.clone() } else { b.b.clone() };
-        keep.pts.clear();
+        // The user's bend points: the kept line's, then the other half's in the same direction.
+        let mut rest = b.pts.clone();
+        if b2 {
+            rest.reverse();
+        }
+        keep.pts.extend(rest);
         for l in p.lines.iter_mut() {
             for e in [&mut l.a, &mut l.b] {
                 if let End::Line { line, .. } = e {
@@ -803,31 +832,36 @@ pub fn split(p: &mut Project, line_id: u32, item_id: u32) -> Result<Vec<u32>, St
             ob.data.entry("size".into()).or_insert(size);
         }
     }
+    // Where along the path the cut is, and where each of the user's bend points is: those before
+    // the cut stay on the first half, those after go to the second.
+    let cut = seg as f64 + if horiz { (x - a[0]) / dx.abs().max(1e-9) * dx.signum() } else { (y - a[1]) / dy.abs().max(1e-9) * dy.signum() }.clamp(0.0, 1.0);
+    let along = |q: [f64; 2]| {
+        let (_, k, _) = graph::nearest_on(&path, q);
+        let (q0, q1) = (path[k], path[(k + 1).min(path.len() - 1)]);
+        let len = (q1[0] - q0[0]).hypot(q1[1] - q0[1]).max(1e-9);
+        k as f64 + ((q[0] - q0[0]).hypot(q[1] - q0[1]) / len).clamp(0.0, 1.0)
+    };
+    let (before, after): (Vec<[f64; 2]>, Vec<[f64; 2]>) = line.pts.iter().partition(|q| along(**q) < cut);
     let id = p.id();
     let mut second = line.clone();
     second.id = id;
     second.a = End::Port { item: item_id, port: pb };
-    second.pts.clear();
+    second.pts = after;
     {
         let first = find_line(p, line_id)?;
         first.b = End::Port { item: item_id, port: pa };
-        first.pts.clear();
+        first.pts = before;
     }
     // A reducer changes the size: the downstream half takes the next size down if it had one.
     p.lines.push(second);
     // Branches past the cut move to the second half.
-    let cut = seg as f64 + if horiz { (x - a[0]) / dx.abs().max(1e-9) * dx.signum() } else { (y - a[1]) / dy.abs().max(1e-9) * dy.signum() }.clamp(0.0, 1.0);
     let moves: Vec<(u32, bool)> = p
         .lines
         .iter()
         .flat_map(|l| [(l.id, false, &l.a), (l.id, true, &l.b)])
         .filter_map(|(lid, b, e)| match e {
             End::Line { line, x, y } if *line == line_id => {
-                let (_, k, _) = graph::nearest_on(&path, [*x, *y]);
-                let (q0, q1) = (path[k], path[(k + 1).min(path.len() - 1)]);
-                let len = (q1[0] - q0[0]).hypot(q1[1] - q0[1]).max(1e-9);
-                let t = k as f64 + ((x - q0[0]).hypot(y - q0[1]) / len).clamp(0.0, 1.0);
-                (t > cut).then_some((lid, b))
+                (along([*x, *y]) > cut).then_some((lid, b))
             }
             _ => None,
         })
@@ -999,6 +1033,24 @@ mod tests {
         assert_eq!(d.p.lines.len(), 1);
         let one = &d.p.lines[0];
         assert_eq!((one.a.clone(), one.b.clone()), (End::Port { item: t, port: 5 }, End::Port { item: v, port: 3 }));
+    }
+
+    #[test]
+    fn split_and_merge_keep_the_users_bend_points() {
+        let mut d = Doc::new(Project::new());
+        let t = item(&mut d, "vvessel", 50.0, 100.0);
+        let v = item(&mut d, "vvessel", 250.0, 100.0);
+        let l = connect(&mut d, (t, 5), (v, 3));
+        let pts = vec![[100.0, 108.0], [100.0, 160.0], [200.0, 160.0], [200.0, 108.0]];
+        d.apply(Op::SetPts { id: l, pts: pts.clone() }).unwrap();
+        let sheet = d.p.sheets[0].id;
+        let made = d.apply(Op::AddItem { item: Item { sheet, sym: "gate".into(), x: 150.0, y: 160.0, ..Item::default() }, on: Some(l), tag: String::new(), obj: None }).unwrap();
+        let (gv, l2) = (made[0], made[1]);
+        assert_eq!(d.p.line(l).unwrap().pts, pts[..2].to_vec(), "the bends before the valve stay on the first half");
+        assert_eq!(d.p.line(l2).unwrap().pts, pts[2..].to_vec(), "the bends after it go to the second");
+        d.apply(Op::Delete { ids: vec![gv], keep: false }).unwrap();
+        assert_eq!(d.p.lines.len(), 1);
+        assert_eq!(d.p.lines[0].pts, pts, "joined again, the line has all its bends back");
     }
 
     #[test]

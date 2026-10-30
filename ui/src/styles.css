@@ -321,7 +321,7 @@ tr.link:hover td { background: var(--pale); }
 .tbl.map td { white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 .keys td { padding: 3px 14px 3px 0; }
 .keys td:first-child { font-family: Consolas, monospace; color: var(--navy); }
-.ov.top { align-items: flex-start; padding-top: 12vh; }
+.ov.high { align-items: flex-start; padding-top: 12vh; }
 .pal { width: min(620px, 92vw); background: var(--bg2); border-radius: 10px; box-shadow: 0 16px 50px rgba(0,0,0,.28); overflow: hidden; }
 .pal input { width: 100%; border: 0 !important; border-bottom: 1px solid var(--line) !important; padding: 13px 16px !important; font-size: 14px; outline: none !important; border-radius: 0 !important; }
 .pl { max-height: 50vh; overflow: auto; padding: 6px; }

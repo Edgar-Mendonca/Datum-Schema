@@ -108,6 +108,8 @@ fn exercise(p: &Project) {
         let set: std::collections::HashSet<&String> = ids.iter().collect();
         assert_eq!(set.len(), ids.len(), "DEXPI IDs are unique");
         assert!(refs.iter().all(|r| set.contains(r)), "DEXPI references resolve: {:?}", refs.iter().filter(|r| !set.contains(r)).collect::<Vec<_>>());
+        let (mut q, _) = crate::dexpi::read(&crate::dexpi::write(p, s)).expect("our own DEXPI reads back");
+        assert!(q.normalize().is_empty(), "an imported project is sound");
     }
     if let Ok(book) = crate::datasheets::xlsx(p) {
         crate::import::plan(p, &book).expect("an exported workbook reads back");

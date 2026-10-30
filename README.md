@@ -41,7 +41,7 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Cause and effect**: the matrix of the interlocks, read from the P&ID (causes, effects with their actions, the interlock in each cell); print or Excel.
 - **Loop diagrams**: every instrument loop drawn from the P&ID on an A3 sheet, with each device wired through its junction box and cable to its I/O channel and controller; type the wiring, print one or all, or save as DXF.
 - **Lists**: line list, equipment list, instrument index, valve list and datasheet index, always in step with the drawing; edit them, export to Excel or CSV, print them.
-- **Print and export**: PDF (sheets at their size or fitted to A3, lists, legend), SVG, DXF (R12) that opens in any CAD program, and the DEXPI P&ID exchange format (XML).
+- **Print and export**: PDF (sheets at their size or fitted to A3, lists, legend), SVG, DXF (R12) that opens in any CAD program, and the DEXPI P&ID exchange format (XML), which it also opens.
 - **Examples**: a pump transfer, a compressor package, a steam heater loop, and "Find the faults".
 - **Safe files**: `.dschema` projects (a single SQLite database with the history), atomic saves, recovery of unsaved work, undo and redo for everything.
 

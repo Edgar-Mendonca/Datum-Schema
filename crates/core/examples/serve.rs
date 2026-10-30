@@ -90,7 +90,10 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
                 "dexpi" => {
                     let sh = a["sheet"].as_u64().unwrap_or(0) as u32;
                     let sheet = s.doc.p.sheet(sh).or(s.doc.p.sheets.first()).ok_or("There is no sheet.")?.clone();
-                    datum_core::dexpi::write(&s.doc.p, &sheet)
+                    // Kept as the file the next DEXPI import reads (the test cannot pick one).
+                    let text = datum_core::dexpi::write(&s.doc.p, &sheet);
+                    std::fs::write(import_file().with_extension("xml"), &text).map_err(|e| e.to_string())?;
+                    text
                 }
                 "datasheets" => {
                     // Kept as the file the next datasheet import reads (the test cannot pick one).
@@ -110,6 +113,13 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
         "import_datasheets" => {
             let bytes = std::fs::read(import_file()).map_err(|_| "Export the datasheets first: the test imports the last export.".to_string())?;
             serde_json::to_value(datum_core::import::plan(&s.doc.p, &bytes)?).unwrap()
+        }
+        "import_dexpi" => {
+            let text = std::fs::read_to_string(import_file().with_extension("xml")).map_err(|_| "Export DEXPI first: the test imports the last export.".to_string())?;
+            let (p, w) = datum_core::dexpi::read(&text)?;
+            s.doc = Doc::new(p);
+            s.doc.dirty = true;
+            out(s, vec![], w)
         }
         "cause_effect" => serde_json::to_value(datum_core::cause::matrix(&s.doc.p)).unwrap(),
         "loops" => serde_json::to_value(datum_core::loops::all(&s.doc.p)).unwrap(),

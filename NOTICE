@@ -5,7 +5,8 @@ The window bundles SolidJS (MIT) and the IBM Plex fonts (SIL Open Font Licence 1
 shell uses Tauri (MIT or Apache-2.0) and the Rust crates listed in Cargo.lock, each under MIT,
 Apache-2.0, BSD, ISC, Zlib, MPL-2.0 or Unicode licences (checked by cargo deny, deny.toml). Excel
 workbooks are written with rust_xlsxwriter (MIT or Apache-2.0), as in Datum Plan, and datasheets are
-read back from Excel with calamine (MIT), which brings encoding_rs ((Apache-2.0 or MIT) and
+read back from Excel with calamine (MIT); DEXPI files are read with quick-xml (MIT), which calamine
+also uses. calamine brings encoding_rs ((Apache-2.0 or MIT) and
 BSD-3-Clause), codepage, atoi_simd, fast-float2, simdutf8, core_detect, debug_unsafe and
 multiversion_no_op (each MIT or Apache-2.0). The project file is
 an SQLite database (SQLite is in the public domain, https://sqlite.org/copyright.html), read and written

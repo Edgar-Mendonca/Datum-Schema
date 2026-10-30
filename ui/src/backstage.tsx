@@ -56,6 +56,7 @@ const Home = () => {
         <div class="tiles">
           <button class="tile" onClick={() => C.newProject(null)}><div class="pic"><ExampleArt id="blank" /></div><b>Blank project</b><span>One A3 sheet with its border and title block.</span></button>
           <For each={ex() ?? []}>{t => <button class="tile" onClick={() => C.newProject(t.id)}><div class="pic"><ExampleArt id={t.id} /></div><b>{t.name}</b><span>{t.what}</span></button>}</For>
+          <button class="tile" onClick={() => C.importDexpi()}><div class="pic"><svg class="ic"><use href="#i-import" /></svg></div><b>From a DEXPI file</b><span>Open a P&ID saved in the DEXPI exchange format (XML) by Datum Schema or another program.</span></button>
           <button class="tile" onClick={() => setBackstage("roadmap")}><div class="pic"><svg class="ic"><use href="#i-list" /></svg></div><b>Roadmap</b><span>Everything Datum Schema will do, and when.</span></button>
         </div>
         <h2>Recent</h2>
@@ -94,6 +95,7 @@ const Export = () => (
     <div class="tiles">
       <button class="tile" onClick={() => setBackstage("print")}><div class="pic"><svg class="ic"><use href="#i-print" /></svg></div><b>Print or save as PDF</b><span>The sheets at their size or fitted to A3, the lists and the legend.</span></button>
       <button class="tile" onClick={() => C.exportDxf()}><div class="pic"><svg class="ic"><use href="#i-dxf" /></svg></div><b>DXF of this sheet</b><span>R12 DXF: a layer per line type and symbol category, symbols as blocks with their tags. Opens in any CAD program.</span></button>
+      <button class="tile" onClick={() => C.exportDexpi()}><div class="pic"><svg class="ic"><use href="#i-export" /></svg></div><b>DEXPI of this sheet</b><span>The DEXPI P&ID exchange format (XML): equipment, line numbers, valves, instruments, signal lines and their data, for other P&ID programs.</span></button>
       <button class="tile" onClick={() => C.exportSvg()}><div class="pic"><svg class="ic"><use href="#i-svg" /></svg></div><b>SVG of this sheet</b><span>The sheet as a vector picture, for documents and the web.</span></button>
       <For each={[["lines", "Line list"], ["equipment", "Equipment list"], ["instruments", "Instrument index"], ["valves", "Valve list"], ["datasheets", "Datasheet index"]]}>{([k, l]) =>
         <button class="tile" onClick={() => C.exportList(k, "xlsx")}><div class="pic"><svg class="ic"><use href="#i-xlsx" /></svg></div><b>{l} to Excel</b><span>Or to CSV: <a href="#" onClick={e => { e.preventDefault(); e.stopPropagation(); C.exportList(k, "csv"); }}>save as CSV</a>.</span></button>}</For>

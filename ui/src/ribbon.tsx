@@ -37,7 +37,7 @@ export const palette = () => openDialog(() => {
   let input!: HTMLInputElement;
   onMount(() => input.focus());
   return (
-    <div class="ov top" onMouseDown={e => e.target === e.currentTarget && closeDialog()}>
+    <div class="ov high" onMouseDown={e => e.target === e.currentTarget && closeDialog()}>
       <div class="pal">
         <input ref={input} placeholder="Tell me what you want to do" value={q()} onInput={e => { setQ(e.currentTarget.value); setK(0); }}
           onKeyDown={e => { if (e.key === "ArrowDown") { e.preventDefault(); setK(Math.min(list().length - 1, k() + 1)); } else if (e.key === "ArrowUp") { e.preventDefault(); setK(Math.max(0, k() - 1)); } else if (e.key === "Enter") { e.preventDefault(); go(k()); } else if (e.key === "Escape") closeDialog(); }} />
