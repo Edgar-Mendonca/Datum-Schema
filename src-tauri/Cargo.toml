@@ -1,6 +1,6 @@
 [package]
 name = "datum-schema"
-version = "0.1.12"
+version = "0.2.0"
 edition = "2021"
 description = "Datum Schema: intelligent P&IDs and process flow diagrams."
 license = "MIT"

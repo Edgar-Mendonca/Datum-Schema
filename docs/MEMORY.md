@@ -6,10 +6,10 @@
 | | |
 | --- | --- |
 | **Product** | Datum Schema: intelligent P&IDs and process flow diagrams: draw, check and list (symbols and lines that carry their data and connections; live line list, equipment list, instrument index and valve list; drawing checks; line hydraulics; print, SVG and DXF) |
-| **Current version** | 0.1.12 (2026-10-30) |
+| **Current version** | 0.2.0 (2026-10-30) |
 | **Repo** | `Edgar-Mendonca/Datum-Schema` · branch `claude/vigilant-hamilton-ku7r0w` (the first branch pushed, so the default branch) |
 | **Stack** | Rust engine (`crates/core`: model, symbols, graph, tags, checks, hydraulics, lists, frame, routing, DXF), Tauri 2, SolidJS + strict TypeScript; no Python |
-| **Identifier** | `com.edgarmendonca.datumschema` · files `.dschema` (SQLite, `format` 3 (2 before 0.1.9: no `issues` table); JSON `format` 1 from 0.1.0–0.1.4 converts) · installer `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` · publisher "Datum" |
+| **Identifier** | `com.edgarmendonca.datumschema` · files `.dschema` (SQLite, `format` 4 from 0.2.0 (items.base, `underlays` and `snapshots` tables, meta "symbols"); 3 from 0.1.9; 2 before: no `issues` table; JSON `format` 1 from 0.1.0–0.1.4 converts) · symbol libraries `.dschemalib` (JSON, in app data › libraries) · installer `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` · publisher "Datum" |
 | **Accent** | Magenta `#9C1F84` (`--blue2` `#801A6C`, `--sky` `#EAB6DD`, `--pale` `#FAEBF6`, `--sel` `#F4DCEE`, `--sel2` `#E7B9DB`; dark `#E07BC9`; File sidebar `#4E1043`) |
 | **Brief** | `Edgar-Mendonca/Datum` › `briefs/DATUM-SCHEMA.md` (hub session 22): every decision made up front |
 | **Reference repos** | `Edgar-Mendonca/Datum` (FAMILY, MEMORY, brain), `Edgar-Mendonca/Datum-Plan` (shell, updater, print, Excel), `Edgar-Mendonca/Datum-Sim` (canvas, router), `Edgar-Mendonca/Datum-Calc` (units, pipe pressure-drop pack), `Edgar-Mendonca/Datum-Pipe` (pipe sizes; its shell is the newest copy of Plan's) |
@@ -35,6 +35,11 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | `crates/core/src/loops.rs` | Loop diagrams: `all` (loops of ≥ 2 members by first letter and number, relief devices left out), `diagram` (A3 sheet with the frame: field devices with their own symbols, JB terminal block, I/O box, control-system functions; wiring from the "Wiring" attributes `jb`, `jb_terminals`, `cable`, `system`, `io`; a To complete list) |
 | `crates/core/src/cause.rs` | Cause and effect: `matrix` (each interlock symbol: the items signalled to it, effects = valves, drives, equipment, final elements; the rest are causes; a switch wired straight to a final element is its own group, cell "X"); actions from the fail position (FC close, FO open, FL hold), drives stop, `trip_action` overrides; `xlsx` |
 | `crates/core/src/dexpi.rs` | DEXPI (Proteus XML) import (`read`: element tree with limits, units and fit-to-sheet, symbols from DatumSchemaSymbol, the class or a stand-in, nozzles matched by position, segments as pieces From → components → To, branches onto segments, flows as signal or impulse lines, attributes back to keys in SI) and export of a sheet: Equipment with Nozzles, PipingNetworkSystem per line-number object, PipingNetworkSegment per piece with CenterLine, PipingComponent (each once) and Connection; ProcessInstrumentationFunction; InformationFlow for signal and impulse lines; GenericAttributes (DEXPI names in SI, the rest in DatumSchemaAttributes); y up |
+| `crates/core/src/dxfin.rs` | The DXF reader: group-code pairs, BLOCKS and ENTITIES (LINE, LWPOLYLINE/POLYLINE with bulges, CIRCLE, ARC, ELLIPSE, TEXT, MTEXT stripped of codes, SOLID and solid HATCH, INSERT with ATTRIBs, nested to depth 8), $INSUNITS, limits; `flatten` to primitives in mm y-down; `underlay` (an old drawing scaled to fit the drawing area, never enlarged) |
+| `crates/core/src/symlib.rs` | Client symbol libraries: `scan_legend` (blocks and the text beside each insert; `suggest` by word overlap with synonyms, `draft` size, `ports_like` snapped onto the drawing), `validate`/`clean`, `register` (global registry of leaked `Sym`s, keys `x.<lib>.<block>`), `save`/`load_dir`/`read_file`, `restyle`, `port_at`, `check_copies` for the copies a project carries |
+| `crates/core/src/links.rs` | Datum Pipe (`to_pipe`: a run as a `.dpipe` straight model between two anchors with its valves as rigid elements, size, schedule, design T/P, density, length) and Datum Sim (`to_sim`: a loop as a `.dsim` with Step, Sum, PID, valve, process (integrating for level, with an outflow), transmitter and Scope; dynamics as model variables) |
+| `crates/core/src/pfd.rs` | Process flow diagrams: the stream table on the sheet (`table`, bands left of the title block), checks 14 (mass) and 15 (heat, duty or shaft power) round each item, and 16 (a P&ID line's `stream` against the stream's mass flow) |
+| `crates/core/src/revs.rs` | Sheet revisions: `snapshot` (items, lines with routes, notes, objects' tag and data), `compare` (added, removed, changed: moved, rerouted, symbol, tag, data; gathered into areas), `cloud` (scallops and the triangle), `clouds` for the view, `next_rev` |
 | `crates/core/src/units.rs` | Calc's unit table (NIST SP 811) with unit expressions and Schema's display table |
 | `crates/core/src/pipes.rs` | Pipe's sizes ½"–24" and schedules (ASME B36.10M/B36.19M dimensions); inside diameters |
 | `crates/core/src/doc.rs` | The history (`Change`: who, when, what, object, old, new; recorded by diffing objects after every edit, undo and redo). Edit operations (NewLineObject, SetNode, AddNode, SetNode2, DeleteNode, add, set, move, rotate, mirror, delete with merge of in-line items, set data, tags, bend points, split, paste with the next free tags, pair connectors, sheets, title, project, settings, renumber, batch) on a copy, kept only if `normalize` finds nothing to repair; undo/redo; size-limited reads and atomic writes |
@@ -44,7 +49,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | `crates/core/src/view.rs` | What the window draws for a sheet: items with ports and upright texts (tags, instrument letters and loop numbers, fail positions, connector partners), lines (route, pieces with hops, arrows or signal marks, line number, hydraulic badge), notes and Hold clouds, the legend |
 | `crates/core/src/frame.rs` | The sheet frame: border, zones, title block, revision table, as primitives |
 | `crates/core/src/hydraulics.rs` | Inside diameter, velocity, Reynolds, Colebrook (or 64/Re), Δp per 100 m and over length + fittings, limits by service, status |
-| `crates/core/src/checks.rs` (+ `checks/tests.rs`) | The 13 checks, one function per rule, each issue with level, reason, ids and place; a passing and a failing test per rule |
+| `crates/core/src/checks.rs` (+ `checks/tests.rs`) | The 16 checks (`RULES`; P&ID rules skip PFD sheets), one function per rule, each issue with level, reason, ids and place; a passing and a failing test per rule |
 | `crates/core/src/lists.rs` | The line list (one row per line number: from/to, hydraulics), equipment list, instrument index, valve list; CSV with a formula guard; Excel (rust_xlsxwriter) |
 | `crates/core/src/dxf.rs` | The DXF writer (R12: layers per line type and symbol category, blocks with a TAG attribute, text, frame) and `read_back` for the tests |
 | `crates/core/src/examples.rs` | The examples built through the edit operations: pump transfer, compressor package, exchanger loop, Find the faults (tests: 0 errors and warnings; exactly the planted faults) |
@@ -63,6 +68,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | `ui/src/ribbon.tsx`, `ui/src/cmds.ts` | Title bar, quick access, Tell Me, the ribbon; every command |
 | `ui/src/backstage.tsx`, `ui/src/print.tsx`, `ui/src/roadmap.tsx` | File page (examples, export, options with the check rules and limits, updates), print (sheets at size or A3, lists, legend; the SVG writer), roadmap |
 | `ui/src/help.tsx`, `ui/src/dialogs.tsx` | The `?` cards and the rule list; dialogs (save changes, recovery, add a symbol by name, pair connectors, shortcuts, getting started, glossary) |
+| `ui/src/libraries.tsx` | File › Libraries (import a legend, review table, connection-point editor, share) and Options › Drawing standard |
+| `ui/src/revisions.tsx` | Issue a sheet at a revision; compare with an issued revision (click to go; Cloud them) |
 | `ui/src/styles.css`, `ui/src/ui.tsx`, `ui/index.html` | Plan's styles (magenta accent) and components; the icon sprite |
 | `tests_ui/run.cjs` | UI checks of the built window against the real engine (through the test server) |
 | `tests_ui/screens.cjs` | The four README and site screenshots (1440×900, `docs/images/`) |
@@ -89,6 +96,14 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 
 | Version | Decision | Why |
 | --- | --- | --- |
+| 0.2.0 | One bigger release (0.2.0) instead of several small ones, as the user asked: "a bigger build and release at least until process flow diagrams". Built and committed in five tested stages | The user's call |
+| 0.2.0 | Client symbols come from DXF, not DWG (DWG is closed; the user agreed "DXF is fine"). A library symbol keeps a `like` (the built-in it stands for); items keep `base`; every semantic test uses `Item::base_key()`, so checks, classes, tags and lists are unchanged under a drawing standard | The object stays the master; only the drawing changes |
+| 0.2.0 | A project carries copies of the library symbols it uses (`custom_syms`, meta "symbols"), registered on open | A project must open on a computer without the library |
+| 0.2.0 | Large per-sheet data (an old drawing's shapes, issued snapshots) live in `Arc`s with `#[serde(skip)]`, in their own file tables, never sent to the window; the window fetches the background SVG once per fingerprint (`underlay_svg`). `SetSheet` from the window keeps the engine's copies by fingerprint or revision; a forged one is dropped | The window gets the whole project after every edit, and undo keeps up to 100 copies |
+| 0.2.0 | A PFD is a sheet flag; line objects on it get the `Stream` class (reconciled in `normalize`, so every creation path is covered) and the next free number. P&ID-only rules skip PFD sheets; DEXPI refuses a PFD sheet | Reuses the line machinery (runs, lists, inspector) without a second network |
+| 0.2.0 | Heat balance: out − in must be zero (both sides of an exchanger drawn) or equal the item's `duty` or `power`, within 2%; mass within 0.5%. Enthalpy flow is the user's, from one datum per diagram | A check on typed numbers, not a simulation |
+| 0.2.0 | The `.dpipe` and `.dsim` files were opened, analysed and run with the real Datum Pipe and Datum Sim engines from the local clones (a scratch program, deleted; nothing linked); 16 lines and 4 loops, no repairs. Level loops needed an outflow to settle | "Never link another app"; the files must still be right |
+| 0.2.0 | Revision clouds compare against a chosen issued revision; the triangle shows the revision after it (the next one issued, else `next_rev`) | Works both while working towards B and on the issued B |
 | 0.1.12 | The Tell Me overlay was `class="ov top"`; the title bar's `.top { background }` rule, later in the stylesheet, made it opaque and hid the window. Renamed the overlay's class to `high` (the same clash exists in Datum Plan's stylesheet but is harmless there) | The user saw the window vanish behind Ctrl+K |
 | 0.1.12 | DEXPI round trip: our export writes DatumSchemaSymbol, LineKind, FlowDirection and the turn (Reference) and mirror (Axis Z = −1); numbers at full precision; impulse lines carry their line object's data. The import uses them when present, else the class, else a stand-in by kind | A file we write must come back exactly; tested on every example (tags, line numbers, connections, positions, data, check results) |
 | 0.1.12 | Check 8: a check valve counts only when the pump's flow reaches its inlet (port 0); reached at its outlet it is reported on the valve. `Op::TurnRound` mirrors an in-line item and swaps the lines on its two process ports | Lines drawn by hand can meet a check valve backwards; splitting always orients it |
@@ -155,14 +170,18 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.1.10 | Datasheet import from Excel (by tag, preview, never overwriting P&ID values, one undo step); company datasheet layout (form number, logo, footer, hidden rows, section order, default for new projects); loop diagrams (A3, wiring per device, print one or all). The three planned steps released as one version, as the user asked | ✅ |
 | 0.1.11 | Fixes from the user: the line being drawn is shown under the mouse (a click on a port starts a line that follows the mouse until the next click); the symbol search is a small popover beside the point. Cause-and-effect matrix; DEXPI export; loop diagrams in DXF | ✅ |
 | 0.1.12 | Tell Me overlay fixed (class clash); DEXPI import; check 8 checks a check valve's direction, Turn round; bend points kept on split and join; the logo in the Excel datasheets | ✅ |
-| 0.1.13 | Next, proposed: to discuss with the user | ⬜ |
-| later | DEXPI import and export; send a line to Datum Pipe; send a loop to Datum Sim; DXF import as a background | ⬜ |
-| 0.3 | Process flow diagrams with stream tables; heat and mass balance checks; revision clouds and comparison | ⬜ |
-| 0.4 | Loop diagrams; cause-and-effect matrix; valve datasheets | ⬜ |
+| 0.2.0 | DXF reader; client symbol libraries from a legend (review, connection points, share); drawing standards; an old drawing behind a sheet; send a line to Datum Pipe and a loop to Datum Sim; PFD sheets with streams, the stream table, the Streams list and checks 14–16; sheet revisions with comparison and clouds; the Crude preheat example; file format 4 | ✅ |
+| 0.3 | Instrument index reports and loop checks; stream compositions | 🔜 |
 | 0.5 | Company templates; project reports (valve and fitting take-off); review comments | ⬜ |
 | 1.0 | User guide, a validation note for the hydraulics, signed installer | ⬜ |
 
 ## 4. Known limits
+
+- DXF only (DWG must be saved as DXF first); the reader skips dimensions, images, 3D and patterned hatches (counted in the warnings). Text rotation in old drawings is not kept.
+- Legend suggestions are by words (description and block name); unusual legends need the review. Connection points are suggested for two-port symbols; equipment needs its points placed.
+- To Datum Pipe sends a straight run (a P&ID has no 3D routing) and estimated valve masses; To Datum Sim uses typical dynamics.
+- Streams have no composition yet; balances need every stream's mass (and enthalpy) flow; tees between streams are not balanced (draw a mixer or splitter symbol).
+- Revision comparison is per sheet, by object ids; a symbol deleted and placed again counts as removed and added.
 
 - DEXPI import reads one drawing per file and does not pair off-page connectors across files; line pieces are re-routed (centre lines are not kept as bend points).
 - Lines keep their bend points when symbols move; drag a segment again or Straighten to re-route.
@@ -222,4 +241,10 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 - Built the planned items: DEXPI import (with round-trip additions to the export), check 8 direction with Turn round (menu), bend points kept on split and join, the logo in Excel datasheets (base64 decoding moved into the engine).
 - The round-trip test found two real export bugs, both fixed: attribute values rounded to 4 decimals (a gas viscosity became 0) and impulse lines losing their line-number data.
 - Tests: engine 84 (DEXPI round trip on every example, a foreign file in metres with an unknown class, damaged XML; check 8 both ways; bend points; Excel logo; hardening imports every random project's export); UI checks for Tell Me, DEXPI import and Turn round.
+
+### 2026-10-30: Session 1, 0.2.0 (one bigger release up to process flow diagrams)
+- The user asked about importing a client's DWG legend as a separate library; after the brainstorm they chose DXF and asked for "a bigger build and release at least until process flow diagrams". Built in five stages, each tested and committed: DXF reader and client libraries with drawing standards; an old drawing behind a sheet; Datum Pipe and Datum Sim links; PFDs with streams, stream table and balances; revisions with comparison and clouds.
+- Found on the way: our own DXF export wrote legend rows as loose geometry (no blocks), so a legend round trip found nothing; legend rows are now INSERTs with their name. Validating embedded copies re-keyed them (added `check_copies`). With a standard on, checks stopped recognising PSVs and control valves (`base_key` everywhere).
+- The two other apps' formats were studied by two reader agents in parallel; every generated file was then opened in the real engines.
+- Tests: engine 101 (DXF reader and legend scan, re-skin and exact restore, background through undo, save and the window's copy, Pipe and Sim files, PFD numbering, balances, table and rule 16, revisions through save and reopen, random DXF hardening); UI checks for libraries and the standard, the background, both sends, the PFD example, a broken mass balance, a new PFD sheet, DEXPI's refusal, issue, compare and clouds.
 

@@ -25,7 +25,7 @@
 
 Draw the plant with real symbols, and every symbol and line carries its data and knows what it is connected to. So Datum Schema writes the line list, equipment list, instrument index and valve list for you, always in step with the drawing; checks the drawing as you work; and sizes every line, with its velocity and pressure drop against limits. It is for process, chemical, mechanical, piping and instrument engineers, operators and students. It is free and open source (MIT), Windows first, installs in seconds and updates itself. More on the family site: [edgar-mendonca.github.io/Datum/apps/schema](https://edgar-mendonca.github.io/Datum/apps/schema).
 
-> **Hydraulic results are a sizing aid.** Velocities and pressure drops help you size lines; they are checked by the engineer before they are used.
+> **Hydraulic results are a sizing aid.** Velocities and pressure drops help you size lines; they are checked by the engineer before they are used. The same goes for the heat and mass balance checks (they check the numbers typed, they are not a simulation) and for the models sent to Datum Pipe and Datum Sim (starting points with stated assumptions).
 
 ## What it does
 
@@ -33,16 +33,21 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Lines that know their ends**: drawn port to port, routed at right angles around symbols, with flow arrows and hops; a valve dropped on a line goes into it; off-page connectors carry a line to another sheet.
 - **Data on everything**: tags, services, design and operating conditions, sizes, line numbers built from size, fluid, sequence and class, in SI or US units.
 - **Sheets**: A3, A1, ANSI B and ANSI D with border, grid zones, title block and revision table; a legend sheet.
-- **Live checks**: thirteen rules on every change (duplicate tags, open ends, size changes without a reducer, class changes without a spec break, pumps without check valves, vessels without relief, control loops, hydraulic limits and more), each a click away from the problem.
+- **Live checks**: sixteen rules on every change (duplicate tags, open ends, size changes without a reducer, class changes without a spec break, pumps without check valves, vessels without relief, control loops, hydraulic limits, heat and mass balances and more), each a click away from the problem.
 - **Line hydraulics**: inside diameter from size and schedule, velocity, Reynolds number, Colebrook friction factor, pressure drop per 100 m and over the line, with a ✓ ! ✗ badge against the limits for its service.
 - **Plant objects**: every equipment item, valve, instrument and line number is an object in a plant › unit › area hierarchy (the Plant panel); symbols are views of it, so one object can be drawn on several sheets. Every change is recorded with who made it and when.
 - **Classes you can extend**: a class library (named after the open DEXPI data standard) defines what data each kind of object has; add your company's attributes in Options and mark them required.
 - **Instrument datasheets**: one per instrument, control valve and relief device, with the process conditions taken from its line or vessel; type on it, issue it with a revision and status, see every value changed since the last issue (Δ), print it, export every datasheet to Excel; a datasheet index tracks them all; import datasheet values from Excel (matched by tag, with a preview first, never overwriting values that come from the P&ID); set your company's datasheet form (form number, logo, rows and section order).
 - **Cause and effect**: the matrix of the interlocks, read from the P&ID (causes, effects with their actions, the interlock in each cell); print or Excel.
 - **Loop diagrams**: every instrument loop drawn from the P&ID on an A3 sheet, with each device wired through its junction box and cable to its I/O channel and controller; type the wiring, print one or all, or save as DXF.
-- **Lists**: line list, equipment list, instrument index, valve list and datasheet index, always in step with the drawing; edit them, export to Excel or CSV, print them.
+- **Process flow diagrams**: PFD sheets whose lines are streams (mass and volume flow, temperature, pressure, vapour fraction, density, enthalpy flow), numbered in diamonds, with a stream table on the sheet, a stream list, and heat and mass balance checks round every item; P&ID lines can name the stream they carry and are checked against it.
+- **A client's symbols**: read a client's legend sheet (DXF) into a symbol library, with suggested meanings and connection points to review; draw a whole project to that standard and back, with the objects, data and checks unchanged; share libraries as files.
+- **Old drawings**: a DXF shown faintly behind a sheet, to redraw an old P&ID as a live one.
+- **Revisions**: issue a sheet at a revision, compare it later with what changed, and cloud the changes with the revision triangle.
+- **The Datum family**: send a line to Datum Pipe as a stress model, and a control loop to Datum Sim as a model to tune.
+- **Lists**: line list, stream list, equipment list, instrument index, valve list and datasheet index, always in step with the drawing; edit them, export to Excel or CSV, print them.
 - **Print and export**: PDF (sheets at their size or fitted to A3, lists, legend), SVG, DXF (R12) that opens in any CAD program, and the DEXPI P&ID exchange format (XML), which it also opens.
-- **Examples**: a pump transfer, a compressor package, a steam heater loop, and "Find the faults".
+- **Examples**: a pump transfer, a compressor package, a steam heater loop, a crude preheat process flow diagram, and "Find the faults".
 - **Safe files**: `.dschema` projects (a single SQLite database with the history), atomic saves, recovery of unsaved work, undo and redo for everything.
 
 ![The Checks panel on "Find the faults": duplicate tag, open end, a size change without a reducer, a pump without a check valve, a vessel without relief](docs/images/checks.png)

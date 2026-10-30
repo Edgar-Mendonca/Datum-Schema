@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.2.0 — 2026-10-30
+
+A client's own symbols, old drawings to trace over, links to Datum Pipe and Datum Sim, process flow diagrams with heat and mass balances, and revision clouds.
+
+**A client's symbol library.** File › Libraries › **Import a legend (DXF)** reads a client's legend sheet (save a DWG as DXF from any CAD program first). Every block placed on the legend becomes a symbol, described by the text beside it. Datum Schema suggests what each one stands for (a gate valve, a centrifugal pump…) from its description and block name, and puts its connection points where lines meet the drawing. Check the suggestions in the review table, edit the connection points by clicking on the drawing, and save the library: it stays on this computer for every project, and **Save a copy** / **Add a library file** share it with colleagues. The palette's **Library** tab places its symbols one by one.
+
+**Drawing standard.** File › Options › **Drawing standard** draws a whole project with a library's symbols. The objects do not change: the same class, tag, data, checks and lists; lines stay on their nozzles (followed by name). Switching back to Datum Schema's symbols restores the drawing exactly. A project keeps its own copies of the library symbols it uses, so it opens on any computer, and DXF export keeps the client's block names.
+
+**An old drawing behind a sheet.** Sheets › **Old Drawing** shows a DXF faintly behind the sheet, to redraw an old P&ID as a live one. A drawing larger than the sheet is scaled to fit and centred; set its size and position in the Inspector. It is never picked by mistake, and is printed and exported (on its own BACKGROUND layer in DXF) only when you ask.
+
+**To Datum Pipe.** Select a process line, then Format › Send › **To Datum Pipe**: the line becomes a Datum Pipe model to start its stress analysis, with its size, schedule, design pressure and temperature, density and length, and its valves at their places along the run between two anchors. A P&ID has no routing in three dimensions, so the line goes as a straight run; add the bends and supports in Datum Pipe. What was assumed (a missing schedule, length or condition) is listed.
+
+**To Datum Sim.** Lists › Loop Diagrams › **To Datum Sim** saves a control loop as a Datum Sim model to tune: set point, PID controller, valve, process and transmitter, with a trend of SP, PV and OP. The dynamics are typical values for the measured variable (flow, level, pressure, temperature), kept as variables at the top of the model to set from the plant; level loops are integrating, with an outflow.
+
+**Process flow diagrams.** Sheets › **PFD Sheet** (or tick *Process flow diagram* for a sheet in the Inspector). On a PFD, process lines are streams, numbered 1, 2, 3… in diamonds, each with mass and volume flow, temperature, pressure, vapour fraction, density and enthalpy flow. A stream table is drawn along the bottom of the sheet in the project's units, and the **Streams** tab lists them (edit, Excel, CSV, print). Equipment on a PFD can be the same objects as on the P&IDs.
+
+**Heat and mass balances.** Three new checks: **14** the mass flows into each item on a PFD equal those out (within 0.5%); **15** the enthalpy flows out less those in equal the item's duty or shaft power, or nothing (within 2%); **16** a P&ID line that names a PFD stream (Inspector › PFD stream) carries the stream's mass flow. The P&ID checks (sizes, check valves, relief, isolation) leave PFD sheets alone. The balances check the numbers typed; they are not a simulation.
+
+**Revisions, comparison and clouds.** Inspector › Revisions › **Issue…** puts a row in the revision table and keeps the sheet as issued in the project file. **Compare with A…** lists what was added, removed or changed since (moved, rerouted, a new tag or data); click a change to go to it. **Revision clouds** draw a cloud round each changed area with the next revision in a triangle, printed and on the REVISION layer in DXF.
+
+**Example.** File › Examples › **Crude preheat (PFD)**: feed pump, exchanger, fired heater and separator with eight streams whose heat and mass balances close by hand.
+
 ## 0.1.12 — 2026-10-30
 
 Tell Me shows the drawing behind it, DEXPI import, a check valve's direction, bend points kept, the logo in Excel.

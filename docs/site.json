@@ -8,7 +8,8 @@
   "about": [
     "Datum Schema draws piping and instrument diagrams where every symbol and line carries its data and knows what it is connected to. You place real symbols (vessels, pumps, exchangers, valves, instruments) and join them with lines that route themselves; drop a valve on a line and it goes into it, carry a line to another sheet with a pair of off-page connectors.",
     "Because the drawing knows its connections, Datum Schema writes the line list, the equipment list, the instrument index and the valve list for you, always in step with the drawing; it checks the drawing as you work (duplicate tags, open ends, size changes without a reducer, pumps without check valves and more); and it sizes every line, with its velocity and pressure drop against limits for its service. Hydraulic results are a sizing aid, checked by the engineer.",
-    "Every symbol is a view of a plant object (equipment, valve, instrument, line number) in a plant › unit › area hierarchy, defined by a class library you can extend with your company's attributes. Every change is recorded in the project file, and every instrument, control valve and relief device has a datasheet whose process conditions come straight from the P&ID."
+    "Every symbol is a view of a plant object (equipment, valve, instrument, line number) in a plant › unit › area hierarchy, defined by a class library you can extend with your company's attributes. Every change is recorded in the project file, and every instrument, control valve and relief device has a datasheet whose process conditions come straight from the P&ID.",
+    "Process flow diagrams sit beside the P&IDs: streams with their flows and conditions, a stream table on the sheet, and heat and mass balance checks. A client's legend sheet (DXF) becomes a symbol library to draw a project to their standard; an old drawing can sit behind a sheet to trace over; issued sheets are compared and the changes clouded. Lines go to Datum Pipe for stress analysis and control loops to Datum Sim for tuning."
   ],
   "steps": [
     {
@@ -17,7 +18,7 @@
     },
     {
       "title": "Check it as you go",
-      "text": "Thirteen rules run on every change: duplicate tags, open ends, size and class changes, check valves, relief paths, control loops, velocities and pressure drops. Click an issue to go to it."
+      "text": "Sixteen rules run on every change: duplicate tags, open ends, size and class changes, check valves, relief paths, control loops, velocities and pressure drops, and heat and mass balances on process flow diagrams. Click an issue to go to it."
     },
     {
       "title": "Print the drawings and lists",
@@ -26,6 +27,10 @@
   ],
   "highlights": [
     "About 80 symbols of our own, following ISO 10628-2 and ISA-5.1",
+    "Process flow diagrams: streams in diamonds, a stream table on the sheet, heat and mass balance checks",
+    "A client's legend (DXF) becomes a symbol library; draw a project to their standard and back",
+    "Old drawings (DXF) behind a sheet to trace over; revision clouds round what changed since an issue",
+    "Send a line to Datum Pipe and a control loop to Datum Sim",
     "Plant objects in a plant › unit › area hierarchy; symbols are views, every change is recorded",
     "A class library you can extend with your company's attributes",
     "Instrument datasheets with process conditions from the P&ID; revisions with what changed (Δ); your company's form; import from Excel; print and Excel",
@@ -35,7 +40,7 @@
     "A valve dropped on a line splits it and joins both halves",
     "Off-page connectors pair across sheets; click one to jump to its partner",
     "Live line list, equipment list, instrument index, valve list and datasheet index",
-    "Thirteen drawing checks, each with a click to the problem",
+    "Sixteen checks, including heat and mass balances, each with a click to the problem",
     "Line hydraulics: velocity, Reynolds number, Colebrook friction factor and pressure drop against limits",
     "SI and US units; DXF, SVG, PDF, Excel, CSV and the DEXPI P&ID exchange format (export and import)",
     "Automatic tags and loop numbers, renumbering, a legend sheet"
@@ -49,38 +54,31 @@
   "roadmap": [
     {
       "v": "0.2",
-      "title": "Exchange and links",
-      "when": "Next",
+      "title": "Exchange, links and flow diagrams",
+      "when": "Now",
       "items": [
-        "Send a line to Datum Pipe as a stress model",
-        "Send a loop to Datum Sim (pump, valve, tank, controller) as a dynamic model",
-        "DXF import of an old drawing as a background"
+        "Client symbol libraries from a DXF legend; drawing standards",
+        "DXF of an old drawing as a background",
+        "Send a line to Datum Pipe and a loop to Datum Sim",
+        "Process flow diagrams: streams, stream table, heat and mass balances",
+        "Revision snapshots, comparison and revision clouds"
       ]
     },
     {
       "v": "0.3",
-      "title": "Process flow diagrams",
-      "when": "Later",
+      "title": "Instrument documents",
+      "when": "Next",
       "items": [
-        "Stream tables (flow, pressure, temperature, composition per stream)",
-        "Heat and mass balance checks",
-        "Revision clouds and comparing revisions"
+        "Instrument index reports and loop checks",
+        "Stream compositions on process flow diagrams"
       ]
     },
     {
       "v": "0.4",
-      "title": "Instrument documents",
-      "when": "Later",
-      "items": [
-        "Instrument index reports and loop checks"
-      ]
-    },
-    {
-      "v": "0.5",
       "title": "Company templates and review",
       "when": "Later",
       "items": [
-        "Company symbol and title-block templates",
+        "Company title-block templates",
         "Project-wide reports (valve and fitting take-off)",
         "Review comments from several people"
       ]
