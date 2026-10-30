@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1 — 2026-10-30
+
+The valve and fitting take-off.
+
+**Take-off.** Lists › **Take-off** (and its tab under the drawing) counts every valve, control valve, fitting and in-line element on the P&IDs by type, size, pipe class and rating, with their tags and sheets: the quantities for a material requisition. The size is the item's own, else that of the lines it sits in (a component between two sizes shows both, such as 3" × 2"); the pipe class comes from its line, the rating from the item. Each object counts once, even when drawn on two sheets; process flow diagrams are left out. Print it, or export it to Excel or CSV; click a row to select its items.
+
+**Tell Me** now finds the take-off, the I/O summary and the stream list.
+
 ## 0.3.0 — 2026-10-30
 
 Stream compositions with a component balance, the I/O summary, and three instrument checks.

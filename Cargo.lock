@@ -554,7 +554,7 @@ dependencies = [
 
 [[package]]
 name = "datum-core"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "calamine",
  "quick-xml",
@@ -566,7 +566,7 @@ dependencies = [
 
 [[package]]
 name = "datum-schema"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "chrono",
  "datum-core",

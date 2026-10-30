@@ -46,7 +46,8 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Revisions**: issue a sheet at a revision, compare it later with what changed, and cloud the changes with the revision triangle.
 - **The Datum family**: send a line to Datum Pipe as a stress model, and a control loop to Datum Sim as a model to tune.
 - **I/O summary**: inputs and outputs per control system (AI, AO, DI, DO, fieldbus) with 20% spare, from the instruments' wiring and signals.
-- **Lists**: line list, stream list, I/O summary, equipment list, instrument index, valve list and datasheet index, always in step with the drawing; edit them, export to Excel or CSV, print them.
+- **Valve and fitting take-off**: every piping component counted by type, size, pipe class and rating, with its tags, for a material requisition.
+- **Lists**: line list, stream list, I/O summary, take-off, equipment list, instrument index, valve list and datasheet index, always in step with the drawing; edit them, export to Excel or CSV, print them.
 - **Print and export**: PDF (sheets at their size or fitted to A3, lists, legend), SVG, DXF (R12) that opens in any CAD program, and the DEXPI P&ID exchange format (XML), which it also opens.
 - **Examples**: a pump transfer, a compressor package, a steam heater loop, a crude preheat process flow diagram, and "Find the faults".
 - **Safe files**: `.dschema` projects (a single SQLite database with the history), atomic saves, recovery of unsaved work, undo and redo for everything.

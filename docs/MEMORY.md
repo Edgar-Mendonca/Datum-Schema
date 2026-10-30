@@ -6,7 +6,7 @@
 | | |
 | --- | --- |
 | **Product** | Datum Schema: intelligent P&IDs and process flow diagrams: draw, check and list (symbols and lines that carry their data and connections; live line list, equipment list, instrument index and valve list; drawing checks; line hydraulics; print, SVG and DXF) |
-| **Current version** | 0.3.0 (2026-10-30) |
+| **Current version** | 0.3.1 (2026-10-30) |
 | **Repo** | `Edgar-Mendonca/Datum-Schema` · branch `claude/vigilant-hamilton-ku7r0w` (the first branch pushed, so the default branch) |
 | **Stack** | Rust engine (`crates/core`: model, symbols, graph, tags, checks, hydraulics, lists, frame, routing, DXF), Tauri 2, SolidJS + strict TypeScript; no Python |
 | **Identifier** | `com.edgarmendonca.datumschema` · files `.dschema` (SQLite, `format` 4 from 0.2.0 (items.base, `underlays` and `snapshots` tables, meta "symbols"); 3 from 0.1.9; 2 before: no `issues` table; JSON `format` 1 from 0.1.0–0.1.4 converts) · symbol libraries `.dschemalib` (JSON, in app data › libraries) · installer `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` · publisher "Datum" |
@@ -97,6 +97,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 
 | Version | Decision | Why |
 | --- | --- | --- |
+| 0.3.1 | The user asked to step the 0.4 roadmap as 0.3.1, 0.3.2, … (one item per release) | The user's call |
+| 0.3.1 | Take-off groups by (category, type, size, line pipe class, own rating), one count per object, P&ID sheets only; size is the item's own, else its lines' (largest first, joined with ×) | A requisition counts components, not drawings; a reducer or relief valve spans two sizes |
 | 0.3.0 | Compositions are mass fractions in each stream's data under "x:<component>", with the component list in `settings.components`; the class library adds them to the Stream class's attributes (group "Composition"), so the Inspector, the list and the table need no special case. A blank fraction is none of it once a stream has any composition | No schema change; the list's `Col.key` became a `String` for these columns |
 | 0.3.0 | I/O kind from the I/O channel first, then the signal, then letters and symbol; local gauges, pneumatic, capillary and software links take none; spare is 20% per kind, rounded up | What an I/O summary is for: sizing cards per system |
 | 0.3.0 | Check 18 reads only ranges it understands (a unit of the right quantity, or none for the project's units); anything else is left alone rather than guessed | A check must not raise false alarms on free text |
@@ -176,7 +178,9 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.1.12 | Tell Me overlay fixed (class clash); DEXPI import; check 8 checks a check valve's direction, Turn round; bend points kept on split and join; the logo in the Excel datasheets | ✅ |
 | 0.2.0 | DXF reader; client symbol libraries from a legend (review, connection points, share); drawing standards; an old drawing behind a sheet; send a line to Datum Pipe and a loop to Datum Sim; PFD sheets with streams, the stream table, the Streams list and checks 14–16; sheet revisions with comparison and clouds; the Crude preheat example; file format 4 | ✅ |
 | 0.3.0 | Stream compositions and check 17 (component balance, fractions add up); I/O summary (list, print, Excel); checks 18 (range covers the operating value), 19 (fail position), 20 (loop wiring) | ✅ |
-| 0.4 | Company title-block templates; project-wide reports (valve and fitting take-off); review comments | 🔜 |
+| 0.3.1 | Valve and fitting take-off (list, print, Excel, CSV; Tell Me entries for the newer lists) | ✅ |
+| 0.3.2 | Company title-block templates | 🔜 |
+| 0.3.3 | Review comments | ⬜ |
 | 0.5 | Company templates; project reports (valve and fitting take-off); review comments | ⬜ |
 | 1.0 | User guide, a validation note for the hydraulics, signed installer | ⬜ |
 
@@ -257,4 +261,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 - After 0.2.0 the user asked for a comparison with the commercial suites (given in chat only, never in public text), then said to stick to the roadmap. 0.3 was scoped as stream compositions with a component balance, the I/O summary, and checks on instrument ranges, fail positions and loop wiring.
 - The hardening tests caught a byte-slicing panic on a hostile tag in the I/O classification, and the examples test caught Excel refusing "/" in the worksheet name "I/O summary"; both fixed.
 - Tests: engine 103 (ranges in several units and refusals, checks 17–20 both ways, the I/O summary, component rows and columns); UI checks for the components in Options, a broken component balance, the I/O summary and check 18 from the instrument index.
+
+### 2026-10-30: Session 1, 0.3.1 (take-off)
+- The user asked to step the next roadmap items as 0.3.1, 0.3.2 and so on. 0.3.1 is the valve and fitting take-off (`lists.rs` kind `takeoff`), with Tell Me entries for the take-off, I/O summary and stream list.
+- Tests: engine 104 (take-off groups, sizes across two lines, one count per object, nothing from a PFD); UI checks for the take-off and its CSV.
 

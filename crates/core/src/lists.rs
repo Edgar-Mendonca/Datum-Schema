@@ -37,7 +37,7 @@ pub struct List {
     pub rows: Vec<Row>,
 }
 
-pub const KINDS: [(&str, &str); 7] = [("lines", "Line list"), ("streams", "Stream list"), ("io", "I/O summary"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list"), ("datasheets", "Datasheet index")];
+pub const KINDS: [(&str, &str); 8] = [("lines", "Line list"), ("streams", "Stream list"), ("io", "I/O summary"), ("takeoff", "Valve and fitting take-off"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list"), ("datasheets", "Datasheet index")];
 
 /// (key, label, quantity, editable)
 type Spec = (&'static str, &'static str, &'static str, bool);
@@ -216,6 +216,79 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
                 .collect();
             (cols(&specs, us), rows)
         }
+        "takeoff" => {
+            let specs: Vec<Spec> = vec![("kind", "Item", "", false), ("size", "Size", "", false), ("pclass", "Pipe class", "", false), ("rating", "Rating", "", false), ("qty", "Quantity", "", false), ("tags", "Tags", "", false), ("sheet", "Sheets", "", false)];
+            let pfd: std::collections::HashSet<u32> = p.sheets.iter().filter(|s| s.pfd).map(|s| s.id).collect();
+            // Every piping component on the P&IDs once (an object drawn twice counts once), by
+            // what it is, its size, its line's pipe class and its own rating.
+            type Key = (usize, String, (u64, String), String, String);
+            // (items, tags, untagged count, sheets)
+            type Group = (Vec<u32>, Vec<String>, usize, Vec<u32>);
+            let mut groups: std::collections::BTreeMap<Key, Group> = std::collections::BTreeMap::new();
+            let mut seen = std::collections::HashSet::new();
+            for it in p.items.iter().filter(|i| !pfd.contains(&i.sheet)) {
+                let Some(s) = symbols::get(&it.sym) else { continue };
+                let piping = matches!(s.cat, Cat::Valve | Cat::Control | Cat::Fitting) || (s.cat == Cat::Primary && s.inline);
+                if !piping || (it.obj != 0 && !seen.insert(it.obj)) {
+                    continue;
+                }
+                let own = p.data_of(it.obj);
+                let txt = |d: &crate::model::Data, k: &str| d.get(k).map(|v| v.text().trim().to_string()).unwrap_or_default();
+                // The lines on its process ports, for its size and pipe class.
+                let mut sizes: Vec<String> = vec![];
+                let mut class = String::new();
+                for k in (0..s.ports.len()).filter(|k| !s.ports[*k].signal) {
+                    for &(l, _) in net.on_port(it.id, k as u8) {
+                        let Some(line) = net.lines.get(&l).filter(|x| x.kind.process() && x.obj != 0) else { continue };
+                        let d = p.data_of(line.obj);
+                        let sz = txt(d, "size");
+                        if !sz.is_empty() && !sizes.contains(&sz) {
+                            sizes.push(sz);
+                        }
+                        if class.is_empty() {
+                            class = txt(d, "class");
+                        }
+                    }
+                }
+                let inch = |s: &str| if crate::pipes::nps_inches(s.trim_end_matches('"')).is_some() { format!("{}\"", s.trim_end_matches('"')) } else { s.to_string() };
+                let size = match txt(own, "size") {
+                    s if !s.is_empty() => inch(&s),
+                    _ => {
+                        sizes.sort_by(|a, b| crate::pipes::nps_inches(b).unwrap_or(0.0).total_cmp(&crate::pipes::nps_inches(a).unwrap_or(0.0)));
+                        sizes.iter().map(|s| inch(s)).collect::<Vec<_>>().join(" × ")
+                    }
+                };
+                let order = (crate::pipes::nps_inches(size.split(' ').next().unwrap_or("").trim_end_matches('"')).map_or(u64::MAX, |x| (x * 1000.0) as u64), size.clone());
+                let cat = Cat::ALL.iter().position(|c| *c == s.cat).unwrap_or(0);
+                let g = groups.entry((cat, sym_name(it), order, class, txt(own, "class"))).or_default();
+                g.0.push(it.id);
+                let tag = p.tag_of(it).trim().to_string();
+                if tag.is_empty() {
+                    g.2 += 1;
+                } else {
+                    g.1.push(tag);
+                }
+                if !g.3.contains(&it.sheet) {
+                    g.3.push(it.sheet);
+                }
+            }
+            let rows = groups
+                .into_iter()
+                .map(|((_, name, (_, size), class, rating), (ids, mut tags, untagged, sheets))| {
+                    tags.sort_by_key(|t| { let (a, n, _) = crate::tags::split(t); (a, n, t.clone()) });
+                    if untagged > 0 {
+                        tags.push(format!("{untagged} untagged"));
+                    }
+                    let mut sh: Vec<u32> = sheets;
+                    sh.sort_by_key(|x| p.sheet_no(*x));
+                    let cells = vec![name, size, class, rating, ids.len().to_string(), tags.join(", "), sh.iter().map(|x| sheet_no(p, *x)).collect::<Vec<_>>().join(", ")];
+                    Row { sheet: ids.first().and_then(|i| p.item(*i)).map_or(0, |i| i.sheet), ids, cells, status: None }
+                })
+                .collect();
+            let mut cs = cols(&specs, us);
+            cs[4].num = true;
+            (cs, rows)
+        }
         "datasheets" => {
             let specs: Vec<Spec> = vec![("tag", "Tag", "", false), ("kind", "Type", "", false), ("rev", "Rev", "", false), ("status", "Status", "", false), ("date", "Date", "", false), ("by", "By", "", false), ("changed", "Changed since issue", "", false), ("area", "Area", "", false), ("sheet", "Sheet", "", false)];
             let rows = crate::datasheets::all(p)
@@ -326,6 +399,28 @@ pub fn xlsx(p: &Project, kind: &str) -> Result<Vec<u8>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_take_off_counts_every_valve_and_fitting_once() {
+        let p = crate::examples::get("pump").unwrap();
+        let l = build(&p, "takeoff").unwrap();
+        let row = |name: &str, size: &str| l.rows.iter().find(|r| r.cells[0] == name && r.cells[1] == size).map(|r| r.cells.clone());
+        let g3 = row("Gate valve", "3\"").expect("3\" gate valves");
+        assert_eq!(g3[2], "A1A");
+        assert_eq!(g3[4], "4");
+        assert!(g3[5].contains("HV-104") && g3[5].contains("HV-108"));
+        assert_eq!(row("Control valve, pneumatic", "3\"").unwrap()[3], "300#");
+        assert!(row("Vent", "3\"").unwrap()[5].contains("1 untagged"));
+        // Every piping component once: the quantities add up to the piping objects drawn.
+        let piping = p.items.iter().filter(|i| symbols::get(&i.sym).is_some_and(|s| matches!(s.cat, Cat::Valve | Cat::Control | Cat::Fitting) || (s.cat == Cat::Primary && s.inline))).map(|i| i.obj).collect::<std::collections::HashSet<_>>().len();
+        assert_eq!(l.rows.iter().map(|r| r.cells[4].parse::<usize>().unwrap()).sum::<usize>(), piping);
+        // A relief valve between two sizes shows both.
+        let c = build(&crate::examples::get("compressor").unwrap(), "takeoff").unwrap();
+        assert!(c.rows.iter().any(|r| r.cells[0] == "Pressure safety valve" && r.cells[1] == "3\" × 2\""));
+        // Nothing from a process flow diagram.
+        let f = build(&crate::examples::get("pfd").unwrap(), "takeoff").unwrap();
+        assert!(f.rows.is_empty());
+    }
     use crate::checks::tests::B;
     use crate::model::Val;
 

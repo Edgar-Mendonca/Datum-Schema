@@ -555,6 +555,14 @@ const shots = process.env.SHOTS;
   await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
   check("check 18 finds a range below the operating pressure", (await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(x => x.includes("range of PI-102")));
 
+  // 39. The valve and fitting take-off: counted by type, size and class; export to CSV.
+  await openEx("Pump transfer");
+  await p.click(".tabs button:text-is('Lists')"); await p.click(".ribbon button:has-text('Take-off')"); await p.waitForTimeout(400);
+  { const rows = await p.$$eval(".lists tbody tr.f", els => els.map(e => [...e.querySelectorAll("td")].map(td => td.textContent)));
+    check("the take-off counts the 3\" gate valves", rows.some(r => r[0] === "Gate valve" && r[1] === '3"' && r[2] === "A1A" && r[4] === "4"), JSON.stringify(rows)); }
+  await p.click(".cfilter button:has-text('CSV')"); await p.waitForTimeout(400);
+  { const csv = (await inv("exports")).filter(e => e.kind === "csv").pop(); check("the take-off exports to CSV", !!csv && csv.what === "takeoff" && csv.text.startsWith("Item,Size,Pipe class,Rating,Quantity"), csv?.text.slice(0, 80)); }
+
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();
   await fetch(`${url}quit`).catch(() => {});
