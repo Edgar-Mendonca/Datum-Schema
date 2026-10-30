@@ -95,6 +95,13 @@ fn exercise(p: &Project) {
         assert!(!d.sections.is_empty());
     }
     let _ = crate::datasheets::xlsx(p);
+    let _ = crate::datasheets::layout_rows(p);
+    for l in crate::loops::all(p) {
+        crate::loops::diagram(p, &l.key).expect("every loop draws");
+    }
+    if let Ok(book) = crate::datasheets::xlsx(p) {
+        crate::import::plan(p, &book).expect("an exported workbook reads back");
+    }
     let _ = view::all(p);
     let _ = crate::tags::renumber(p);
 }

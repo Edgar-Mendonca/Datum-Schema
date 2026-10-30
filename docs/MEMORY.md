@@ -6,7 +6,7 @@
 | | |
 | --- | --- |
 | **Product** | Datum Schema: intelligent P&IDs and process flow diagrams: draw, check and list (symbols and lines that carry their data and connections; live line list, equipment list, instrument index and valve list; drawing checks; line hydraulics; print, SVG and DXF) |
-| **Current version** | 0.1.9 (2026-10-30) |
+| **Current version** | 0.1.10 (2026-10-30) |
 | **Repo** | `Edgar-Mendonca/Datum-Schema` · branch `claude/vigilant-hamilton-ku7r0w` (the first branch pushed, so the default branch) |
 | **Stack** | Rust engine (`crates/core`: model, symbols, graph, tags, checks, hydraulics, lists, frame, routing, DXF), Tauri 2, SolidJS + strict TypeScript; no Python |
 | **Identifier** | `com.edgarmendonca.datumschema` · files `.dschema` (SQLite, `format` 3 (2 before 0.1.9: no `issues` table); JSON `format` 1 from 0.1.0–0.1.4 converts) · installer `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` · publisher "Datum" |
@@ -31,6 +31,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | `crates/core/src/symbols.rs` | The symbol library (about 80 of our own drawings in a small drawing language: polylines, outlines, fills, dashes, circles, arcs, ellipses, rectangles, text), ports with directions, categories, tag prefixes, in-line and terminal flags; placement (turn, mirror, scale); primitives and their SVG |
 | `crates/core/classes.json`, `crates/core/src/classes.rs` | The class library (83 classes, DEXPI-style names, inheritance from PlantItem, symbols, prefixes, attributes with quantity, type, choices, DEXPI name, required) and its reader: `attrs(project, class)` merges inherited, own and project (`settings.user_attrs`) attributes |
 | `crates/core/src/datasheets.rs` | Datasheets: per instrument, primary element, control valve and relief device; General, Process conditions (from `process_source`: its line, a primary element it is tapped to, the equipment it is mounted on, else its loop's measurement), the class's own attributes, Specification (`group`), company attributes; Excel with one worksheet each. Revisions: `build_in` marks rows changed (Δ) against the last `Issue` snapshot (SI display units), `next_rev` (A… before purchase, 0… from purchase on), `snapshot` |
+| `crates/core/src/import.rs` | Datasheet import from Excel (calamine): `read` (sheets as text grids, capped), `plan` (match by tag; a table with a Tag header, or one datasheet per worksheet; labels by `norm`; units by `unit_expr`/`quantity`; kinds set, same, conflict, bad; unmatched tags, unknown labels). The window applies the "set" rows as one `Op::Batch` of `SetData` |
+| `crates/core/src/loops.rs` | Loop diagrams: `all` (loops of ≥ 2 members by first letter and number, relief devices left out), `diagram` (A3 sheet with the frame: field devices with their own symbols, JB terminal block, I/O box, control-system functions; wiring from the "Wiring" attributes `jb`, `jb_terminals`, `cable`, `system`, `io`; a To complete list) |
 | `crates/core/src/units.rs` | Calc's unit table (NIST SP 811) with unit expressions and Schema's display table |
 | `crates/core/src/pipes.rs` | Pipe's sizes ½"–24" and schedules (ASME B36.10M/B36.19M dimensions); inside diameters |
 | `crates/core/src/doc.rs` | The history (`Change`: who, when, what, object, old, new; recorded by diffing objects after every edit, undo and redo). Edit operations (NewLineObject, SetNode, AddNode, SetNode2, DeleteNode, add, set, move, rotate, mirror, delete with merge of in-line items, set data, tags, bend points, split, paste with the next free tags, pair connectors, sheets, title, project, settings, renumber, batch) on a copy, kept only if `normalize` finds nothing to repair; undo/redo; size-limited reads and atomic writes |
@@ -85,6 +87,9 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 
 | Version | Decision | Why |
 | --- | --- | --- |
+| 0.1.10 | Import reads with calamine (MIT; NOTICE lists its crates): writing an xlsx reader of our own would be weeks for no gain, and hostile files are its job. Rows that live on the line, vessel or drawing (key empty) are never written; a disagreement is a "conflict" row naming the source. Blank cells never clear. Numbers take the cell's own unit, else the header's "(unit)", else the project's display unit; gauge marks (psig, barg) are read as the pressure the datasheet shows | The P&ID stays the one source for process data; imports must be safe to run twice |
+| 0.1.10 | The datasheet layout is project data (`Settings.ds_layout`), filtering the datasheet view only: hidden rows keep data, are imported and are in issue snapshots; Δ counts only shown rows. The shell copies the default layout into every new project, examples too | A company form is a view; hiding must never lose data |
+| 0.1.10 | Loop = instruments with the same first letter and number (ISA-5.1), at least two, relief devices excluded. Wiring is five text attributes in the class library group "Wiring" (not on the datasheet). Primary elements are drawn without wiring. The diagram is engine prims on an A3 sheet with the standard frame, so print and (later) DXF draw the same thing | Loop diagrams come from the same objects as the P&ID; nothing to keep in step |
 | 0.1.9 | An issue (`model::Issue`, project-level `issues`, SQLite table `issues`) keeps the whole datasheet as text per "Section › Label" in SI display units; Δ compares the current SI datasheet to the last issue. Issues of a deleted object go with it (dropped silently in `normalize`). Undo withdraws an issue; there is no other way to delete one | A snapshot of what was issued is what a revision means; SI display text survives unit switches and class changes; issued records should not be edited |
 | 0.1.9 | File format 3: 0.1.8 refuses 0.1.9 files ("update Datum Schema") rather than opening them and dropping the revisions on save | Losing issued revisions silently is worse than asking to update |
 | 0.1.9 | Revisions: letters (A, B… Z, AA) for Preliminary and Issued for Enquiry, numbers (0, 1…) for Issued for Purchase and As-built; suggested, the user may type another (unique per datasheet, at most 12 characters). Bulk issue gives each datasheet its own next revision | Common practice in process plant documents; companies differ, so it is a suggestion |
@@ -138,9 +143,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.1.7 | Plant panel (hierarchy, every object, drag to draw or move), delete the object or only the drawing, objects on several sheets, Area column in the lists | ✅ |
 | 0.1.8 | Instrument datasheets (process conditions from the line, vessel or loop; Specification group; print on A4; Excel one worksheet each) | ✅ |
 | 0.1.9 | Datasheet revisions and status (issue with rev, status, date, author, note; Δ since the last issue; revision block on screen, print and Excel; datasheet index list with bulk issue); file format 3 | ✅ |
-| 0.1.10 | Next, proposed: datasheet import from Excel (match by tag, preview, never overwrite line or vessel values) | ⬜ |
-| 0.1.11 | Next, proposed: company datasheet layout (rows, order, logo, form number) | ⬜ |
-| 0.1.12 | Next, proposed: loop diagrams from the loop | ⬜ |
+| 0.1.10 | Datasheet import from Excel (by tag, preview, never overwriting P&ID values, one undo step); company datasheet layout (form number, logo, footer, hidden rows, section order, default for new projects); loop diagrams (A3, wiring per device, print one or all). The three planned steps released as one version, as the user asked | ✅ |
+| 0.1.11 | Next, proposed: cause-and-effect matrix from interlocks; DEXPI export; loop diagrams in DXF | ⬜ |
 | later | DEXPI import and export; send a line to Datum Pipe; send a loop to Datum Sim; DXF import as a background | ⬜ |
 | 0.3 | Process flow diagrams with stream tables; heat and mass balance checks; revision clouds and comparison | ⬜ |
 | 0.4 | Loop diagrams; cause-and-effect matrix; valve datasheets | ⬜ |
@@ -189,4 +193,11 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 ### 2026-10-30: Session 1, 0.1.9 (datasheet revisions)
 - Built and released 0.1.9: `Op::IssueDatasheet` (one or many, rev suggested per status, `by` from the document's user), `model::Issue` with the snapshot, the `issues` table (format 3), Δ marks and `was` per row, revision block, `next_rev`, the Datasheet index list (fifth list kind) with bulk issue, Excel and print with revisions, history entries `issue` / `undo withdraw`.
 - Tests: engine (revision sequence incl. Z → AA; issue, Δ for an own value and a line value, US units do not mark changes, duplicate and bad statuses refused, index row, undo, save and reopen, delete takes issues; format 2 files open cleanly; newer formats refused), hardening (random hostile issues), UI (not issued, suggested A, issue, Δ, index row, bulk issue of the shown rows).
+
+### 2026-10-30: Session 1, 0.1.10 (import, company layout, loop diagrams)
+- The user asked for the three planned steps (Excel import, company layout, loop diagrams) as one release, 0.1.10.
+- Engine: `import.rs` (calamine reader; table and one-sheet layouts; unit conversion; conflicts for line, vessel and drawing values), `datasheets::full`/`all_full`/`layout_rows` and the layout in `build_in`, `model::DsLayout` with logo checks, `loops.rs`, the Wiring attributes on Instrument and ControlValve. Shell and test-server commands `import_datasheets`, `loops`, `loop_diagram`, `layout_rows`; the default layout goes into every new project.
+- Window: import preview dialog (tick, import as one Batch), Options › Datasheets (form, logo, footer, rows, order, use for new projects), logo, form and footer on datasheets and their print, loop diagrams dialog (list, preview, wiring table, print), Print with loop diagrams, ribbon Lists › Loop Diagrams and Import Excel, Inspector Loop diagram…, help cards.
+- Tests: engine 74 (import table and read-back of our own export, units as typed, hostile bytes; layout; loops on every example; hardening runs import, layout and loops on random projects); UI 77 (import preview and apply, layout, loop diagram, wiring, print).
+- Looked at the rendered loop diagrams: moved device text under the symbols (it crossed the wiring), drew primary elements without wiring.
 

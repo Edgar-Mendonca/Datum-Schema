@@ -7,7 +7,7 @@ import { panel, setPanel, panelOpen, setPanelOpen, derived, call, out, act, proj
 import { fromU } from "./units";
 import { C } from "./cmds";
 import { Help } from "./help";
-import { openDatasheet, issueDialog } from "./datasheet";
+import { openDatasheet, issueDialog, importDatasheets } from "./datasheet";
 
 const TABS: [string, string][] = [["checks", "Checks"], ["lines", "Line list"], ["equipment", "Equipment"], ["instruments", "Instruments"], ["valves", "Valves"], ["datasheets", "Datasheets"]];
 
@@ -65,7 +65,8 @@ const ListView = (p: { kind: string }) => {
         <input class="lsearch" placeholder="Filter" value={q()} onInput={e => setQ(e.currentTarget.value)} />
         <label class="inline small">Group by <select onChange={e => setGroup(+e.currentTarget.value)}><option value="-1">—</option><For each={list()?.cols ?? []}>{(c, i) => <option value={i()}>{c.label}</option>}</For></select></label>
         <span class="grow" /><span class="muted small">{rows().length} rows</span>
-        <Show when={p.kind === "datasheets" && rows().length}><button class="btn sm" title="Issue every datasheet shown (use the filter to choose), each with its next revision" onClick={() => issueDialog(rows().map(r => r.ids[0]))}>Issue the {rows().length} shown…</button></Show>
+        <Show when={p.kind === "datasheets"}><button class="btn sm" title="Import datasheet values from an Excel workbook, with a preview first" onClick={importDatasheets}>Import Excel…</button></Show>
+        <Show when={p.kind === "datasheets" && rows().length}><button class="btn sm" title="Issue every datasheet shown (use the filter to choose), each with its next revision" onClick={() => issueDialog(rows().map(r => r.ids[0]))}>Issue {rows().length} shown…</button></Show>
         <button class="btn sm" onClick={() => C.exportList(p.kind, "xlsx")}>Excel</button><button class="btn sm" onClick={() => C.exportList(p.kind, "csv")}>CSV</button><button class="btn sm" onClick={C.print}>Print</button>
       </div>
       <div class="lscroll">

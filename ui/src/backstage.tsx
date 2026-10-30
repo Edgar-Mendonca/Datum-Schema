@@ -1,5 +1,6 @@
 // File (backstage): home with examples and recent projects, export, print, options (including the
 // check rules and hydraulic limits), roadmap, updates. From Datum Plan by way of Datum Pipe.
+import { LayoutSec } from "./datasheet";
 import { For, Show, createSignal, createResource, onMount, JSX } from "solid-js";
 import { PrintPage } from "./print";
 import { RoadmapPage } from "./roadmap";
@@ -158,6 +159,9 @@ const ProjectSettings = () => {
       <Opt l="Snap grid" hint="Symbols, bends and ends snap to it."><span class="inline"><input type="number" step="0.5" style={{ width: "90px" }} value={s().grid} onChange={e => set({ grid: Math.max(0.5, +e.currentTarget.value || 2.5) })} /> mm</span></Opt>
     </Sec>
     <ClassesSec />
+    <Sec t="Datasheets" about="Your company's datasheet form: its number, your logo, a footer, the rows it shows and the order of its sections. Saved with the project; use it for new projects too.">
+      <LayoutSec />
+    </Sec>
     <Sec t="Hydraulic limits" about="Typical limits by service, used for the badges on the lines and check 13. Change them to your company's practice; a line takes the limits of its service (set on the line, or worked out from a pump's suction or discharge and the phase).">
       <table class="tbl limits"><thead><tr><th>Service</th><th class="r">Min velocity <span class="unit">{unit("velocity")}</span></th><th class="r">Max velocity <span class="unit">{unit("velocity")}</span></th><th class="r">Max pressure drop <span class="unit">{unit("dp100")}</span></th></tr></thead>
         <tbody><For each={s().limits}>{(l, i) => <tr><td>{l.name}</td>

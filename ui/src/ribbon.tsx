@@ -9,6 +9,8 @@ import { Icon } from "./ui";
 import { Help, helpCard, HELP } from "./help";
 import { PRESETS } from "./palette";
 import { Cat, Kind } from "./api";
+import { importDatasheets } from "./datasheet";
+import { openLoops } from "./loops";
 
 const GH = "https://github.com/Edgar-Mendonca/Datum-Schema";
 
@@ -142,7 +144,7 @@ export const Ribbon = () => {
         <G l="Tags" h="tags"><B big i="renum" l="Renumber" run={C.renumber} /></G>
       </Show>
       <Show when={tab() === "lists"}>
-        <G l="Lists" h="lists"><B big i="list" l="Line List" run={() => C.panel("lines")} /><B big i="list" l="Equipment" run={() => C.panel("equipment")} /><B big i="list" l="Instruments" run={() => C.panel("instruments")} /><B big i="list" l="Valves" run={() => C.panel("valves")} /><B big i="list" l="Datasheets" run={() => C.panel("datasheets")} /></G>
+        <G l="Lists" h="lists"><B big i="list" l="Line List" run={() => C.panel("lines")} /><B big i="list" l="Equipment" run={() => C.panel("equipment")} /><B big i="list" l="Instruments" run={() => C.panel("instruments")} /><B big i="list" l="Valves" run={() => C.panel("valves")} /><B big i="list" l="Datasheets" run={() => C.panel("datasheets")} /><B big i="sig" l="Loop Diagrams" run={() => openLoops()} /><B big i="import" l="Import Excel" title="Import datasheet values from an Excel workbook, with a preview first" run={importDatasheets} /></G>
         <G l="Export" h="export"><B big i="xlsx" l="Excel" dd={e => openMenu(e, [...[["lines", "Line list"], ["equipment", "Equipment list"], ["instruments", "Instrument index"], ["valves", "Valve list"], ["datasheets", "Datasheet index"]].map(([k, l]) => ({ label: l, run: () => C.exportList(k, "xlsx") })), "-", { label: "Datasheets (one worksheet each)", run: C.exportDatasheets }])} /><B big i="csv" l="CSV" dd={e => openMenu(e, [["lines", "Line list"], ["equipment", "Equipment list"], ["instruments", "Instrument index"], ["valves", "Valve list"], ["datasheets", "Datasheet index"]].map(([k, l]) => ({ label: l, run: () => C.exportList(k, "csv") })))} /><B big i="print" l="Print" run={C.print} /></G>
       </Show>
       <Show when={tab() === "sheets"}>

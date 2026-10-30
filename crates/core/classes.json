@@ -403,6 +403,31 @@
      "label": "Notes",
      "type": "text",
      "group": "Specification"
+    },
+    {
+     "key": "jb",
+     "label": "Junction box",
+     "group": "Wiring"
+    },
+    {
+     "key": "jb_terminals",
+     "label": "JB terminals",
+     "group": "Wiring"
+    },
+    {
+     "key": "cable",
+     "label": "Cable",
+     "group": "Wiring"
+    },
+    {
+     "key": "system",
+     "label": "Control system",
+     "group": "Wiring"
+    },
+    {
+     "key": "io",
+     "label": "I/O channel",
+     "group": "Wiring"
     }
    ]
   },
@@ -590,6 +615,31 @@
      "label": "Notes",
      "type": "text",
      "group": "Specification"
+    },
+    {
+     "key": "jb",
+     "label": "Junction box",
+     "group": "Wiring"
+    },
+    {
+     "key": "jb_terminals",
+     "label": "JB terminals",
+     "group": "Wiring"
+    },
+    {
+     "key": "cable",
+     "label": "Cable",
+     "group": "Wiring"
+    },
+    {
+     "key": "system",
+     "label": "Control system",
+     "group": "Wiring"
+    },
+    {
+     "key": "io",
+     "label": "I/O channel",
+     "group": "Wiring"
     }
    ]
   },

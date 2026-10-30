@@ -4,9 +4,9 @@
 // they come from and are edited on the line. Print and Excel export cover every datasheet.
 // A datasheet is issued with a revision and a status; values changed since the last issue are
 // marked Δ, and the revision block lists every issue.
-import { For, Show, createResource, createSignal } from "solid-js";
-import { Datasheet, DsRow, Val, parseNum, STATUSES } from "./api";
-import { call, act, proj, openDialog, closeDialog, setBackstage, toast } from "./store";
+import { For, Show, createMemo, createResource, createSignal } from "solid-js";
+import { Datasheet, DsRow, DsLayout, ImportPlan, Val, parseNum, STATUSES } from "./api";
+import { call, act, proj, openDialog, closeDialog, setBackstage, toast, opts, setOpts } from "./store";
 import { fromU } from "./units";
 import { Dialog, Pick } from "./ui";
 import { C } from "./cmds";
@@ -99,11 +99,95 @@ export const openDatasheet = (id: number) => openDialog(() => {
         <button class="btn" onClick={C.exportDatasheets}>Excel (every datasheet)</button>
       </>}>
       <Show when={d()} fallback={<p class="muted">Making the datasheet…</p>}>
+        <Show when={d()!.logo || d()!.form}><p class="dsco"><Show when={d()!.logo}><img class="dslogo" src={d()!.logo} alt="" /></Show><span class="muted small">{d()!.form ? `Form ${d()!.form}` : ""}</span></p></Show>
         <p class="dsrev"><b>{revLine(d()!)}</b>{d()!.by ? <span class="muted"> · issued by {d()!.by}</span> : ""}</p>
         <p class="muted small">Type the instrument's own values here or in the Inspector; grey rows come from the line or the drawing and change there. Δ marks a value changed since the last issue (hover for what it was).</p>
         <DatasheetTable d={d()!} edit />
         <RevBlock d={d()!} />
+        <Show when={d()!.footer}><p class="muted small">{d()!.footer}</p></Show>
       </Show>
     </Dialog>
   );
 });
+
+/** Import datasheet values from an Excel workbook: the engine's plan is shown first; only the
+ *  ticked values are written, as one edit that Undo takes back. */
+export const importDatasheets = async () => {
+  const plan = await call<ImportPlan | null>("import_datasheets");
+  if (!plan) return;
+  openDialog(() => {
+    const sets = plan.changes.filter(c => c.kind === "set");
+    const [on, setOn] = createSignal<boolean[]>(sets.map(() => true));
+    const n = createMemo(() => on().filter(Boolean).length);
+    const others = plan.changes.filter(c => c.kind === "conflict" || c.kind === "bad");
+    const same = plan.changes.filter(c => c.kind === "same").length;
+    const ok = async () => {
+      const ops = sets.filter((_, i) => on()[i]).map(c => ({ SetData: { ids: [c.obj], key: c.key, val: c.val } }));
+      if (!ops.length) return true;
+      const r = await act({ Batch: { ops } });
+      if (r) toast(`Imported ${ops.length} ${ops.length === 1 ? "value" : "values"}. Undo takes ${ops.length === 1 ? "it" : "them all"} back.`, true);
+      return !!r;
+    };
+    return (
+      <Dialog title="Import datasheets from Excel" wide ok={ok} okText={`Import ${n()} ${n() === 1 ? "value" : "values"}`} help="import">
+        <p class="imsum">
+          <b>{sets.length}</b> {sets.length === 1 ? "value" : "values"} to import · {same} already the same · <span classList={{ warnline: others.length > 0 }}>{others.length} not imported</span> · {plan.used} of {plan.sheets} worksheets matched a datasheet
+        </p>
+        <Show when={sets.length}>
+          <h4>To import <button class="btn sm" onClick={() => setOn(on().map(() => !on().every(Boolean)))}>{on().every(Boolean) ? "Untick all" : "Tick all"}</button></h4>
+          <table class="tbl small imtbl"><thead><tr><th /><th>Tag</th><th>Value</th><th>Now</th><th>From the file</th></tr></thead><tbody>
+            <For each={sets}>{(c, i) => <tr><td><input type="checkbox" checked={on()[i()]} onChange={e => setOn(on().map((x, j) => (j === i() ? e.currentTarget.checked : x)))} /></td><td class="mono">{c.tag}</td><td>{c.label}</td><td class="muted">{c.old || "—"}</td><td><b>{c.new}</b></td></tr>}</For>
+          </tbody></table>
+        </Show>
+        <Show when={others.length}>
+          <h4>Not imported</h4>
+          <table class="tbl small imtbl"><thead><tr><th>Tag</th><th>Value</th><th>Now</th><th>The file says</th><th>Why</th></tr></thead><tbody>
+            <For each={others}>{c => <tr class={c.kind}><td class="mono">{c.tag}</td><td>{c.label}</td><td>{c.old || "—"}</td><td>{c.new}</td><td class="muted">{c.kind === "conflict" ? c.note : c.note}</td></tr>}</For>
+          </tbody></table>
+        </Show>
+        <Show when={plan.unmatched.length}><p class="small"><b>Tags with no datasheet in this project:</b> {plan.unmatched.join(", ")}</p></Show>
+        <Show when={plan.unknown.length}><p class="small"><b>Columns or rows not recognised:</b> {plan.unknown.join(", ")} <span class="muted">(add them as attributes in Options › Classes, then import again)</span></p></Show>
+        <p class="muted small">Values that come from the line, the vessel or the drawing are never imported: change them there. Blank cells change nothing.</p>
+      </Dialog>
+    );
+  });
+};
+
+/** Options › Datasheets: the company layout (form number, logo, footer, rows shown, section order). */
+export const LayoutSec = () => {
+  const [rows] = createResource(() => proj(), () => call<[string, string[]][]>("layout_rows"));
+  const l = (): DsLayout => proj()!.settings.ds_layout;
+  const set = (x: Partial<DsLayout>) => act({ SetSettings: { settings: { ...proj()!.settings, ds_layout: { ...l(), ...x } } } });
+  const key = (s: string, r: string) => `${s} › ${r}`;
+  const order = () => {
+    const names = (rows() ?? []).map(r => r[0]);
+    return [...names].sort((a, b) => { const i = l().order.indexOf(a), j = l().order.indexOf(b); return (i < 0 ? 999 : i) - (j < 0 ? 999 : j); });
+  };
+  const move = (name: string, d: number) => { const o = order(); const i = o.indexOf(name); const j = i + d; if (j < 0 || j >= o.length) return; [o[i], o[j]] = [o[j], o[i]]; set({ order: o }); };
+  const logo = (f: File | undefined) => {
+    if (!f) return;
+    if (!/^image\/(png|jpeg|svg\+xml)$/.test(f.type)) return toast("Choose a PNG, JPEG or SVG image.");
+    if (f.size > 200 * 1024) return toast("The logo is larger than 200 KB: save a smaller copy and choose it again.");
+    const r = new FileReader(); r.onload = () => set({ logo: String(r.result) }); r.readAsDataURL(f);
+  };
+  return (
+    <div class="dslayout">
+      <div class="form">
+        <label>Form number</label><div><input value={l().form} placeholder="e.g. IDS-001 rev 2" onChange={e => set({ form: e.currentTarget.value })} /></div>
+        <label>Logo</label><div class="inline"><Show when={l().logo}><img class="dslogo" src={l().logo} alt="" /></Show><label class="btn sm">Choose…<input type="file" accept="image/png,image/jpeg,image/svg+xml" hidden onChange={e => logo(e.currentTarget.files?.[0])} /></label><Show when={l().logo}><button class="btn sm" onClick={() => set({ logo: "" })}>Remove</button></Show></div>
+        <label>Footer</label><div><input value={l().footer} placeholder="A line at the foot of every datasheet" onChange={e => set({ footer: e.currentTarget.value })} /></div>
+      </div>
+      <Show when={(rows() ?? []).length} fallback={<p class="muted small">Draw an instrument to choose the rows its datasheet shows.</p>}>
+        <p class="muted small">Untick the rows your company's form leaves out; move sections up or down. Hidden rows keep their data and are still imported and issued.</p>
+        <div class="dsrows"><For each={order()}>{name => {
+          const labels = () => (rows() ?? []).find(r => r[0] === name)?.[1] ?? [];
+          return <div class="dssec">
+            <div class="dsech"><b>{name}</b><button class="btn sm" title="Move up" onClick={() => move(name, -1)}>↑</button><button class="btn sm" title="Move down" onClick={() => move(name, 1)}>↓</button></div>
+            <For each={labels()}>{r => <label class="chk"><input type="checkbox" checked={!l().hidden.includes(key(name, r))} onChange={e => set({ hidden: e.currentTarget.checked ? l().hidden.filter(h => h !== key(name, r)) : [...l().hidden, key(name, r)] })} />{r}</label>}</For>
+          </div>;
+        }}</For></div>
+      </Show>
+      <p><button class="btn sm" onClick={() => { const o = { ...opts(), defaults: { ...(opts().defaults ?? proj()!.settings), ds_layout: l() } }; setOpts(o); call("set_options", { opts: o }).then(() => toast("New projects and the examples will use this datasheet layout.", true)); }}>Use this layout for new projects</button></p>
+    </div>
+  );
+};

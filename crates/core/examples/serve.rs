@@ -82,7 +82,12 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             let text = match kind.as_str() {
                 "csv" => lists::csv(&lists::build(&s.doc.p, &what)?),
                 "xlsx" => format!("{} bytes", lists::xlsx(&s.doc.p, &what)?.len()),
-                "datasheets" => format!("{} bytes", datum_core::datasheets::xlsx(&s.doc.p)?.len()),
+                "datasheets" => {
+                    // Kept as the file the next datasheet import reads (the test cannot pick one).
+                    let bytes = datum_core::datasheets::xlsx(&s.doc.p)?;
+                    std::fs::write(import_file(), &bytes).map_err(|e| e.to_string())?;
+                    format!("{} bytes", bytes.len())
+                }
                 _ => {
                     let sh = a["sheet"].as_u64().unwrap_or(0) as u32;
                     let sheet = s.doc.p.sheet(sh).or(s.doc.p.sheets.first()).ok_or("There is no sheet.")?.clone();
@@ -92,12 +97,23 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             s.exports.push(json!({ "kind": kind, "what": what, "text": text }));
             json!(format!("export.{kind}"))
         }
+        "import_datasheets" => {
+            let bytes = std::fs::read(import_file()).map_err(|_| "Export the datasheets first: the test imports the last export.".to_string())?;
+            serde_json::to_value(datum_core::import::plan(&s.doc.p, &bytes)?).unwrap()
+        }
+        "loops" => serde_json::to_value(datum_core::loops::all(&s.doc.p)).unwrap(),
+        "loop_diagram" => serde_json::to_value(datum_core::loops::diagram(&s.doc.p, &str_("key"))?).unwrap(),
+        "layout_rows" => serde_json::to_value(datum_core::datasheets::layout_rows(&s.doc.p)).unwrap(),
         "exports" => json!(s.exports),
         "recent" => json!([]),
         "recovery" | "startup_file" | "check_update" => Value::Null,
         "version" => json!("test"),
         _ => Value::Null,
     })
+}
+
+fn import_file() -> std::path::PathBuf {
+    std::env::temp_dir().join(format!("datum-schema-ui-{}.xlsx", std::process::id()))
 }
 
 fn main() {

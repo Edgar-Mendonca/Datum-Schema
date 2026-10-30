@@ -8,6 +8,7 @@ import { Help } from "./help";
 import { C } from "./cmds";
 import { Pick } from "./ui";
 import { openDatasheet } from "./datasheet";
+import { openLoops } from "./loops";
 
 const Row = (p: { label: string; unit?: string; children: JSX.Element; hint?: string }) => (
   <div class="iprow"><label>{p.label}{p.unit && <span class="unit">{p.unit}</span>}</label>{p.children}{p.hint && <span class="hint">{p.hint}</span>}</div>
@@ -80,7 +81,7 @@ const ItemPanel = (p: { it: Item }) => {
       <Pick value={String(ob().node)} set={v => act({ SetNode: { ids: [ob().id], node: +v } })} options={(proj()?.nodes ?? []).filter(n => n.level === "area").map(n => [String(n.id), proj()!.nodes.find(u => u.id === n.parent)?.name ? `${proj()!.nodes.find(u => u.id === n.parent)!.name} › ${n.name}` : n.name] as [string, string])} />
     </Row>}</Show>
     <Show when={["instrument", "primary", "control"].includes(s()?.cat ?? "")}>
-      <div class="ibtns"><button class="btn sm" title="The datasheet: this object's data with the process conditions of its line, to print or export" onClick={() => openDatasheet(p.it.obj)}>Datasheet…</button><Help k="datasheets" /></div>
+      <div class="ibtns"><button class="btn sm" title="The datasheet: this object's data with the process conditions of its line, to print or export" onClick={() => openDatasheet(p.it.obj)}>Datasheet…</button><button class="btn sm" title="The loop diagram of this instrument's loop, with its wiring" onClick={() => openLoops(String(p.it.obj))}>Loop diagram…</button><Help k="datasheets" /></div>
     </Show>
     <h4>Data</h4>
     <For each={derived()?.attrs[o()?.class ?? ""] ?? s()?.fields ?? []}>{f => <FieldInput f={f} v={o()?.data[f.key]} ids={[p.it.obj]} placeholder={f.key === "loop" ? (o()?.tag.match(/\d+/)?.[0] ?? "") : undefined} />}</For>

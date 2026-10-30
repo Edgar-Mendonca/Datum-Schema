@@ -95,6 +95,10 @@ fn fresh(a: &App, mut p: Project) -> Project {
     if let (Some(s), true) = (&a.opts.defaults, p.items.is_empty()) {
         p.settings = s.clone();
     }
+    // The company datasheet layout goes with every new project, examples too.
+    if let Some(s) = &a.opts.defaults {
+        p.settings.ds_layout = s.ds_layout.clone();
+    }
     p
 }
 
@@ -130,6 +134,37 @@ fn changes(st: State<St>, id: u32) -> Vec<doc::Change> {
     let a = st.lock();
     let obj = a.doc.p.obj_id(id).unwrap_or(0);
     a.doc.history.iter().rev().filter(|c| id == 0 || c.obj == obj).take(500).cloned().collect()
+}
+
+/// What importing a workbook of datasheets would change (nothing changes until the window applies
+/// the plan as one edit).
+#[tauri::command]
+async fn import_datasheets(app: AppHandle, st: State<'_, St>) -> R<Option<datum_core::import::Plan>> {
+    let Some(path) = pick(&app, "Excel workbook", &["xlsx"]) else { return Ok(None) };
+    let len = std::fs::metadata(&path).map_err(|e| format!("Could not open {}: {e}", path.display()))?.len();
+    if len > doc::MAX_FILE {
+        return Err(format!("{} is too large to read.", path.display()));
+    }
+    let bytes = std::fs::read(&path).map_err(|e| format!("Could not open {}: {e}", path.display()))?;
+    guard(|| datum_core::import::plan(&st.lock().doc.p, &bytes)).map(Some)
+}
+
+/// Every instrument loop with two or more members.
+#[tauri::command]
+fn loops(st: State<St>) -> R<Vec<datum_core::loops::LoopInfo>> {
+    guard(|| Ok(datum_core::loops::all(&st.lock().doc.p)))
+}
+
+/// The loop diagram of a loop ("L-101", or an object's id).
+#[tauri::command]
+fn loop_diagram(st: State<St>, key: String) -> R<datum_core::loops::LoopView> {
+    guard(|| datum_core::loops::diagram(&st.lock().doc.p, &key))
+}
+
+/// The sections and rows a datasheet layout can show, hide and order.
+#[tauri::command]
+fn layout_rows(st: State<St>) -> R<Vec<(String, Vec<String>)>> {
+    guard(|| Ok(datasheets::layout_rows(&st.lock().doc.p)))
 }
 
 /// The datasheet of an instrument, control valve or relief device (by object or symbol id).
@@ -497,7 +532,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            state, apply, history, changes, datasheet, datasheets_all, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
+            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
             options, set_options, autosave, recovery, recover, recent, startup_file, open_url, version, quit, check_update, install_update
         ])
         .run(tauri::generate_context!())

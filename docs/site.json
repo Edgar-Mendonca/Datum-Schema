@@ -28,7 +28,8 @@
     "About 80 symbols of our own, following ISO 10628-2 and ISA-5.1",
     "Plant objects in a plant › unit › area hierarchy; symbols are views, every change is recorded",
     "A class library you can extend with your company's attributes",
-    "Instrument datasheets with process conditions taken from the P&ID; issue revisions, see what changed (Δ), print and Excel",
+    "Instrument datasheets with process conditions from the P&ID; revisions with what changed (Δ); your company's form; import from Excel; print and Excel",
+    "Loop diagrams drawn from the P&ID, with junction box, cable and I/O wiring",
     "Lines route themselves at right angles, hop over each other and carry flow arrows",
     "A valve dropped on a line splits it and joins both halves",
     "Off-page connectors pair across sheets; click one to jump to its partner",
@@ -71,9 +72,7 @@
       "title": "Instrument documents",
       "when": "Later",
       "items": [
-        "Instrument loop diagrams",
-        "Cause-and-effect matrix from interlocks",
-        "Company datasheet layouts and datasheet import from Excel"
+        "Cause-and-effect matrix from interlocks"
       ]
     },
     {

@@ -25,7 +25,9 @@ export interface Line { id: number; sheet: number; kind: Kind; a: End; b: End; p
 export type NoteKind = "note" | "leader" | "hold";
 export interface Note { id: number; sheet: number; kind: NoteKind; x: number; y: number; w: number; h: number; text: string; to: Pt }
 export interface Limit { service: string; name: string; vmin: number; vmax: number; dp: number }
-export interface Settings { line_format: string; off: number[]; limits: Limit[]; roughness: number; grid: number; hidden: string[]; user_attrs: UserAttr[] }
+export interface Settings { line_format: string; off: number[]; limits: Limit[]; roughness: number; grid: number; hidden: string[]; user_attrs: UserAttr[]; ds_layout: DsLayout }
+/** The company's datasheet layout: form number, logo (data URL), footer, rows left out ("Section › Label"), section order. */
+export interface DsLayout { form: string; logo: string; footer: string; hidden: string[]; order: string[] }
 export interface Project { format: number; name: string; units: "SI" | "US"; title: Title; nodes: PlantNode[]; objects: Obj[]; sheets: Sheet[]; items: Item[]; lines: Line[]; notes: Note[]; settings: Settings; next: number }
 export interface Out { p: Project; path: string | null; dirty: boolean; undo: boolean; redo: boolean; created: number[]; warnings: string[] }
 
@@ -84,6 +86,15 @@ export const num = (v: number, sig = 4) => {
 export interface DsRow { key: string; label: string; value: string; unit: string; q: string; choices: string[]; required: boolean; source: string; changed: boolean; was: string }
 export interface DsIssue { rev: string; status: string; date: string; by: string; note: string }
 /** A datasheet with its revision state: the last issue (rev empty: never issued), the revision block, the Δ count and the next revision per status. */
-export interface Datasheet { obj: number; item: number; sheet: number; tag: string; title: string; sections: { title: string; rows: DsRow[] }[]; rev: string; status: string; date: string; by: string; issues: DsIssue[]; changed: number; next_rev: Record<string, string> }
+export interface Datasheet { obj: number; item: number; sheet: number; tag: string; title: string; sections: { title: string; rows: DsRow[] }[]; rev: string; status: string; date: string; by: string; issues: DsIssue[]; changed: number; next_rev: Record<string, string>; form: string; logo: string; footer: string }
+/** One value of a datasheet import: set (will be written), same, conflict (lives on the line, vessel or drawing), bad. */
+export interface ImportChange { obj: number; tag: string; key: string; label: string; old: string; new: string; val: Val | null; kind: "set" | "same" | "conflict" | "bad"; note: string; sheet: string }
+export interface ImportPlan { changes: ImportChange[]; unmatched: string[]; unknown: string[]; sheets: number; used: number }
+export interface LoopInfo { key: string; tags: string[] }
+/** A loop member and its wiring, in the order of LOOP_WIRING. */
+export interface LoopMember { obj: number; item: number; sheet: number; tag: string; place: "field" | "system"; what: string; wiring: string[] }
+export interface LoopView { key: string; number: string; title: string; w: number; h: number; prims: Prim[]; members: LoopMember[]; missing: string[] }
+/** The wiring attributes of a loop member (loops::WIRING). */
+export const LOOP_WIRING: [string, string][] = [["jb", "Junction box"], ["jb_terminals", "JB terminals"], ["cable", "Cable"], ["system", "Control system"], ["io", "I/O channel"]];
 /** The statuses a datasheet is issued with, in order (model::STATUSES). */
 export const STATUSES = ["Preliminary", "Issued for Enquiry", "Issued for Purchase", "As-built"];

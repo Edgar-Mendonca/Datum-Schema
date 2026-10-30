@@ -61,6 +61,10 @@ pub struct Datasheet {
     pub changed: usize,
     /// The revision to suggest for the next issue, per status.
     pub next_rev: BTreeMap<String, String>,
+    /// The company layout's form number, logo (data URL) and footer.
+    pub form: String,
+    pub logo: String,
+    pub footer: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -209,8 +213,52 @@ pub fn build(p: &Project, id: u32) -> Result<Datasheet, String> {
     build_in(p, &Net::new(p), id)
 }
 
-/// A datasheet with its revision state: the last issue, the revision block and the Δ marks.
+/// A datasheet as the company layout shows it: rows left out, sections in order, the form number,
+/// logo and footer.
 pub fn build_in(p: &Project, net: &Net, id: u32) -> Result<Datasheet, String> {
+    let mut d = full(p, net, id)?;
+    let l = &p.settings.ds_layout;
+    for s in &mut d.sections {
+        let t = s.title.clone();
+        s.rows.retain(|r| !l.hidden.contains(&key(&t, &r.label)));
+    }
+    d.sections.retain(|s| !s.rows.is_empty());
+    // Stable: named sections first in the layout's order, then the rest as they were.
+    d.sections.sort_by_key(|s| l.order.iter().position(|o| *o == s.title).unwrap_or(usize::MAX));
+    d.changed = d.sections.iter().flat_map(|s| &s.rows).filter(|r| r.changed).count();
+    (d.form, d.logo, d.footer) = (l.form.clone(), l.logo.clone(), l.footer.clone());
+    Ok(d)
+}
+
+/// Every section and row a datasheet in this project can have ("Section", ["Label", …]), in the
+/// usual order: what the layout can leave out or reorder.
+pub fn layout_rows(p: &Project) -> Vec<(String, Vec<String>)> {
+    let net = Net::new(p);
+    let mut out: Vec<(String, Vec<String>)> = vec![];
+    let mut seen = std::collections::HashSet::new();
+    for i in p.items.iter().filter(|i| symbols::get(&i.sym).is_some_and(|s| has_datasheet(s.cat)) && seen.insert(i.obj)) {
+        let Ok(d) = full(p, &net, i.obj) else { continue };
+        for s in d.sections {
+            let at = match out.iter().position(|x| x.0 == s.title) {
+                Some(k) => k,
+                None => {
+                    out.push((s.title.clone(), vec![]));
+                    out.len() - 1
+                }
+            };
+            for r in s.rows {
+                if !out[at].1.contains(&r.label) {
+                    out[at].1.push(r.label);
+                }
+            }
+        }
+    }
+    out
+}
+
+/// A datasheet with every row and its revision state: the last issue, the revision block and the
+/// Δ marks (what the import reads and the layout chooses from).
+pub fn full(p: &Project, net: &Net, id: u32) -> Result<Datasheet, String> {
     let us = p.units == "US";
     let mut d = sheet(p, net, id, us)?;
     let si = if us { sheet(p, net, id, false)? } else { d.clone() };
@@ -309,7 +357,13 @@ fn sheet(p: &Project, net: &Net, id: u32, us: bool) -> Result<Datasheet, String>
         sections.push(Section { title: "Company attributes".into(), rows: company });
     }
     let title = format!("{} datasheet", if sym.cat == Cat::Control { "Valve" } else { "Instrument" });
-    Ok(Datasheet { obj: obj.id, item: it.id, sheet: it.sheet, tag: obj.tag.clone(), title, sections, rev: String::new(), status: String::new(), date: String::new(), by: String::new(), issues: vec![], changed: 0, next_rev: BTreeMap::new() })
+    Ok(Datasheet { obj: obj.id, item: it.id, sheet: it.sheet, tag: obj.tag.clone(), title, sections, rev: String::new(), status: String::new(), date: String::new(), by: String::new(), issues: vec![], changed: 0, next_rev: BTreeMap::new(), form: String::new(), logo: String::new(), footer: String::new() })
+}
+
+/// Every datasheet with every row (the layout's hidden rows too), for the import.
+pub fn all_full(p: &Project, net: &Net) -> Vec<Datasheet> {
+    let mut seen = std::collections::HashSet::new();
+    p.items.iter().filter(|i| symbols::get(&i.sym).is_some_and(|s| has_datasheet(s.cat)) && seen.insert(i.obj)).filter_map(|i| full(p, net, i.obj).ok()).collect()
 }
 
 /// Every datasheet in the project, in tag order.
@@ -371,6 +425,9 @@ pub fn xlsx(p: &Project) -> Result<Vec<u8>, String> {
         ws.set_name(&name).map_err(e)?;
         ws.write_string_with_format(0, 0, format!("{} · {}", d.title, d.tag), &bold).map_err(e)?;
         ws.write_string(1, 0, format!("{} · {}", p.title.company, if p.title.project.is_empty() { &p.name } else { &p.title.project })).map_err(e)?;
+        if !d.form.is_empty() {
+            ws.write_string(0, 3, format!("Form {}", d.form)).map_err(e)?;
+        }
         ws.write_string(1, 3, if d.rev.is_empty() { "Not issued".to_string() } else { format!("Rev {} · {} · {}", d.rev, d.status, d.date) }).map_err(e)?;
         let mut r = 3u32;
         for s in &d.sections {
@@ -410,6 +467,9 @@ pub fn xlsx(p: &Project) -> Result<Vec<u8>, String> {
                 ws.write_string(r, 3, &i.note).map_err(e)?;
                 r += 1;
             }
+        }
+        if !d.footer.is_empty() {
+            ws.write_string(r + 1, 0, &d.footer).map_err(e)?;
         }
         ws.set_column_width(0, 32).map_err(e)?;
         ws.set_column_width(1, 26).map_err(e)?;
@@ -538,5 +598,29 @@ mod tests {
         d.apply(Op::DeleteObjects { ids: vec![lt] }).unwrap();
         assert!(d.p.issues.iter().all(|i| i.obj != lt) && d.p.issues.iter().any(|i| i.obj == pi));
         assert_eq!(&xlsx(&d.p).unwrap()[..2], b"PK");
+    }
+
+    #[test]
+    fn the_company_layout_hides_rows_and_orders_sections() {
+        let mut p = crate::examples::get("pump").unwrap();
+        let lt = p.objects.iter().find(|o| o.tag == "LT-101").unwrap().id;
+        let rows = layout_rows(&p);
+        assert!(rows.iter().any(|(s, ls)| s == "Specification" && ls.iter().any(|l| l == "Manufacturer")), "{rows:?}");
+        p.settings.ds_layout = crate::model::DsLayout { form: "IDS-001".into(), footer: "Datum Process Ltd".into(), hidden: vec!["Specification › Manufacturer".into(), "General › Area".into()], order: vec!["Specification".into(), "Process conditions".into()], logo: String::new() };
+        let d = build(&p, lt).unwrap();
+        let titles: Vec<&str> = d.sections.iter().map(|s| s.title.as_str()).collect();
+        assert_eq!(&titles[..3], ["Specification", "Process conditions", "General"]);
+        let all: Vec<&str> = d.sections.iter().flat_map(|s| s.rows.iter().map(|r| r.label.as_str())).collect();
+        assert!(!all.contains(&"Manufacturer") && !all.contains(&"Area") && all.contains(&"Model"));
+        assert_eq!((d.form.as_str(), d.footer.as_str()), ("IDS-001", "Datum Process Ltd"));
+        // A hidden row changed since an issue does not count as a visible change.
+        p.issues.push(crate::model::Issue { obj: lt, rev: "A".into(), status: "Preliminary".into(), values: snapshot(&p, lt).unwrap(), ..Default::default() });
+        p.obj_mut(lt).unwrap().data.insert("manufacturer".into(), Val::Text("Acme".into()));
+        assert_eq!(build(&p, lt).unwrap().changed, 0);
+        assert_eq!(full(&p, &Net::new(&p), lt).unwrap().changed, 1);
+        // A logo that is not an image is refused.
+        p.settings.ds_layout.logo = "javascript:alert(1)".into();
+        assert!(p.normalize().iter().any(|w| w.contains("logo")) && p.settings.ds_layout.logo.is_empty());
+        assert_eq!(&xlsx(&p).unwrap()[..2], b"PK");
     }
 }

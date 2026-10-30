@@ -4,7 +4,7 @@
 // and footer on every page; the legend comes last. The same SVG writer saves a sheet as SVG.
 import { For, Show, JSX, createSignal, createMemo, createResource, onMount, onCleanup } from "solid-js";
 import { Portal } from "solid-js/web";
-import { SheetView, Prim, List, Datasheet } from "./api";
+import { SheetView, Prim, List, Datasheet, LoopInfo, LoopView } from "./api";
 import { call, proj, lib, sheet, setBackstage, symOf } from "./store";
 import { Help } from "./help";
 import { Check, Pick } from "./ui";
@@ -61,6 +61,10 @@ export const svgString = (v: SheetView, opts: { width?: number; height?: number 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n(v.w)} ${n(v.h)}" width="${n(w)}mm" height="${n(h)}mm" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" font-family="IBM Plex Sans, Segoe UI, Arial, sans-serif"><defs>${defs}</defs>${body.join("")}</svg>`;
 };
 
+/** Drawing primitives (a loop diagram) as a standalone SVG drawing in millimetres. */
+export const primsSvg = (ps: Prim[], w: number, h: number, opts: { width?: number; height?: number } = {}): string =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n(w)} ${n(h)}" width="${n(opts.width ?? w)}mm" height="${n(opts.height ?? h)}mm" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" font-family="IBM Plex Sans, Segoe UI, Arial, sans-serif"><rect width="${n(w)}" height="${n(h)}" fill="#fff" stroke="none"/>${ps.map(p => prim(p)).join("")}</svg>`;
+
 /** One sheet as an SVG file's text. */
 export const sheetSvg = async (id: number) => {
   const vs = await call<SheetView[]>("views");
@@ -73,14 +77,20 @@ const LISTS: [string, string][] = [["lines", "Line list"], ["equipment", "Equipm
 const [printing, setPrinting] = createSignal(false);
 /** Set by a datasheet's Print button: print only that object's datasheet. */
 export const [printOnly, setPrintOnly] = createSignal<number | null>(null);
+/** Set by a loop diagram's Print button: print only that loop. */
+export const [printLoop, setPrintLoop] = createSignal<string | null>(null);
 
 export const PrintPage = () => {
   const [views] = createResource(() => call<SheetView[]>("views"));
   const [which, setWhich] = createSignal<"all" | "this">("all");
   const [fitA3, setFitA3] = createSignal(false);
-  const [want, setWant] = createSignal<Record<string, boolean>>({ lines: true, equipment: true, instruments: true, valves: true, datasheets: false, legend: true, sheets_ds: false });
+  const [want, setWant] = createSignal<Record<string, boolean>>({ lines: true, equipment: true, instruments: true, valves: true, datasheets: false, legend: true, sheets_ds: false, loops: false });
   const [datasheets] = createResource(() => call<Datasheet[]>("datasheets_all"));
-  onCleanup(() => setPrintOnly(null));
+  const [loops] = createResource(async () => {
+    const ls = (await call<LoopInfo[]>("loops")) ?? [];
+    return (await Promise.all(ls.map(l => call<LoopView>("loop_diagram", { key: l.key })))).filter(Boolean) as LoopView[];
+  });
+  onCleanup(() => { setPrintOnly(null); setPrintLoop(null); });
   const [lists] = createResource(async () => Promise.all(LISTS.map(([k]) => call<List>("list", { kind: k }).then(l => l ?? null).catch(() => null))));
   const [zoomP, setZoomP] = createSignal(0.4);
   const sheets = createMemo(() => (views() ?? []).filter(v => which() === "all" || v.id === sheet()?.id));
@@ -91,11 +101,12 @@ export const PrintPage = () => {
     const p = proj();
     return { w: 210, h: 297, label: `Datasheet ${d.tag}`, body: () => (
       <div class="plist pds">
-        <header><b>{d.title} · {d.tag}</b><span>{p?.title.project || p?.name}</span><span class="grow" /><span>{revLine(d)}</span></header>
+        <header><Show when={d.logo}><img class="dslogo" src={d.logo} alt="" /></Show><b>{d.title} · {d.tag}</b><span>{p?.title.project || p?.name}</span><span class="grow" /><span>{revLine(d)}</span></header>
         <DatasheetTable d={d} />
         <RevBlock d={d} />
+        <Show when={d.footer}><p class="dsfoot">{d.footer}</p></Show>
         <table class="ptb"><tbody><tr>
-          <td><small>COMPANY</small>{p?.title.company || "—"}</td><td><small>PROJECT</small>{p?.title.project || p?.name}</td><td><small>TAG</small>{d.tag}</td><td><small>REV</small>{d.rev || "—"}</td>
+          <td><small>COMPANY</small>{p?.title.company || "—"}</td><td><small>PROJECT</small>{p?.title.project || p?.name}</td><td><small>TAG</small>{d.tag}</td><td><small>REV</small>{d.rev || "—"}</td><Show when={d.form}><td><small>FORM</small>{d.form}</td></Show>
           <td><small>BY</small>{p?.title.by || "—"}</td><td><small>CHECKED</small>{p?.title.checked || "—"}</td><td><small>DATE</small>{new Date().toLocaleDateString()}</td>
         </tr></tbody></table>
       </div>) };
@@ -104,6 +115,9 @@ export const PrintPage = () => {
     const out: Page[] = [];
     const only = printOnly();
     if (only !== null) return (datasheets() ?? []).filter(d => d.obj === only || d.item === only).map(dsPage);
+    const loopPage = (l: LoopView): Page => ({ w: l.w, h: l.h, label: l.title, body: () => <div innerHTML={primsSvg(l.prims, l.w, l.h)} /> });
+    const lk = printLoop();
+    if (lk !== null) return (loops() ?? []).filter(l => l.key === lk).map(loopPage);
     for (const v of sheets()) {
       const [w, h] = fitA3() ? [420, 297] : [v.w, v.h];
       out.push({ w, h, label: v.number, body: () => <div innerHTML={svgString(v, { width: w, height: h })} /> });
@@ -124,6 +138,7 @@ export const PrintPage = () => {
         </div>) });
     });
     if (want().sheets_ds) for (const d of datasheets() ?? []) out.push(dsPage(d));
+    if (want().loops) for (const l of loops() ?? []) out.push(loopPage(l));
     if (want().legend && !(views() ?? []).some(v => v.legend)) {
       const used = [...new Set((p?.items ?? []).map(i => i.sym))].map(k => symOf(k)).filter(Boolean);
       if (used.length) out.push({ w: 420, h: 297, label: "Legend", body: () => (
@@ -150,8 +165,8 @@ export const PrintPage = () => {
         <h1>Print <Help k="export" /></h1>
         <div class="pbtns"><button class="btn pri big" onClick={doPrint}><svg class="ic"><use href="#i-print" /></svg> Print / Save as PDF</button></div>
         <p class="muted">In the print window choose your printer, or <b>Save as PDF</b>. {pages().length} {pages().length === 1 ? "page" : "pages"}.</p>
-        <Show when={printOnly() !== null}><p class="small">Printing one datasheet. <button class="btn sm" onClick={() => setPrintOnly(null)}>Choose what to print</button></p></Show>
-        <Show when={printOnly() === null}>
+        <Show when={printOnly() !== null || printLoop() !== null}><p class="small">Printing one {printLoop() !== null ? "loop diagram" : "datasheet"}. <button class="btn sm" onClick={() => { setPrintOnly(null); setPrintLoop(null); }}>Choose what to print</button></p></Show>
+        <Show when={printOnly() === null && printLoop() === null}>
         <h4>Sheets</h4>
         <Pick value={which()} set={v => setWhich(v as any)} options={[["all", "Every sheet"], ["this", "This sheet only"]]} />
         <Check label="Fit every sheet to A3" value={fitA3()} set={setFitA3} />
@@ -159,8 +174,9 @@ export const PrintPage = () => {
         <For each={LISTS}>{([k, l]) => <Check label={l} value={!!want()[k]} set={v => setWant({ ...want(), [k]: v })} />}</For>
         <Check label="Legend (when there is no legend sheet)" value={!!want().legend} set={v => setWant({ ...want(), legend: v })} />
         <Check label={`Datasheets (${datasheets()?.length ?? 0}, one A4 page each)`} value={!!want().sheets_ds} set={v => setWant({ ...want(), sheets_ds: v })} />
+        <Check label={`Loop diagrams (${loops()?.length ?? 0}, one A3 page each)`} value={!!want().loops} set={v => setWant({ ...want(), loops: v })} />
         </Show>
-        <p class="muted small">Sheets print at their own size (A3, A1, ANSI B, ANSI D) unless fitted to A3; the lists print on A3 landscape with a header and page numbers; datasheets on A4 portrait.</p>
+        <p class="muted small">Sheets print at their own size (A3, A1, ANSI B, ANSI D) unless fitted to A3; the lists print on A3 landscape with a header and page numbers; datasheets on A4 portrait; loop diagrams on A3 with the title block.</p>
         <p><button class="btn sm" onClick={() => setBackstage(null)}>Back to the drawing</button></p>
       </div>
       <div class="pprev">

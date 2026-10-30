@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.10 — 2026-10-30
+
+Datasheets from Excel, your company's datasheet form, and loop diagrams.
+
+**Import datasheets from Excel.** Lists › Import Excel reads a workbook (.xlsx) and matches it to this project's datasheets by tag. It reads a table (a Tag column and one column per value, such as "Manufacturer" or "Set pressure (psig)") or one worksheet per datasheet, as Datum Schema exports them. Columns match by label, ignoring case and a unit in brackets; numbers are converted from the unit given (psi, °F, m³/h…) or from the project's units; choices match however their dashes were typed. A preview comes first: what will change, what is already the same, and what is not imported. Values that come from the line, the vessel or the drawing are never imported; where the file disagrees, the preview says so and where to change them. Blank cells change nothing. Untick what you do not want; the import is one step that Undo takes back. Tags with no datasheet and columns that match nothing are listed.
+
+**Your company's datasheet form.** File › Options › Datasheets sets the form number, your logo (PNG, JPEG or SVG, up to 200 KB), a footer line, which rows the datasheet shows and the order of its sections. Hidden rows keep their data, are still imported and are still part of each issued revision. **Use this layout for new projects** makes it the default, for the examples too. The form number and footer go on screen, in print and in Excel; the logo on screen and in print.
+
+**Loop diagrams.** Lists › Loop Diagrams draws every instrument loop (LT-101, LIC-101 and LV-101 make loop L-101) on an A3 sheet with the title block. Each field device is drawn with its own symbol, with its function, where it is mounted, its range or fail position, and its signal. It is wired through its junction box terminals and cable to its I/O channel in the control system, and on to the controller. Type the junction box, terminals, cable, control system and I/O channel for each device in the loop's Wiring table or in the Inspector; what is still missing is listed and noted on the drawing. Primary elements such as orifice plates are shown beside their transmitter; relief valves are not part of loops. Print one loop from its Print button, or all of them from File › Print. The Inspector has **Loop diagram…** for any instrument.
+
 ## 0.1.9 — 2026-10-30
 
 Datasheet revisions: issue, track what changed, issue again.

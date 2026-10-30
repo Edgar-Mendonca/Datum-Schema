@@ -281,13 +281,53 @@ const shots = process.env.SHOTS;
   const dsPages = await p.$$eval(".pprev .pwrap", els => els.map(e => e.textContent));
   check("one datasheet prints on one page", dsPages.length === 1 && dsPages[0].includes("LT-101") && dsPages[0].includes("Acme Instruments"), JSON.stringify(dsPages.map(t => t.slice(0, 60))));
   await p.click(".printpage button:has-text('Back to the drawing')"); await p.waitForTimeout(200);
-  await p.click(".btabs button:has-text('Datasheets')"); await p.waitForSelector(".lists .egrid tbody tr.f");
+  await p.click(".tabs button:text-is('Lists')"); await p.click(".ribbon button:has-text('Datasheets')"); await p.waitForSelector(".lists .egrid tbody tr.f");
   const ixRow = await p.$$eval(".lists .egrid tbody tr.f", els => els.map(e => [...e.querySelectorAll("td")].map(td => td.textContent)).find(c => c[0] === "LT-101"));
   check("the datasheet index shows its revision, status and changes", !!ixRow && ixRow[2] === "A" && ixRow[3] === "Preliminary" && ixRow[6] === "Δ 1", JSON.stringify(ixRow));
   await p.click(".lists button:has-text('shown…')"); await p.waitForSelector(".dlg header:has-text('datasheets')");
   await p.click(".dlg footer button:has-text('Issue')"); await p.waitForTimeout(500);
   const ixAll = await p.$$eval(".lists .egrid tbody tr.f", els => els.map(e => [...e.querySelectorAll("td")].map(td => td.textContent)));
   check("issuing every datasheet shown gives each its next revision", ixAll.length >= 5 && ixAll.every(c => c[3] === "Preliminary" && c[6] === "none") && ixAll.find(c => c[0] === "LT-101")?.[2] === "B" && ixAll.filter(c => c[0] !== "LT-101").every(c => c[2] === "A"), JSON.stringify(ixAll.map(c => c.slice(0, 4))));
+
+  // 25. Import from Excel: export the datasheets, change a value, import the workbook: the preview
+  // lists the change and leaves the line's values alone; Import writes it back.
+  await inv("export", { kind: "datasheets", what: "", sheet: 0 });
+  const ltObj = (await project()).objects.find(o => o.tag === "LT-101").id;
+  await inv("apply", { op: { SetData: { ids: [ltObj], key: "manufacturer", val: "Other Co" } } });
+  await p.click(".lists button:has-text('Import Excel')"); await p.waitForSelector(".dlg header:has-text('Import datasheets')");
+  const imRows = await p.$$eval(".dlg .imtbl tbody tr", els => els.map(e => e.textContent));
+  await shot("import-preview");
+  check("the import preview lists the changed value", imRows.some(t => t.includes("LT-101") && t.includes("Manufacturer") && t.includes("Other Co") && t.includes("Acme Instruments")), JSON.stringify(imRows.slice(0, 5)));
+  check("the preview never imports the line's values", !(await p.textContent(".dlg")).includes("Operating pressure") || imRows.every(t => !t.includes("Operating pressure")));
+  await p.click(".dlg footer button.pri"); await p.waitForTimeout(400);
+  check("Import writes the ticked values", (await project()).objects.find(o => o.tag === "LT-101").data.manufacturer === "Acme Instruments");
+
+  // 26. The company layout: a form number and a hidden row, in Options › Datasheets.
+  await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Options')"); await p.waitForTimeout(400);
+  await p.fill(".dslayout input[placeholder^='e.g. IDS']", "IDS-001"); await p.keyboard.press("Tab"); await p.waitForTimeout(300);
+  await p.click(".dslayout .dssec:has(b:text-is('Specification')) label.chk:has-text('Model') input"); await p.waitForTimeout(300);
+  const lay = (await project()).settings.ds_layout;
+  check("the layout keeps the form number and the hidden row", lay.form === "IDS-001" && lay.hidden.includes("Specification › Model"), JSON.stringify(lay));
+  await p.click(".bs .back"); await p.waitForTimeout(300);
+  await p.click(".tabs button:text-is('Lists')"); await p.click(".ribbon button:has-text('Datasheets')"); await p.waitForSelector(".lists .egrid tbody tr.f");
+  await p.locator(".lists .egrid tbody tr.f").filter({ has: p.locator("td", { hasText: /^LT-101$/ }) }).click(); await p.waitForSelector(".dlg .ds");
+  const dsT = await p.textContent(".dlg .bd");
+  check("the datasheet follows the layout", dsT.includes("Form IDS-001") && !(await p.$$eval(".dlg .ds td:first-child", els => els.map(e => e.textContent))).includes("Model"));
+  await p.keyboard.press("Escape"); await p.waitForTimeout(200);
+
+  // 27. Loop diagrams: L-101 is drawn with its devices; wiring typed in the table shows on it.
+  await p.click(".ribbon button:has-text('Loop Diagrams')"); await p.waitForSelector(".dlg .loopsvg svg");
+  check("the loop list has L-101", (await p.$$eval(".looplist b", els => els.map(e => e.textContent))).includes("L-101"));
+  await p.click(".looplist button:has(b:text-is('L-101'))"); await p.waitForTimeout(300);
+  const svgT = await p.$$eval(".dlg .loopsvg svg text", els => els.map(e => e.textContent));
+  check("the loop diagram draws the loop on a sheet", ["FIELD", "JUNCTION BOX", "CONTROL SYSTEM", "LD-L-101", "LT", "LIC"].every(s => svgT.includes(s)), JSON.stringify(svgT.slice(0, 20)));
+  await p.fill(".loopw tbody tr:has(td:text-is('LT-101')) td:nth-child(2) input", "JB-101"); await p.keyboard.press("Tab"); await p.waitForTimeout(400);
+  check("wiring typed on the loop diagram shows on it", (await p.$$eval(".dlg .loopsvg svg text", els => els.map(e => e.textContent))).includes("JB-101") && (await project()).objects.find(o => o.tag === "LT-101").data.jb === "JB-101");
+  await shot("loop-diagram");
+  await p.click(".dlg footer button:has-text('Print')"); await p.waitForSelector(".pprev .pwrap");
+  const lpages = await p.$$eval(".pprev .pwrap", els => els.map(e => e.textContent));
+  check("one loop diagram prints on one page", lpages.length === 1 && lpages[0].includes("JB-101"), JSON.stringify(lpages.map(t => t.slice(0, 50))));
+  await p.click(".printpage button:has-text('Back to the drawing')"); await p.waitForTimeout(200);
 
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();

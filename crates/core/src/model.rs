@@ -336,11 +336,33 @@ pub struct Settings {
     pub hidden: Vec<String>,
     /// Attributes this project adds to classes (Options › Classes).
     pub user_attrs: Vec<crate::classes::UserAttr>,
+    /// The company's datasheet layout (Options › Datasheets).
+    pub ds_layout: DsLayout,
 }
+
+/// A company's datasheet layout: its form number, logo and footer, the rows it leaves out and the
+/// order of the sections.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
+pub struct DsLayout {
+    /// The form's own number, printed on every datasheet (e.g. "IDS-001 rev 2").
+    pub form: String,
+    /// The company logo as a data URL (PNG, JPEG or SVG), at most `MAX_LOGO` characters.
+    pub logo: String,
+    /// A line printed at the foot of every datasheet.
+    pub footer: String,
+    /// Rows left out, as "Section › Label".
+    pub hidden: Vec<String>,
+    /// Section titles in the order to show them; sections not named follow in their usual order.
+    pub order: Vec<String>,
+}
+
+/// The largest logo kept (as data URL text): about 200 KB of image.
+pub const MAX_LOGO: usize = 280_000;
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![] }
+        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default() }
     }
 }
 
@@ -639,6 +661,18 @@ impl Project {
             fix(&mut l.vmax, 0.0, 1000.0, 3.0);
             fix(&mut l.dp, 0.0, 1e9, 40_000.0);
         }
+        let l = &mut s.ds_layout;
+        let image = ["data:image/png;base64,", "data:image/jpeg;base64,", "data:image/svg+xml;base64,"].iter().any(|h| l.logo.starts_with(h));
+        if !l.logo.is_empty() && (!image || l.logo.len() > MAX_LOGO) {
+            l.logo.clear();
+            w.push("The datasheet logo was not a PNG, JPEG or SVG image of at most 200 KB; it was removed.".into());
+        }
+        l.form = crate::clip(&l.form, 80);
+        l.footer = crate::clip(&l.footer, 300);
+        l.hidden.truncate(2000);
+        l.hidden.retain(|h| h.len() <= 200);
+        l.order.truncate(50);
+        l.order.retain(|h| h.len() <= 100);
         if s.line_format.trim().is_empty() || s.line_format.len() > 200 {
             s.line_format = Settings::default().line_format;
         }

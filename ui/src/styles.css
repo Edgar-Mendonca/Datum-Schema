@@ -999,3 +999,25 @@ tr.behind td { background: var(--err-bg); }
 .pds .ds td.dlt { color: #000; }
 .pds .ds.revs { margin-top: 3mm; font-size: 8pt; }
 .pds .ds.revs th, .pds .ds.revs td { border: 1px solid #888; padding: 0.6mm 1.5mm; color: #000; background: #fff; }
+.pds header .dslogo { max-height: 12mm; max-width: 40mm; object-fit: contain; }
+.pds .dsfoot { font-size: 7.5pt; margin: 2mm 0 0; color: #333; }
+.dsco { display: flex; align-items: center; gap: 12px; margin: 0 0 6px; }
+.dslogo { max-height: 40px; max-width: 160px; object-fit: contain; }
+.imsum { margin: 0 0 6px; }
+.imtbl { width: 100%; }
+.imtbl tr.conflict td:first-child, .imtbl tr.bad td:first-child { box-shadow: inset 3px 0 0 var(--amber, #C88A12); }
+.dsrows { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin: 8px 0; }
+.dssec { border: 1px solid var(--line); padding: 6px 8px; background: var(--bg2); }
+.dsech { display: flex; gap: 4px; align-items: center; margin-bottom: 4px; }
+.dsech b { flex: 1; }
+.dssec .chk { display: flex; gap: 6px; font-size: 12px; padding: 1px 0; }
+.loops { display: grid; grid-template-columns: 170px 1fr; gap: 12px; }
+.looplist { display: flex; flex-direction: column; gap: 2px; max-height: 70vh; overflow: auto; }
+.looplist button { text-align: left; border: 1px solid transparent; background: none; padding: 5px 7px; display: flex; flex-direction: column; cursor: pointer; color: var(--text); }
+.looplist button.on { background: var(--sel); border-color: var(--line3); }
+.looplist small { color: var(--muted); font-size: 10.5px; }
+.loopmain { min-width: 0; }
+.loopsvg { overflow: auto; border: 1px solid var(--line); background: #fff; max-height: 52vh; }
+.loopw input { width: 100%; box-sizing: border-box; }
+.loopsvg svg { width: 100%; height: auto; display: block; }
+.loopw td.mono { white-space: nowrap; }
