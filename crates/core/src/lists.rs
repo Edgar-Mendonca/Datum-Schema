@@ -12,7 +12,7 @@ use serde::Serialize;
 
 #[derive(Clone, Debug, Serialize)]
 pub struct Col {
-    pub key: &'static str,
+    pub key: String,
     pub label: String,
     pub q: &'static str,
     pub edit: bool,
@@ -37,7 +37,7 @@ pub struct List {
     pub rows: Vec<Row>,
 }
 
-pub const KINDS: [(&str, &str); 6] = [("lines", "Line list"), ("streams", "Stream list"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list"), ("datasheets", "Datasheet index")];
+pub const KINDS: [(&str, &str); 7] = [("lines", "Line list"), ("streams", "Stream list"), ("io", "I/O summary"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list"), ("datasheets", "Datasheet index")];
 
 /// (key, label, quantity, editable)
 type Spec = (&'static str, &'static str, &'static str, bool);
@@ -47,7 +47,7 @@ fn cols(specs: &[Spec], us: bool) -> Vec<Col> {
         .iter()
         .map(|&(key, label, q, edit)| {
             let u = if q.is_empty() { String::new() } else { units::shown(us).into_iter().find(|s| s.q == q).map(|s| s.label).unwrap_or_default() };
-            Col { key, label: if u.is_empty() { label.into() } else { format!("{label} ({u})") }, q, edit, num: !q.is_empty() }
+            Col { key: key.into(), label: if u.is_empty() { label.into() } else { format!("{label} ({u})") }, q, edit, num: !q.is_empty() }
         })
         .collect()
 }
@@ -134,7 +134,7 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
                     let o = p.obj(net.run_obj[r]).filter(|o| o.class == crate::model::STREAM_CLASS)?;
                     let l = net.lines[&lines[0]];
                     let (from, to) = net.run_ends(r);
-                    let cells = specs
+                    let mut cells = specs
                         .iter()
                         .map(|&(k, _, q, _)| match k {
                             "from" => from.as_ref().map(|e| net.describe(e)).unwrap_or_default(),
@@ -143,11 +143,44 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
                             _ => val(&o.data, k, q, us),
                         })
                         .collect::<Vec<String>>();
+                    cells.extend(p.settings.components.iter().map(|c| val(&o.data, &format!("x:{c}"), "", us)));
                     Some((cells[0].trim().parse().unwrap_or(u64::MAX), Row { ids: lines.clone(), sheet: l.sheet, cells, status: None }))
                 })
                 .collect();
             rows.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cells[0].cmp(&b.1.cells[0])));
-            (cols(&specs, us), rows.into_iter().map(|x| x.1).collect())
+            let mut cs = cols(&specs, us);
+            cs.extend(p.settings.components.iter().map(|c| Col { key: format!("x:{c}"), label: format!("{c} (mass fraction)"), q: "", edit: true, num: true }));
+            (cs, rows.into_iter().map(|x| x.1).collect())
+        }
+        "io" => {
+            let specs: Vec<Spec> = vec![("system", "Control system", "", false), ("ai", "AI", "", false), ("ao", "AO", "", false), ("di", "DI", "", false), ("do", "DO", "", false), ("fb", "Fieldbus", "", false), ("total", "Total", "", false), ("spare", "With 20% spare", "", false)];
+            let sum = crate::instruments::io_summary(p);
+            let row = |name: String, c: [usize; 5], ids: Vec<u32>| {
+                let total: usize = c.iter().sum();
+                // 20% spare on each kind, rounded up.
+                let spare: usize = c.iter().map(|n| (n * 12).div_ceil(10)).sum();
+                let mut cells = vec![name];
+                cells.extend(c.iter().map(|n| n.to_string()));
+                cells.push(total.to_string());
+                cells.push(spare.to_string());
+                Row { sheet: ids.first().and_then(|i| p.item(*i)).map_or(0, |i| i.sheet), ids, cells, status: None }
+            };
+            let mut all = [0usize; 5];
+            let mut ids_all = vec![];
+            let mut rows: Vec<Row> = vec![];
+            for (sys, c, ids) in sum {
+                for (a, n) in all.iter_mut().zip(c) {
+                    *a += n;
+                }
+                ids_all.extend(ids.iter().copied());
+                rows.push(row(sys, c, ids));
+            }
+            if rows.len() > 1 {
+                rows.push(row("All systems".into(), all, ids_all));
+            }
+            let mut cs = cols(&specs, us);
+            cs.iter_mut().skip(1).for_each(|c| c.num = true);
+            (cs, rows)
         }
         "equipment" => {
             let specs: Vec<Spec> = vec![("tag", "Tag", "", true), ("kind", "Type", "", false), ("service", "Service", "", true), ("design_p", "Design P", "press", true), ("design_t", "Design T", "temp", true), ("oper_p", "Oper P", "press", true), ("oper_t", "Oper T", "temp", true), ("material", "Material", "", true), ("capacity", "Size / capacity", "", false), ("power", "Power", "power", true), ("area", "Area", "", false), ("sheet", "Sheet", "", false)];
@@ -267,7 +300,9 @@ pub fn xlsx(p: &Project, kind: &str) -> Result<Vec<u8>, String> {
     let e = |x: rust_xlsxwriter::XlsxError| x.to_string();
     let mut wb = Workbook::new();
     let ws = wb.add_worksheet();
-    ws.set_name(crate::clip(&l.title, 31)).map_err(e)?;
+    // Excel forbids [ ] : * ? / \ in a worksheet's name ("I/O summary").
+    let name: String = l.title.chars().map(|c| if "[]:*?/\\".contains(c) { '-' } else { c }).collect();
+    ws.set_name(crate::clip(&name, 31)).map_err(e)?;
     let bold = Format::new().set_bold();
     let head = Format::new().set_bold().set_background_color(0xF4DCEE).set_border_bottom(rust_xlsxwriter::FormatBorder::Thin);
     ws.write_string_with_format(0, 0, format!("{} · {}", l.title, if p.title.project.is_empty() { &p.name } else { &p.title.project }), &bold).map_err(e)?;

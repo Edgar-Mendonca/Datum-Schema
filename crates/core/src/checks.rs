@@ -21,7 +21,7 @@ pub struct Issue {
 }
 
 /// The number of rules.
-pub const RULES: u8 = 16;
+pub const RULES: u8 = 20;
 
 const ERROR: &str = "error";
 const WARNING: &str = "warning";
@@ -320,9 +320,18 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
         }
     }
 
-    // 14 and 15. Mass and heat balance round every item on a process flow diagram.
-    if on(14) || on(15) {
+    // 14, 15 and 17. Mass, heat and component balances round every item on a process flow
+    // diagram, and compositions that add up.
+    if on(14) || on(15) || on(17) {
         v.extend(crate::pfd::balances(p, net).into_iter().filter(|i| on(i.rule)));
+    }
+    if on(17) {
+        v.extend(crate::pfd::compositions(p, net));
+    }
+
+    // 18, 19 and 20. Instrument ranges, control valve fail positions, loop wiring.
+    if on(18) || on(19) || on(20) {
+        v.extend(crate::instruments::checks(p, net, &on));
     }
 
     // 16. A P&ID line that names a PFD stream carries what the stream says.

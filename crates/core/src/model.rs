@@ -347,6 +347,8 @@ pub struct Obj {
 pub const LINE_CLASS: &str = "PipingNetworkSystem";
 /// The class of a line on a process flow diagram: a stream, numbered 1, 2, 3….
 pub const STREAM_CLASS: &str = "Stream";
+/// At most this many stream components.
+pub const MAX_COMPONENTS: usize = 40;
 
 /// An issued revision of an object's datasheet: its revision, status, date and who issued it,
 /// with what the datasheet said then (so the next revision can mark what changed).
@@ -456,6 +458,9 @@ pub struct Settings {
     pub ds_layout: DsLayout,
     /// The drawing standard: Datum Schema's symbols drawn with a library's.
     pub standard: Standard,
+    /// The components of the process flow diagrams' streams (each stream's mass fractions are
+    /// its data "x:<component>").
+    pub components: Vec<String>,
 }
 
 /// A drawing standard: a library's name and, for each of Datum Schema's symbols, the library
@@ -489,7 +494,7 @@ pub const MAX_LOGO: usize = 280_000;
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default() }
+        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), components: vec![] }
     }
 }
 
@@ -828,6 +833,8 @@ impl Project {
         l.hidden.retain(|h| h.len() <= 200);
         l.order.truncate(50);
         l.order.retain(|h| h.len() <= 100);
+        let mut seen = HashSet::new();
+        s.components = std::mem::take(&mut s.components).into_iter().map(|c| crate::clip(c.trim(), 40)).filter(|c| !c.is_empty() && seen.insert(c.to_lowercase())).take(MAX_COMPONENTS).collect();
         if s.line_format.trim().is_empty() || s.line_format.len() > 200 {
             s.line_format = Settings::default().line_format;
         }

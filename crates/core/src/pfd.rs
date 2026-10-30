@@ -49,7 +49,7 @@ fn cell(d: &Data, k: &str, q: &str, us: bool) -> String {
     match d.get(k) {
         None => String::new(),
         Some(v) if !q.is_empty() => v.num().map(|x| crate::fmt_sig(units::to_display(x, q, us), 4)).unwrap_or_else(|| v.text()),
-        Some(v) if k == "vfrac" => v.num().map(|x| crate::fmt_sig(x, 3)).unwrap_or_else(|| v.text()),
+        Some(v) if k == "vfrac" || k.starts_with("x:") => v.num().map(|x| crate::fmt_sig(x, 3)).unwrap_or_else(|| v.text()),
         Some(v) => v.text(),
     }
 }
@@ -85,14 +85,16 @@ pub fn table(p: &Project, s: &Sheet) -> Vec<Prim> {
     let (rx, _) = crate::frame::reserved(s);
     let x0 = x0 + 3.0;
     let per = (((rx - 5.0 - x0 - LABEL_W) / COL_W).floor() as usize).max(1);
-    let h = ROW_H * ROWS.len() as f64;
+    // The fixed rows, then a mass fraction for each component.
+    let rows: Vec<(String, String, &str)> = ROWS.iter().map(|(l, k, q)| (label(l, q, us), k.to_string(), *q)).chain(p.settings.components.iter().map(|c| (format!("  {c}"), format!("x:{c}"), ""))).collect();
+    let h = ROW_H * rows.len() as f64;
     let mut v = vec![];
     for (band, chunk) in streams.chunks(per).enumerate() {
         let bottom = y1 - 3.0 - band as f64 * (h + 4.0);
         let top = bottom - h;
         let right = x0 + LABEL_W + COL_W * chunk.len() as f64;
         v.push(poly(vec![[x0, top], [right, top], [right, bottom], [x0, bottom]], true, 0.35));
-        for r in 1..ROWS.len() {
+        for r in 1..rows.len() {
             let y = top + ROW_H * r as f64;
             v.push(poly(vec![[x0, y], [right, y]], false, if r == 1 { 0.3 } else { 0.13 }));
         }
@@ -100,9 +102,12 @@ pub fn table(p: &Project, s: &Sheet) -> Vec<Prim> {
             let x = x0 + LABEL_W + COL_W * c as f64;
             v.push(poly(vec![[x, top], [x, bottom]], false, 0.18));
         }
-        for (r, (l, k, q)) in ROWS.iter().enumerate() {
+        for (r, (l, k, q)) in rows.iter().enumerate() {
             let y = top + ROW_H * (r as f64 + 0.5);
-            v.push(text([x0 + 1.2, y], 2.0, label(l, q, us), 0, r == 0));
+            if r == ROWS.len() && r > 0 {
+                v.push(poly(vec![[x0, top + ROW_H * r as f64], [right, top + ROW_H * r as f64]], false, 0.3));
+            }
+            v.push(text([x0 + 1.2, y], 2.0, crate::clip(l, 22), 0, r == 0));
             for (c, o) in chunk.iter().enumerate() {
                 let x = x0 + LABEL_W + COL_W * (c as f64 + 0.5);
                 let t = crate::clip(&cell(&o.data, k, q, us), 13);
@@ -188,6 +193,45 @@ pub fn balances(p: &Project, net: &Net) -> Vec<Issue> {
                 let duty = if d != 0.0 { format!(", against a duty of {}", units::show(d.abs(), "power", us)) } else { String::new() };
                 v.push(issue(15, "warning", format!("Heat does not balance at {who}: the streams take {} {}{duty}.", units::show(gap.abs(), "power", us), if gap >= 0.0 { "more out than in" } else { "less out than in" })));
             }
+        }
+        // 17. Each component, when every stream round the item has a composition (a component
+        // left blank is none of it). Reactors change their components and are left out.
+        let comps = &p.settings.components;
+        let reactor = it.base_key().contains("reactor");
+        let has = |o: &Obj| comps.iter().any(|c| num(&o.data, &format!("x:{c}")).is_some());
+        if !comps.is_empty() && !reactor && st.iter().all(|(o, _)| has(o) && num(&o.data, "mflow").is_some()) {
+            let total: f64 = st.iter().filter(|x| x.1).filter_map(|(o, _)| num(&o.data, "mflow")).sum();
+            for c in comps {
+                let k = format!("x:{c}");
+                let sum = |into: bool| st.iter().filter(|x| x.1 == into).map(|(o, _)| num(&o.data, "mflow").unwrap_or(0.0) * num(&o.data, &k).unwrap_or(0.0)).sum::<f64>();
+                let (i, o) = (sum(true), sum(false));
+                if (i - o).abs() > 0.005 * total.abs() + 1e-9 {
+                    v.push(issue(17, "warning", format!("{c} does not balance at {who}: {} in, {} out.", units::show(i, "mflow", us), units::show(o, "mflow", us))));
+                }
+            }
+        }
+    }
+    v
+}
+
+/// Rule 17 too: a stream's mass fractions add up to 1 (within 1%).
+pub fn compositions(p: &Project, net: &Net) -> Vec<Issue> {
+    let comps = &p.settings.components;
+    let mut v = vec![];
+    if comps.is_empty() {
+        return v;
+    }
+    for (r, lines) in net.runs.iter().enumerate() {
+        let Some(o) = p.obj(net.run_obj[r]).filter(|o| o.class == STREAM_CLASS) else { continue };
+        let xs: Vec<f64> = comps.iter().filter_map(|c| num(&o.data, &format!("x:{c}"))).collect();
+        if xs.is_empty() {
+            continue;
+        }
+        let sum: f64 = xs.iter().sum();
+        if (sum - 1.0).abs() > 0.01 {
+            let l = net.lines[&lines[0]];
+            let n = o.data.get("number").map(|x| x.text()).unwrap_or_default();
+            v.push(Issue { rule: 17, level: "warning", msg: format!("The composition of stream {n} adds up to {}, not 1.", crate::fmt_sig(sum, 4)), ids: lines.clone(), sheet: l.sheet, at: crate::graph::end_pt(p, &l.a) });
         }
     }
     v
@@ -305,6 +349,29 @@ mod tests {
         assert!(!issues(&d).iter().any(|i| i.rule == 16));
         text(&mut d, "stream", "9");
         assert!(issues(&d).iter().any(|i| i.rule == 16 && i.msg.contains("on no process flow diagram")));
+        // Compositions: water and salt into the drum, out as one stream.
+        d.p.settings.components = vec!["Water".into(), "Salt".into()];
+        let comp = |d: &mut Doc, l: u32, w: f64, s_: f64| {
+            d.apply(Op::SetData { ids: vec![l], key: "x:Water".into(), val: Some(Val::Num(w)) }).unwrap();
+            d.apply(Op::SetData { ids: vec![l], key: "x:Salt".into(), val: Some(Val::Num(s_)) }).unwrap();
+        };
+        assert!(crate::classes::attrs(Some(&d.p), STREAM_CLASS).iter().any(|a| a.key == "x:Salt" && a.group.starts_with("Composition")));
+        comp(&mut d, ids[0], 1.0, 0.0);
+        comp(&mut d, ids[1], 0.7, 0.3);
+        // 2 kg/s water + 0.7 + 0.3 → 3 kg/s at 0.9 water, 0.1 salt.
+        comp(&mut d, ids[2], 0.85, 0.15);
+        let i17 = |d: &Doc| issues(d).into_iter().filter(|i| i.rule == 17).map(|i| i.msg).collect::<Vec<_>>();
+        assert!(i17(&d).iter().any(|m| m.contains("Salt does not balance at V-1")), "{:?}", i17(&d));
+        comp(&mut d, ids[2], 0.9, 0.1);
+        assert!(i17(&d).is_empty(), "{:?}", i17(&d));
+        // A composition that does not add up.
+        d.apply(Op::SetData { ids: vec![ids[1]], key: "x:Salt".into(), val: Some(Val::Num(0.2)) }).unwrap();
+        assert!(i17(&d).iter().any(|m| m.contains("stream 2 adds up to 0.9")), "{:?}", i17(&d));
+        // The table has a row per component; the stream list a column.
+        let sh = d.p.sheets.iter().find(|x| x.id == s).unwrap().clone();
+        assert!(table(&d.p, &sh).iter().any(|p| matches!(p, Prim::Text { s, .. } if s == "  Salt")));
+        let ll = crate::lists::build(&d.p, "streams").unwrap();
+        assert!(ll.cols.iter().any(|c| c.key == "x:Water"));
         // A stream moved to a P&ID sheet becomes a line number again.
         let mut sh2 = sh.clone();
         sh2.pfd = false;

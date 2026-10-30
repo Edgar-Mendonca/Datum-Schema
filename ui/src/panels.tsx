@@ -9,7 +9,7 @@ import { C } from "./cmds";
 import { Help } from "./help";
 import { openDatasheet, issueDialog, importDatasheets } from "./datasheet";
 
-const TABS: [string, string][] = [["checks", "Checks"], ["lines", "Line list"], ["streams", "Streams"], ["equipment", "Equipment"], ["instruments", "Instruments"], ["valves", "Valves"], ["datasheets", "Datasheets"]];
+const TABS: [string, string][] = [["checks", "Checks"], ["lines", "Line list"], ["streams", "Streams"], ["equipment", "Equipment"], ["instruments", "Instruments"], ["io", "I/O summary"], ["valves", "Valves"], ["datasheets", "Datasheets"]];
 
 const level = (l: string) => (l === "error" ? 0 : l === "warning" ? 1 : 2);
 
@@ -73,7 +73,7 @@ const ListView = (p: { kind: string }) => {
         <Show when={list()} fallback={<div class="cempty"><span class="muted">{list.error ? String(list.error) : "…"}</span></div>}>{l => <table class="egrid">
           <thead><tr><For each={l().cols}>{(c, i) => <th classList={{ r: c.num }} onClick={() => setSort(sort()?.col === i() ? { col: i(), dir: (-sort()!.dir) as 1 | -1 } : { col: i(), dir: 1 })}>{c.label}{sort()?.col === i() ? (sort()!.dir > 0 ? " ▲" : " ▼") : ""}</th>}</For></tr></thead>
           <tbody>
-            <For each={rows()} fallback={<tr><td colSpan={l().cols.length} class="muted" style={{ padding: "8px" }}>{l().kind === "streams" ? "Streams appear here: draw process lines on a PFD sheet." : l().kind === "lines" ? "Lines with a number appear here: draw a process line and give it a size, fluid, sequence and class." : "Tagged items appear here as you place them."}</td></tr>}>{(r, ri) => <>
+            <For each={rows()} fallback={<tr><td colSpan={l().cols.length} class="muted" style={{ padding: "8px" }}>{l().kind === "io" ? "Transmitters, switches and control valves appear here, counted by control system (Inspector › Wiring › Control system) and I/O kind." : l().kind === "streams" ? "Streams appear here: draw process lines on a PFD sheet." : l().kind === "lines" ? "Lines with a number appear here: draw a process line and give it a size, fluid, sequence and class." : "Tagged items appear here as you place them."}</td></tr>}>{(r, ri) => <>
               <Show when={group() >= 0 && (ri() === 0 || rows()[ri() - 1].cells[group()] !== r.cells[group()])}><tr class="grow"><td colSpan={l().cols.length}><b>{l().cols[group()].label}: {r.cells[group()] || "—"}</b></td></tr></Show>
               <tr class="f" classList={{ bad: r.status === 2, warn: r.status === 1 }} onClick={() => p.kind === "datasheets" ? openDatasheet(r.ids[0]) : C.goTo(r.ids, r.sheet)}>
                 <For each={l().cols}>{(c, i) => <td classList={{ r: c.num }}>

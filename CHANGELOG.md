@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0 — 2026-10-30
+
+Stream compositions with a component balance, the I/O summary, and three instrument checks.
+
+**Stream compositions.** File › Options › **Stream components** lists the components of the project's streams, one per line. Every stream then has a mass fraction for each (Inspector › Composition; blank is none of it), the stream table on the PFD shows a row per component, and the Streams list a column.
+
+**Component balance.** Check **17**: each component balances round every item on a PFD (within 0.5% of the mass in), and each stream's fractions add up to 1 (within 1%). Reactors are left out of the component balance, since they change their components. The Crude preheat example now carries compositions that close by hand.
+
+**I/O summary.** Lists › **I/O Summary** (and its tab under the drawing) counts the inputs and outputs each control system takes: analogue inputs (transmitters), analogue outputs (control valves), discrete inputs (switches), discrete outputs (solenoids) and fieldbus devices, with the total and the total with 20% spare per kind. An instrument's control system comes from its Wiring; its kind from its I/O channel ("AI 01-03"), else its signal, else its letters and symbol. Print it, or export it to Excel or CSV; click a row to select its instruments.
+
+**Instrument checks.** Check **18**: a transmitter's or gauge's range (typed as "0–10 bar", "-50 to 150 °C", "0-60 m3/h", or a bare range in the project's units) covers the operating pressure, temperature or flow of the line it measures. Check **19**: every control valve has a fail position (FO, FC or FL). Check **20**: once a loop's wiring is started, every device in it has its junction box, terminals, cable, control system and I/O channel (the control-system functions need only their system).
+
 ## 0.2.0 — 2026-10-30
 
 A client's own symbols, old drawings to trace over, links to Datum Pipe and Datum Sim, process flow diagrams with heat and mass balances, and revision clouds.

@@ -162,6 +162,9 @@ const ProjectSettings = () => {
       <Opt l="Snap grid" hint="Symbols, bends and ends snap to it."><span class="inline"><input type="number" step="0.5" style={{ width: "90px" }} value={s().grid} onChange={e => set({ grid: Math.max(0.5, +e.currentTarget.value || 2.5) })} /> mm</span></Opt>
     </Sec>
     <ClassesSec />
+    <Sec t="Stream components" about="The components of the process flow diagrams' streams, one per line. Each stream then has a mass fraction for each (Inspector › Composition), the stream table a row, and check 17 balances each component.">
+      <ComponentsSec />
+    </Sec>
     <Sec t="Drawing standard" about="Draw this project with a client's symbols (File › Libraries). Objects, tags and data stay the same; switch back at any time.">
       <StandardSec />
     </Sec>
@@ -177,6 +180,16 @@ const ProjectSettings = () => {
       <p><button class="btn sm" onClick={() => { const o = { ...opts(), defaults: s() }; setOpts(o); call("set_options", { opts: o }).then(() => toast("New projects will start with these rules, format and limits.", true)); }}>Use these for new projects</button></p>
     </Sec>
   </Show>;
+};
+
+/** Options › Stream components: one per line. */
+const ComponentsSec = () => {
+  const cs = () => proj()?.settings.components ?? [];
+  const save = (t: string) => {
+    const list = t.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+    if (list.join("\n") !== cs().join("\n")) act({ SetSettings: { settings: { ...proj()!.settings, components: list } } });
+  };
+  return <div class="compsec"><textarea class="comps" rows="5" placeholder={"Water\nMethane\nEthane"} value={cs().join("\n")} onChange={e => save(e.currentTarget.value)} /></div>;
 };
 
 const OptionsPage = () => {

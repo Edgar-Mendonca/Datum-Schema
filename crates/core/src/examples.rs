@@ -185,6 +185,16 @@ fn pfd() -> Project {
     for (i, (l, d)) in st.iter().zip(data).enumerate() {
         x.data(&[*l], &[("number", t(&(i + 1).to_string())), ("name", t(d.0)), ("phase", t(d.1)), ("mflow", n(d.2)), ("flow", n(d.2 / d.6)), ("temp", degc(d.3)), ("press", bar(d.4)), ("vfrac", n(d.5)), ("density", n(d.6)), ("hflow", n(d.7 * 1e3))]);
     }
+    // Compositions (mass fractions): the flash splits light ends and naphtha from the residue.
+    let comps = ["Light ends", "Naphtha", "Residue", "Hot oil"];
+    x.d.p.settings.components = comps.iter().map(|c| c.to_string()).collect();
+    let crude = [0.15, 0.25, 0.60, 0.0];
+    let fracs: [[f64; 4]; 8] = [crude, crude, crude, crude, [0.5, 0.5, 0.0, 0.0], [0.0, 1.0 / 7.0, 6.0 / 7.0, 0.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0]];
+    for (l, f) in st.iter().zip(fracs) {
+        let kv: Vec<(String, Val)> = comps.iter().zip(f).filter(|(_, v)| *v > 0.0).map(|(c, v)| (format!("x:{c}"), n((v * 1e6_f64).round() / 1e6))).collect();
+        let kv: Vec<(&str, Val)> = kv.iter().map(|(k, v)| (k.as_str(), v.clone())).collect();
+        x.data(&[*l], &kv);
+    }
     x.done()
 }
 

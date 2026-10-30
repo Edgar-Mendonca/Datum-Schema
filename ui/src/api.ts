@@ -31,7 +31,7 @@ export interface Line { id: number; sheet: number; kind: Kind; a: End; b: End; p
 export type NoteKind = "note" | "leader" | "hold";
 export interface Note { id: number; sheet: number; kind: NoteKind; x: number; y: number; w: number; h: number; text: string; to: Pt }
 export interface Limit { service: string; name: string; vmin: number; vmax: number; dp: number }
-export interface Settings { line_format: string; off: number[]; limits: Limit[]; roughness: number; grid: number; hidden: string[]; user_attrs: UserAttr[]; ds_layout: DsLayout; standard: Standard }
+export interface Settings { line_format: string; off: number[]; limits: Limit[]; roughness: number; grid: number; hidden: string[]; user_attrs: UserAttr[]; ds_layout: DsLayout; standard: Standard; components: string[] }
 /** A drawing standard: a library, and for each of our symbols the library symbol that draws it. */
 export interface Standard { library: string; map: Record<string, string> }
 /** A connection point of a library symbol (dir: 0 right, 1 down, 2 left, 3 up). */

@@ -113,6 +113,12 @@ pub fn attrs(p: Option<&Project>, class: &str) -> Vec<Attr> {
             put(&u.attr, &u.class, &mut out);
         }
     }
+    // A stream's composition: a mass fraction for each of the project's components.
+    if let Some(p) = p.filter(|_| names.contains(&crate::model::STREAM_CLASS)) {
+        for c in &p.settings.components {
+            put(&Attr { key: format!("x:{c}"), label: c.clone(), kind: "number".into(), group: "Composition (mass fraction)".into(), ..Attr::default() }, crate::model::STREAM_CLASS, &mut out);
+        }
+    }
     for c in &chain {
         for k in &c.required {
             if let Some(a) = out.iter_mut().find(|a| a.key == *k) {

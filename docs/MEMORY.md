@@ -6,7 +6,7 @@
 | | |
 | --- | --- |
 | **Product** | Datum Schema: intelligent P&IDs and process flow diagrams: draw, check and list (symbols and lines that carry their data and connections; live line list, equipment list, instrument index and valve list; drawing checks; line hydraulics; print, SVG and DXF) |
-| **Current version** | 0.2.0 (2026-10-30) |
+| **Current version** | 0.3.0 (2026-10-30) |
 | **Repo** | `Edgar-Mendonca/Datum-Schema` · branch `claude/vigilant-hamilton-ku7r0w` (the first branch pushed, so the default branch) |
 | **Stack** | Rust engine (`crates/core`: model, symbols, graph, tags, checks, hydraulics, lists, frame, routing, DXF), Tauri 2, SolidJS + strict TypeScript; no Python |
 | **Identifier** | `com.edgarmendonca.datumschema` · files `.dschema` (SQLite, `format` 4 from 0.2.0 (items.base, `underlays` and `snapshots` tables, meta "symbols"); 3 from 0.1.9; 2 before: no `issues` table; JSON `format` 1 from 0.1.0–0.1.4 converts) · symbol libraries `.dschemalib` (JSON, in app data › libraries) · installer `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` · publisher "Datum" |
@@ -39,6 +39,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | `crates/core/src/symlib.rs` | Client symbol libraries: `scan_legend` (blocks and the text beside each insert; `suggest` by word overlap with synonyms, `draft` size, `ports_like` snapped onto the drawing), `validate`/`clean`, `register` (global registry of leaked `Sym`s, keys `x.<lib>.<block>`), `save`/`load_dir`/`read_file`, `restyle`, `port_at`, `check_copies` for the copies a project carries |
 | `crates/core/src/links.rs` | Datum Pipe (`to_pipe`: a run as a `.dpipe` straight model between two anchors with its valves as rigid elements, size, schedule, design T/P, density, length) and Datum Sim (`to_sim`: a loop as a `.dsim` with Step, Sum, PID, valve, process (integrating for level, with an outflow), transmitter and Scope; dynamics as model variables) |
 | `crates/core/src/pfd.rs` | Process flow diagrams: the stream table on the sheet (`table`, bands left of the title block), checks 14 (mass) and 15 (heat, duty or shaft power) round each item, and 16 (a P&ID line's `stream` against the stream's mass flow) |
+| `crates/core/src/instruments.rs` | `parse_range` (text ranges in their units, or the project's), checks 18 (range covers the line's operating value via `datasheets::process_source`), 19 (control valve fail position), 20 (loop wiring finished once started); `io_of` and `io_summary` (AI/AO/DI/DO/fieldbus per control system) |
 | `crates/core/src/revs.rs` | Sheet revisions: `snapshot` (items, lines with routes, notes, objects' tag and data), `compare` (added, removed, changed: moved, rerouted, symbol, tag, data; gathered into areas), `cloud` (scallops and the triangle), `clouds` for the view, `next_rev` |
 | `crates/core/src/units.rs` | Calc's unit table (NIST SP 811) with unit expressions and Schema's display table |
 | `crates/core/src/pipes.rs` | Pipe's sizes ½"–24" and schedules (ASME B36.10M/B36.19M dimensions); inside diameters |
@@ -49,7 +50,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | `crates/core/src/view.rs` | What the window draws for a sheet: items with ports and upright texts (tags, instrument letters and loop numbers, fail positions, connector partners), lines (route, pieces with hops, arrows or signal marks, line number, hydraulic badge), notes and Hold clouds, the legend |
 | `crates/core/src/frame.rs` | The sheet frame: border, zones, title block, revision table, as primitives |
 | `crates/core/src/hydraulics.rs` | Inside diameter, velocity, Reynolds, Colebrook (or 64/Re), Δp per 100 m and over length + fittings, limits by service, status |
-| `crates/core/src/checks.rs` (+ `checks/tests.rs`) | The 16 checks (`RULES`; P&ID rules skip PFD sheets), one function per rule, each issue with level, reason, ids and place; a passing and a failing test per rule |
+| `crates/core/src/checks.rs` (+ `checks/tests.rs`) | The 20 checks (`RULES`; P&ID rules skip PFD sheets; 14–17 in `pfd.rs`, 18–20 in `instruments.rs`), one function per rule, each issue with level, reason, ids and place; a passing and a failing test per rule |
 | `crates/core/src/lists.rs` | The line list (one row per line number: from/to, hydraulics), equipment list, instrument index, valve list; CSV with a formula guard; Excel (rust_xlsxwriter) |
 | `crates/core/src/dxf.rs` | The DXF writer (R12: layers per line type and symbol category, blocks with a TAG attribute, text, frame) and `read_back` for the tests |
 | `crates/core/src/examples.rs` | The examples built through the edit operations: pump transfer, compressor package, exchanger loop, Find the faults (tests: 0 errors and warnings; exactly the planted faults) |
@@ -96,6 +97,9 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 
 | Version | Decision | Why |
 | --- | --- | --- |
+| 0.3.0 | Compositions are mass fractions in each stream's data under "x:<component>", with the component list in `settings.components`; the class library adds them to the Stream class's attributes (group "Composition"), so the Inspector, the list and the table need no special case. A blank fraction is none of it once a stream has any composition | No schema change; the list's `Col.key` became a `String` for these columns |
+| 0.3.0 | I/O kind from the I/O channel first, then the signal, then letters and symbol; local gauges, pneumatic, capillary and software links take none; spare is 20% per kind, rounded up | What an I/O summary is for: sizing cards per system |
+| 0.3.0 | Check 18 reads only ranges it understands (a unit of the right quantity, or none for the project's units); anything else is left alone rather than guessed | A check must not raise false alarms on free text |
 | 0.2.0 | One bigger release (0.2.0) instead of several small ones, as the user asked: "a bigger build and release at least until process flow diagrams". Built and committed in five tested stages | The user's call |
 | 0.2.0 | Client symbols come from DXF, not DWG (DWG is closed; the user agreed "DXF is fine"). A library symbol keeps a `like` (the built-in it stands for); items keep `base`; every semantic test uses `Item::base_key()`, so checks, classes, tags and lists are unchanged under a drawing standard | The object stays the master; only the drawing changes |
 | 0.2.0 | A project carries copies of the library symbols it uses (`custom_syms`, meta "symbols"), registered on open | A project must open on a computer without the library |
@@ -171,7 +175,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.1.11 | Fixes from the user: the line being drawn is shown under the mouse (a click on a port starts a line that follows the mouse until the next click); the symbol search is a small popover beside the point. Cause-and-effect matrix; DEXPI export; loop diagrams in DXF | ✅ |
 | 0.1.12 | Tell Me overlay fixed (class clash); DEXPI import; check 8 checks a check valve's direction, Turn round; bend points kept on split and join; the logo in the Excel datasheets | ✅ |
 | 0.2.0 | DXF reader; client symbol libraries from a legend (review, connection points, share); drawing standards; an old drawing behind a sheet; send a line to Datum Pipe and a loop to Datum Sim; PFD sheets with streams, the stream table, the Streams list and checks 14–16; sheet revisions with comparison and clouds; the Crude preheat example; file format 4 | ✅ |
-| 0.3 | Instrument index reports and loop checks; stream compositions | 🔜 |
+| 0.3.0 | Stream compositions and check 17 (component balance, fractions add up); I/O summary (list, print, Excel); checks 18 (range covers the operating value), 19 (fail position), 20 (loop wiring) | ✅ |
+| 0.4 | Company title-block templates; project-wide reports (valve and fitting take-off); review comments | 🔜 |
 | 0.5 | Company templates; project reports (valve and fitting take-off); review comments | ⬜ |
 | 1.0 | User guide, a validation note for the hydraulics, signed installer | ⬜ |
 
@@ -180,7 +185,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 - DXF only (DWG must be saved as DXF first); the reader skips dimensions, images, 3D and patterned hatches (counted in the warnings). Text rotation in old drawings is not kept.
 - Legend suggestions are by words (description and block name); unusual legends need the review. Connection points are suggested for two-port symbols; equipment needs its points placed.
 - To Datum Pipe sends a straight run (a P&ID has no 3D routing) and estimated valve masses; To Datum Sim uses typical dynamics.
-- Streams have no composition yet; balances need every stream's mass (and enthalpy) flow; tees between streams are not balanced (draw a mixer or splitter symbol).
+- Compositions are mass fractions only (no molar basis); balances need every stream's mass (and enthalpy) flow; tees between streams are not balanced (draw a mixer or splitter symbol).
 - Revision comparison is per sheet, by object ids; a symbol deleted and placed again counts as removed and added.
 
 - DEXPI import reads one drawing per file and does not pair off-page connectors across files; line pieces are re-routed (centre lines are not kept as bend points).
@@ -247,4 +252,9 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 - Found on the way: our own DXF export wrote legend rows as loose geometry (no blocks), so a legend round trip found nothing; legend rows are now INSERTs with their name. Validating embedded copies re-keyed them (added `check_copies`). With a standard on, checks stopped recognising PSVs and control valves (`base_key` everywhere).
 - The two other apps' formats were studied by two reader agents in parallel; every generated file was then opened in the real engines.
 - Tests: engine 101 (DXF reader and legend scan, re-skin and exact restore, background through undo, save and the window's copy, Pipe and Sim files, PFD numbering, balances, table and rule 16, revisions through save and reopen, random DXF hardening); UI checks for libraries and the standard, the background, both sends, the PFD example, a broken mass balance, a new PFD sheet, DEXPI's refusal, issue, compare and clouds.
+
+### 2026-10-30: Session 1, 0.3.0 (compositions, I/O summary, instrument checks)
+- After 0.2.0 the user asked for a comparison with the commercial suites (given in chat only, never in public text), then said to stick to the roadmap. 0.3 was scoped as stream compositions with a component balance, the I/O summary, and checks on instrument ranges, fail positions and loop wiring.
+- The hardening tests caught a byte-slicing panic on a hostile tag in the I/O classification, and the examples test caught Excel refusing "/" in the worksheet name "I/O summary"; both fixed.
+- Tests: engine 103 (ranges in several units and refusals, checks 17–20 both ways, the I/O summary, component rows and columns); UI checks for the components in Options, a broken component balance, the I/O summary and check 18 from the instrument index.
 

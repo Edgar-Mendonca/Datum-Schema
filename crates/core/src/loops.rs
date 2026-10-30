@@ -62,7 +62,7 @@ fn relief(class: &str) -> bool {
 
 /// The loop's members (one symbol per object), measurement first, then the control system, then
 /// the final elements.
-fn members<'a>(p: &'a Project, key: &str) -> Vec<&'a Item> {
+pub(crate) fn members<'a>(p: &'a Project, key: &str) -> Vec<&'a Item> {
     let mut seen = std::collections::HashSet::new();
     let mut v: Vec<&Item> = p
         .items
@@ -75,7 +75,7 @@ fn members<'a>(p: &'a Project, key: &str) -> Vec<&'a Item> {
     v
 }
 
-fn in_system(p: &Project, it: &Item) -> bool {
+pub(crate) fn in_system(p: &Project, it: &Item) -> bool {
     let loc = p.data_of(it.obj).get("location").map(|v| v.text()).unwrap_or_default();
     matches!(it.base_key().as_str(), "inst_dcs" | "inst_plc" | "inst_panel" | "inst_interlock") || loc == "DCS" || loc == "Control room panel"
 }

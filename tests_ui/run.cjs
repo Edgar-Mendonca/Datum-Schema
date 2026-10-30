@@ -528,6 +528,33 @@ const shots = process.env.SHOTS;
   await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title='DXF']"); await p.waitForTimeout(400);
   { const dx = (await inv("exports")).filter(e => e.kind === "dxf").pop(); check("the clouds go on the REVISION layer", !!dx && dx.text.includes("  8\r\nREVISION\r\n")); }
 
+  // 37. Stream compositions: components in Options, rows in the stream table, check 17.
+  await openEx("Crude preheat (PFD)");
+  check("the components are listed in Options", await (async () => { await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Options')"); await p.waitForTimeout(300); const v = await p.inputValue(".compsec textarea"); await p.click(".bs .back"); await p.waitForTimeout(300); return v.split("\n").length === 4 && v.includes("Naphtha"); })());
+  check("the stream table has a row per component", (await p.$$eval(".dsvg .frame text", els => els.map(e => e.textContent.trim()))).includes("Naphtha"));
+  check("the compositions balance", (await p.textContent(".status")).includes("0 errors · 0 warnings"));
+  await p.click(".btabs button:has-text('Streams')"); await p.waitForTimeout(400);
+  { const ci = (await p.$$eval(".lists thead th", els => els.map(e => e.textContent))).findIndex(t => t.startsWith("Naphtha"));
+    const cell = p.locator(".lists tbody tr.f >> nth=4").locator(`td:nth-child(${ci + 1}) input`);
+    await cell.fill("0.4"); await cell.press("Enter"); await p.waitForTimeout(400); }
+  await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
+  { const t = await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent));
+    check("a wrong fraction breaks the component balance and the sum", t.some(x => x.includes("Naphtha does not balance at V-301")) && t.some(x => x.includes("stream 5 adds up to 0.9"))); }
+  await p.keyboard.press("Control+z"); await p.waitForTimeout(400);
+
+  // 38. The I/O summary, and an instrument range that does not cover its line.
+  await openEx("Pump transfer");
+  await p.click(".btabs button:has-text('I/O summary')"); await p.waitForTimeout(400);
+  { const rows = await p.$$eval(".lists tbody tr.f", els => els.map(e => [...e.querySelectorAll("td")].map(td => td.textContent)));
+    check("the I/O summary counts inputs and outputs", rows.length >= 1 && rows.some(r => r[0] === "(not assigned)" && +r[1] >= 1 && +r[2] >= 1), JSON.stringify(rows)); }
+  await p.click(".btabs button:has-text('Instruments')"); await p.waitForTimeout(400);
+  { const ci = (await p.$$eval(".lists thead th", els => els.map(e => e.textContent))).findIndex(t => t.startsWith("Range"));
+    const ri = await p.$$eval(".lists tbody tr.f", els => els.findIndex(e => e.querySelector("td input")?.value === "PI-102"));
+    const cell = p.locator(`.lists tbody tr.f >> nth=${ri}`).locator(`td:nth-child(${ci + 1}) input`);
+    await cell.fill("0–2 bar"); await cell.press("Enter"); await p.waitForTimeout(400); }
+  await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
+  check("check 18 finds a range below the operating pressure", (await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(x => x.includes("range of PI-102")));
+
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();
   await fetch(`${url}quit`).catch(() => {});

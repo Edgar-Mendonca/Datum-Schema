@@ -1095,3 +1095,4 @@ tr.behind td { background: var(--err-bg); }
 .cmptbl tr.added td.k { color: #2E7D32; }
 .cmptbl tr.removed td.k { color: #B3261E; }
 .cmptbl tr.changed td.k { color: #C88A12; }
+.compsec .comps { width: 100%; max-width: 420px; font-family: inherit; }

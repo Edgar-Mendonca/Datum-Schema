@@ -18,7 +18,7 @@
     },
     {
       "title": "Check it as you go",
-      "text": "Sixteen rules run on every change: duplicate tags, open ends, size and class changes, check valves, relief paths, control loops, velocities and pressure drops, and heat and mass balances on process flow diagrams. Click an issue to go to it."
+      "text": "Twenty rules run on every change: duplicate tags, open ends, size and class changes, check valves, relief paths, control loops, velocities and pressure drops, heat, mass and component balances on process flow diagrams, instrument ranges and loop wiring. Click an issue to go to it."
     },
     {
       "title": "Print the drawings and lists",
@@ -31,6 +31,7 @@
     "A client's legend (DXF) becomes a symbol library; draw a project to their standard and back",
     "Old drawings (DXF) behind a sheet to trace over; revision clouds round what changed since an issue",
     "Send a line to Datum Pipe and a control loop to Datum Sim",
+    "Stream compositions with a component balance; an I/O summary per control system with spare",
     "Plant objects in a plant › unit › area hierarchy; symbols are views, every change is recorded",
     "A class library you can extend with your company's attributes",
     "Instrument datasheets with process conditions from the P&ID; revisions with what changed (Δ); your company's form; import from Excel; print and Excel",
@@ -40,7 +41,7 @@
     "A valve dropped on a line splits it and joins both halves",
     "Off-page connectors pair across sheets; click one to jump to its partner",
     "Live line list, equipment list, instrument index, valve list and datasheet index",
-    "Sixteen checks, including heat and mass balances, each with a click to the problem",
+    "Twenty checks, including heat, mass and component balances and instrument ranges, each with a click to the problem",
     "Line hydraulics: velocity, Reynolds number, Colebrook friction factor and pressure drop against limits",
     "SI and US units; DXF, SVG, PDF, Excel, CSV and the DEXPI P&ID exchange format (export and import)",
     "Automatic tags and loop numbers, renumbering, a legend sheet"
@@ -53,30 +54,19 @@
   ],
   "roadmap": [
     {
-      "v": "0.2",
-      "title": "Exchange, links and flow diagrams",
+      "v": "0.3",
+      "title": "Instrument documents and compositions",
       "when": "Now",
       "items": [
-        "Client symbol libraries from a DXF legend; drawing standards",
-        "DXF of an old drawing as a background",
-        "Send a line to Datum Pipe and a loop to Datum Sim",
-        "Process flow diagrams: streams, stream table, heat and mass balances",
-        "Revision snapshots, comparison and revision clouds"
-      ]
-    },
-    {
-      "v": "0.3",
-      "title": "Instrument documents",
-      "when": "Next",
-      "items": [
-        "Instrument index reports and loop checks",
-        "Stream compositions on process flow diagrams"
+        "Stream compositions and the component balance",
+        "I/O summary per control system, with spare",
+        "Checks: instrument ranges, control valve fail positions, loop wiring"
       ]
     },
     {
       "v": "0.4",
       "title": "Company templates and review",
-      "when": "Later",
+      "when": "Next",
       "items": [
         "Company title-block templates",
         "Project-wide reports (valve and fitting take-off)",
