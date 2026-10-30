@@ -18,6 +18,7 @@ pub mod graph;
 pub mod hydraulics;
 pub mod import;
 pub mod lists;
+pub mod links;
 pub mod loops;
 pub mod model;
 pub mod pipes;

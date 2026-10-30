@@ -19,6 +19,7 @@ export const openLoops = (start?: string) => openDialog(() => {
       extra={<>
         <button class="btn" disabled={!view()} onClick={() => { setPrintLoop(view()!.key); closeDialog(); setBackstage("print"); }}>Print…</button>
         <button class="btn" disabled={!view()} title="Save this loop diagram as a DXF drawing" onClick={async () => { const f = await call<string | null>("export", { kind: "loopdxf", what: view()!.key, sheet: 0 }); if (f) toast(`Saved ${f}.`, true); }}>DXF</button>
+        <button class="btn" disabled={!view()} title="This loop as a Datum Sim model, to tune it" onClick={() => C.send("sim", view()!.key)}>To Datum Sim</button>
       </>}>
       <Show when={(list() ?? []).length} fallback={<p class="muted">{list() ? "There are no loops yet: a loop is two or more instruments sharing a first letter and a loop number (LT-101, LIC-101, LV-101)." : "…"}</p>}>
         <div class="loops">

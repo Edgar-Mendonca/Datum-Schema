@@ -465,6 +465,22 @@ const shots = process.env.SHOTS;
   await p.click(".ubox button:has-text('Remove')"); await p.waitForTimeout(300);
   check("Remove takes it away", !(await project()).sheets[0].underlay && !(await p.$(".dsvg .underlay")));
 
+  // 34. A line to Datum Pipe, a loop to Datum Sim: each as that app's own file.
+  await openEx("Pump transfer");
+  { const v = (await inv("views"))[0];
+    const ln = v.lines.find(l => l.kind === "major" && l.segs.some(sg => sg.length >= 2 && Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]) > 20));
+    const sg = ln.segs.find(sg => sg.length >= 2 && Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]) > 20);
+    const [lx, ly] = await scr((sg[0][0] + sg[1][0]) / 2, (sg[0][1] + sg[1][1]) / 2);
+    await p.mouse.click(lx, ly); await p.waitForTimeout(300);
+    await p.click(".ctxgrp button:has-text('Format')"); await p.click(".ribbon button:has-text('To Datum Pipe')"); await p.waitForTimeout(400);
+    const ex = (await inv("exports")).filter(e => e.kind === "pipe").pop(); const m = ex && JSON.parse(ex.text);
+    check("a line goes to Datum Pipe as its model file", !!m && m.format === 1 && m.elements.length >= 1 && m.supports.length === 2 && m.pipes[0].od > 0, ex?.text.slice(0, 120)); }
+  await p.click(".tabs button:text-is('Lists')"); await p.click(".ribbon button:has-text('Loop Diagrams')"); await p.waitForSelector(".dlg .loopsvg svg");
+  await p.click(".dlg footer button:has-text('To Datum Sim')"); await p.waitForTimeout(400);
+  { const ex = (await inv("exports")).filter(e => e.kind === "sim").pop(); const m = ex && JSON.parse(ex.text);
+    check("a loop goes to Datum Sim as its model file", !!m && m.format === 2 && m.root.blocks.some(b => b.kind === "PID" && b.name === "LIC-101"), ex?.text.slice(0, 160)); }
+  await p.keyboard.press("Escape"); await p.waitForTimeout(200);
+
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();
   await fetch(`${url}quit`).catch(() => {});

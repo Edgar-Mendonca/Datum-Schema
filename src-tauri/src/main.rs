@@ -402,6 +402,31 @@ async fn save(app: AppHandle, st: State<'_, St>, as_new: bool) -> R<Option<Out>>
     Ok(Some(out(&a)))
 }
 
+/// What was sent to another app: where it was saved, and what was assumed.
+#[derive(Serialize)]
+struct SendOut {
+    path: String,
+    notes: Vec<String>,
+}
+
+/// Sends a line to Datum Pipe (`kind` "pipe", `what` a line's id) or a loop to Datum Sim ("sim",
+/// a loop's key) as a file of that app.
+#[tauri::command]
+async fn send(app: AppHandle, st: State<'_, St>, kind: String, what: String) -> R<Option<SendOut>> {
+    let s = guard(|| {
+        let a = st.lock();
+        match kind.as_str() {
+            "pipe" => datum_core::links::to_pipe(&a.doc.p, what.parse().map_err(|_| "Choose a process line.".to_string())?),
+            "sim" => datum_core::links::to_sim(&a.doc.p, &what),
+            k => Err(format!("Unknown app {k}.")),
+        }
+    })?;
+    let (label, ext) = if kind == "pipe" { ("Datum Pipe model", "dpipe") } else { ("Datum Sim model", "dsim") };
+    let Some(path) = app.dialog().file().add_filter(label, &[ext]).set_file_name(&s.file).blocking_save_file().and_then(|f| f.into_path().ok()) else { return Ok(None) };
+    doc::write_atomic(&path, s.text.as_bytes())?;
+    Ok(Some(SendOut { path: path.display().to_string(), notes: s.notes }))
+}
+
 /// Saves a picture or a file the window made (SVG text, PNG data URL, CSV text).
 #[tauri::command]
 async fn save_file(app: AppHandle, name: String, data: String) -> R<Option<String>> {
@@ -648,7 +673,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
+            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
             options, set_options, autosave, recovery, recover, recent, startup_file, open_url, version, quit, check_update, install_update
         ])
         .run(tauri::generate_context!())

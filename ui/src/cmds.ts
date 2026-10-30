@@ -121,6 +121,11 @@ export const C = {
   exportDatasheets: async () => { const f = await call<string | null>("export", { kind: "datasheets", what: "", sheet: sid() }); if (f) toast(`Saved ${f}.`, true); },
   importDexpi: () => D.keepChanges(async () => { const o = await loadOut("import_dexpi"); if (o) toast(o.warnings.length ? `Opened with notes: ${o.warnings.join(" ")}` : "Opened the DEXPI file as a new project. Save keeps it as a Datum Schema project.", !o.warnings.length); }),
   exportCause: async () => { const f = await call<string | null>("export", { kind: "cause", what: "", sheet: 0 }); if (f) toast(`Saved ${f}.`, true); },
+  /** A line to Datum Pipe, or a loop to Datum Sim, as a file of that app. */
+  send: async (kind: "pipe" | "sim", what: string) => {
+    const r = await call<{ path: string; notes: string[] } | null>("send", { kind, what });
+    if (r) toast(`Saved ${r.path}: open it in ${kind === "pipe" ? "Datum Pipe" : "Datum Sim"}. ${r.notes.join(" ")}`, true);
+  },
   underlay: async () => {
     const o = await call<Out | null>("underlay_import", { sheet: sid() });
     if (!o) return;

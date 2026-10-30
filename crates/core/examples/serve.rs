@@ -154,6 +154,15 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             s.doc.apply(Op::SetSheet { sheet: sh })?;
             out(s, vec![], warnings)
         }
+        "send" => {
+            let what = str_("what");
+            let sent = match str_("kind").as_str() {
+                "pipe" => datum_core::links::to_pipe(&s.doc.p, what.parse().map_err(|_| "Choose a process line.")?)?,
+                _ => datum_core::links::to_sim(&s.doc.p, &what)?,
+            };
+            s.exports.push(json!({ "kind": str_("kind"), "what": what, "text": sent.text }));
+            json!({ "path": sent.file, "notes": sent.notes })
+        }
         "underlay_svg" => {
             let id = a["sheet"].as_u64().unwrap_or(0) as u32;
             json!(s.doc.p.sheets.iter().find(|x| x.id == id).and_then(|x| x.underlay.as_ref()).map(|u| datum_core::symbols::svg(&datum_core::symbols::parse(&u.draw))).unwrap_or_default())
