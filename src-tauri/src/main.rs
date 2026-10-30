@@ -444,6 +444,9 @@ async fn save_file(app: AppHandle, name: String, data: String) -> R<Option<Strin
 #[tauri::command]
 async fn export(app: AppHandle, st: State<'_, St>, kind: String, what: String, sheet: u32) -> R<Option<String>> {
     let name = st.lock().doc.p.name.clone();
+    if kind == "dexpi" && st.lock().doc.p.sheet(sheet).is_some_and(|s| s.pfd) {
+        return Err(datum_core::dexpi::NOT_PFD.into());
+    }
     let (label, ext) = match kind.as_str() {
         "csv" => ("CSV", "csv"),
         "xlsx" | "datasheets" | "cause" => ("Excel workbook", "xlsx"),

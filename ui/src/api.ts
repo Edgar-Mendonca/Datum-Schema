@@ -13,7 +13,7 @@ export type Val = number | string;
 export type Data = Record<string, Val>;
 export interface Title { company: string; project: string; client: string; unit: string; by: string; checked: string; approved: string }
 export interface Rev { rev: string; date: string; desc: string; by: string; checked: string; approved: string }
-export interface Sheet { id: number; number: string; title: string; size: string; rev: string; date: string; scale: string; revs: Rev[]; legend: boolean; underlay: Underlay | null }
+export interface Sheet { id: number; number: string; title: string; size: string; rev: string; date: string; scale: string; revs: Rev[]; legend: boolean; underlay: Underlay | null; pfd: boolean }
 /** An old drawing behind a sheet, placed at (x, y) mm and scaled by k; its drawing is fetched by rev. */
 export interface Underlay { name: string; w: number; h: number; x: number; y: number; k: number; show: boolean; print: boolean; rev: string }
 export interface Item { id: number; sheet: number; sym: string; x: number; y: number; rot: number; flip: boolean; scale: number; obj: number; link: number; base: string }

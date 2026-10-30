@@ -20,6 +20,7 @@ pub fn list() -> Vec<Example> {
         Example { id: "pump", name: "Pump transfer", what: "A tank to duty and standby pumps with strainers and check valves, to a level-controlled vessel with its relief valve; hydraulics on every line." },
         Example { id: "compressor", name: "Compressor package", what: "Knock-out drum with level control, centrifugal compressor and motor, air cooler, and the anti-surge loop." },
         Example { id: "exchanger", name: "Exchanger loop", what: "A steam heater with its temperature loop, steam trap and condensate return, insulation and tracing." },
+        Example { id: "pfd", name: "Crude preheat (PFD)", what: "A process flow diagram: feed pump, exchanger, fired heater and separator, with a stream table and heat and mass balances that close." },
         Example { id: "faults", name: "Find the faults", what: "The pump transfer with planted mistakes: open the Checks panel and fix them." },
     ]
 }
@@ -30,6 +31,7 @@ pub fn get(id: &str) -> Option<Project> {
         "compressor" => Some(compressor()),
         "exchanger" => Some(exchanger()),
         "faults" => Some(faults()),
+        "pfd" => Some(pfd()),
         "big" => Some(big(23)),
         _ => None,
     }
@@ -133,6 +135,57 @@ fn m3h(v: f64) -> Val {
 /// Water at 20 °C, 30 m³/h, with design and operating conditions.
 fn water(len: f64, oper_p: f64) -> Vec<(&'static str, Val)> {
     vec![("flow", m3h(30.0)), ("density", n(998.0)), ("viscosity", n(1.0e-3)), ("length", n(len)), ("fittings", n(30.0)), ("design_p", bar(10.0)), ("design_t", degc(65.0)), ("oper_p", bar(oper_p)), ("oper_t", degc(20.0)), ("test_p", bar(15.0))]
+}
+
+/// Example: a process flow diagram. Liquid cp 2.2 kJ/kg·K, hot oil 2.5 kJ/kg·K, 300 kJ/kg to
+/// vaporise; enthalpy flows from 0 °C liquid, so every balance closes by hand.
+fn pfd() -> Project {
+    let mut x = X::new("Crude preheat", "PFD-300", "Crude preheat, process flow diagram");
+    let s = x.s;
+    let mut sh = x.d.p.sheets[0].clone();
+    sh.pfd = true;
+    x.op(Op::SetSheet { sheet: sh });
+    let _ = s;
+    let feed = x.it("battery_limit", 40.0, 120.0, 0, "");
+    let pump = x.it("pump_cent", 95.0, 120.0, 0, "P-301");
+    let hx = x.it("hx_fixed", 175.0, 114.0, 0, "E-301");
+    let heater = x.it("fired_heater", 250.0, 116.0, 0, "H-301");
+    let sep = x.it("separator", 330.0, 114.0, 0, "V-301");
+    let gas = x.it("battery_limit", 392.0, 70.0, 0, "");
+    let liq = x.it("battery_limit", 392.0, 114.0, 0, "");
+    let oil_in = x.it("battery_limit", 130.0, 70.0, 0, "");
+    let oil_out = x.it("battery_limit", 225.0, 165.0, 0, "");
+    x.data(&[pump], &[("service", t("Crude feed pump")), ("power", n(15e3))]);
+    x.data(&[hx], &[("service", t("Crude / hot oil exchanger")), ("duty", n(1965e3))]);
+    x.data(&[heater], &[("service", t("Crude heater")), ("duty", n(2220e3))]);
+    x.data(&[sep], &[("service", t("Flash separator"))]);
+    let k = Kind::Major;
+    let st = [
+        x.ln(E::P(feed, "out"), E::P(pump, "suction"), k),
+        x.ln(E::P(pump, "discharge"), E::P(hx, "tube in"), k),
+        x.ln(E::P(hx, "tube out"), E::P(heater, "inlet"), k),
+        x.ln(E::P(heater, "outlet"), E::P(sep, "inlet"), k),
+        x.ln(E::P(sep, "gas out"), E::P(gas, "in"), k),
+        x.ln(E::P(sep, "liquid out"), E::P(liq, "in"), k),
+        x.ln(E::P(oil_in, "out"), E::P(hx, "shell in"), k),
+        x.ln(E::P(hx, "shell out"), E::P(oil_out, "in"), k),
+    ];
+    // (description, phase, kg/s, °C, bar, vapour fraction, kg/m³, kW)
+    type Stream = (&'static str, &'static str, f64, f64, f64, f64, f64, f64);
+    let data: [Stream; 8] = [
+        ("Crude feed", "Liquid", 10.0, 30.0, 1.5, 0.0, 850.0, 660.0),
+        ("Pump discharge", "Liquid", 10.0, 30.7, 12.0, 0.0, 850.0, 675.0),
+        ("Preheated crude", "Liquid", 10.0, 120.0, 11.0, 0.0, 790.0, 2640.0),
+        ("Heater outlet", "Two-phase", 10.0, 180.0, 8.0, 0.3, 40.0, 4860.0),
+        ("Flash vapour", "Vapour", 3.0, 180.0, 7.5, 1.0, 25.0, 2088.0),
+        ("Flashed crude", "Liquid", 7.0, 180.0, 7.5, 0.0, 760.0, 2772.0),
+        ("Hot oil supply", "Liquid", 20.0, 250.0, 6.0, 0.0, 780.0, 12500.0),
+        ("Hot oil return", "Liquid", 20.0, 210.7, 5.5, 0.0, 800.0, 10535.0),
+    ];
+    for (i, (l, d)) in st.iter().zip(data).enumerate() {
+        x.data(&[*l], &[("number", t(&(i + 1).to_string())), ("name", t(d.0)), ("phase", t(d.1)), ("mflow", n(d.2)), ("flow", n(d.2 / d.6)), ("temp", degc(d.3)), ("press", bar(d.4)), ("vfrac", n(d.5)), ("density", n(d.6)), ("hflow", n(d.7 * 1e3))]);
+    }
+    x.done()
 }
 
 /// Example 1: the pump transfer. Also returns the ids "Find the faults" changes.
@@ -403,7 +456,8 @@ mod tests {
             // Hydraulics on every pipeline that has a flow, all within their limits.
             let net = Net::new(&p);
             let hyd = crate::hydraulics::all(&p, &net);
-            assert!(hyd.iter().flatten().count() >= 3, "{}", ex.name);
+            // (A process flow diagram has streams, not pipelines.)
+            assert!(hyd.iter().flatten().count() >= 3 || p.sheets.iter().all(|s| s.pfd), "{}", ex.name);
             assert!(hyd.iter().flatten().all(|h| h.status == 0));
             // It opens again from its file unchanged.
             let (q, w) = crate::model::from_json(&crate::model::to_json(&p)).unwrap();

@@ -95,9 +95,9 @@ export const C = {
   pairDialog: (id: number) => D.pairDialog(id),
 
   // ---------- sheets ----------
-  addSheet: async (legend = false) => {
+  addSheet: async (legend = false, pfd = false) => {
     const s = sheet();
-    const o = await act({ AddSheet: { sheet: { id: 0, number: "", title: legend ? "Legend" : "Piping and instrument diagram", size: s?.size ?? "A3", rev: "A", date: "", scale: "NTS", revs: [], legend } } });
+    const o = await act({ AddSheet: { sheet: { id: 0, number: "", title: legend ? "Legend" : pfd ? "Process flow diagram" : "Piping and instrument diagram", size: s?.size ?? "A3", rev: "A", date: "", scale: "NTS", revs: [], legend, underlay: null, pfd } } });
     if (o?.created.length) setSheetId(o.created[0]);
   },
   deleteSheet: () => { const s = sheet(); if (s) D.confirm(`Delete sheet ${s.number} and everything on it?`, "Delete", () => act({ DeleteSheet: { id: s.id } })); },

@@ -740,6 +740,11 @@
      "type": "text"
     },
     {
+     "key": "stream",
+     "label": "PFD stream",
+     "type": "text"
+    },
+    {
      "key": "phase",
      "label": "Phase",
      "type": "choice",
@@ -865,6 +870,76 @@
     "fluid",
     "seq",
     "class"
+   ]
+  },
+  {
+   "name": "Stream",
+   "label": "Stream",
+   "parent": "PlantItem",
+   "line": true,
+   "attributes": [
+    {
+     "key": "number",
+     "label": "Stream number",
+     "type": "text"
+    },
+    {
+     "key": "name",
+     "label": "Description",
+     "type": "text"
+    },
+    {
+     "key": "phase",
+     "label": "Phase",
+     "type": "choice",
+     "choices": [
+      "Liquid",
+      "Vapour",
+      "Two-phase",
+      "Solid"
+     ]
+    },
+    {
+     "key": "mflow",
+     "label": "Mass flow",
+     "q": "mflow",
+     "type": "number"
+    },
+    {
+     "key": "flow",
+     "label": "Volume flow",
+     "q": "flow",
+     "type": "number"
+    },
+    {
+     "key": "temp",
+     "label": "Temperature",
+     "q": "temp",
+     "type": "number"
+    },
+    {
+     "key": "press",
+     "label": "Pressure",
+     "q": "press",
+     "type": "number"
+    },
+    {
+     "key": "vfrac",
+     "label": "Vapour fraction",
+     "type": "number"
+    },
+    {
+     "key": "density",
+     "label": "Density",
+     "q": "density",
+     "type": "number"
+    },
+    {
+     "key": "hflow",
+     "label": "Enthalpy flow",
+     "q": "power",
+     "type": "number"
+    }
    ]
   },
   {

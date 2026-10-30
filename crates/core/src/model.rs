@@ -87,6 +87,8 @@ pub struct Sheet {
     pub legend: bool,
     /// An old drawing (read from DXF) shown faintly behind this sheet, to trace over.
     pub underlay: Option<Underlay>,
+    /// A process flow diagram: its process lines are streams, with a stream table on the sheet.
+    pub pfd: bool,
 }
 
 /// An old drawing behind a sheet: its shapes in their own millimetres (top left at 0, 0), placed
@@ -155,7 +157,7 @@ impl Underlay {
 
 impl Default for Sheet {
     fn default() -> Self {
-        Self { id: 0, number: "PID-001".into(), title: "Piping and instrument diagram".into(), size: "A3".into(), rev: "A".into(), date: String::new(), scale: "NTS".into(), revs: vec![], legend: false, underlay: None }
+        Self { id: 0, number: "PID-001".into(), title: "Piping and instrument diagram".into(), size: "A3".into(), rev: "A".into(), date: String::new(), scale: "NTS".into(), revs: vec![], legend: false, underlay: None, pfd: false }
     }
 }
 
@@ -316,6 +318,8 @@ pub struct Obj {
 
 /// The class of a line-number object.
 pub const LINE_CLASS: &str = "PipingNetworkSystem";
+/// The class of a line on a process flow diagram: a stream, numbered 1, 2, 3….
+pub const STREAM_CLASS: &str = "Stream";
 
 /// An issued revision of an object's datasheet: its revision, status, date and who issued it,
 /// with what the datasheet said then (so the next revision can mark what changed).
@@ -762,7 +766,7 @@ impl Project {
         let s = &mut self.settings;
         fix(&mut s.roughness, 0.0, 0.01, 4.5e-5);
         fix(&mut s.grid, 0.5, 20.0, 2.5);
-        s.off.retain(|n| (1..=13).contains(n));
+        s.off.retain(|n| (1..=crate::checks::RULES).contains(n));
         s.off.sort_unstable();
         s.off.dedup();
         if s.limits.is_empty() {
@@ -925,6 +929,7 @@ impl Project {
                 l.obj = 0;
             }
         }
+        self.streams();
         // Issued revisions belong to their object and go with it.
         self.issues.retain(|i| objs.contains(&i.obj));
         for i in &mut self.issues {
@@ -938,6 +943,38 @@ impl Project {
             i.values.retain(|k, v| k.len() <= 200 && v.len() <= 1000);
         }
         w
+    }
+}
+
+impl Project {
+    /// Process lines on a process flow diagram are streams, and the rest line numbers: each
+    /// object's class follows the sheets its lines are drawn on. Streams without a number get the
+    /// next free one.
+    fn streams(&mut self) {
+        let pfd: HashSet<u32> = self.sheets.iter().filter(|s| s.pfd).map(|s| s.id).collect();
+        let mut want: BTreeMap<u32, bool> = BTreeMap::new();
+        for l in self.lines.iter().filter(|l| l.kind.process() && l.obj != 0) {
+            *want.entry(l.obj).or_insert(false) |= pfd.contains(&l.sheet);
+        }
+        for o in &mut self.objects {
+            if let Some(&stream) = want.get(&o.id) {
+                let class = if stream { STREAM_CLASS } else { LINE_CLASS };
+                if o.class != class {
+                    o.class = class.into();
+                }
+            }
+        }
+        let mut used: HashSet<u64> = self.objects.iter().filter(|o| o.class == STREAM_CLASS).filter_map(|o| o.data.get("number")).filter_map(|v| v.text().trim().parse().ok()).collect();
+        let mut n = 1u64;
+        for o in self.objects.iter_mut().filter(|o| o.class == STREAM_CLASS && want.contains_key(&o.id)) {
+            if o.data.get("number").is_none_or(|v| v.text().trim().is_empty()) {
+                while used.contains(&n) {
+                    n += 1;
+                }
+                used.insert(n);
+                o.data.insert("number".into(), Val::Text(n.to_string()));
+            }
+        }
     }
 }
 

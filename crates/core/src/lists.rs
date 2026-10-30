@@ -37,7 +37,7 @@ pub struct List {
     pub rows: Vec<Row>,
 }
 
-pub const KINDS: [(&str, &str); 5] = [("lines", "Line list"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list"), ("datasheets", "Datasheet index")];
+pub const KINDS: [(&str, &str); 6] = [("lines", "Line list"), ("streams", "Stream list"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list"), ("datasheets", "Datasheet index")];
 
 /// (key, label, quantity, editable)
 type Spec = (&'static str, &'static str, &'static str, bool);
@@ -81,7 +81,7 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
         "lines" => {
             let specs: Vec<Spec> = vec![
                 ("number", "Line number", "", false), ("size", "Size", "", true), ("sched", "Sched", "", true), ("fluid", "Fluid", "", true), ("seq", "Seq", "", true), ("class", "Class", "", true),
-                ("service", "Service", "", true), ("from", "From", "", false), ("to", "To", "", false),
+                ("service", "Service", "", true), ("from", "From", "", false), ("to", "To", "", false), ("stream", "PFD stream", "", true),
                 ("flow", "Flow", "flow", true), ("v", "Velocity", "velocity", false), ("dp100", "ΔP", "dp100", false), ("dp", "ΔP total", "dp", false), ("status", "Hydraulics", "", false),
                 ("design_p", "Design P", "press", true), ("design_t", "Design T", "temp", true), ("oper_p", "Oper P", "press", true), ("oper_t", "Oper T", "temp", true),
                 ("density", "Density", "density", true), ("viscosity", "Viscosity", "visc", true), ("length", "Length", "length", true),
@@ -92,6 +92,7 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
                 .runs
                 .iter()
                 .enumerate()
+                .filter(|(r, _)| p.obj(net.run_obj[*r]).is_none_or(|o| o.class != crate::model::STREAM_CLASS))
                 .map(|(r, lines)| {
                     let l = net.lines[&lines[0]];
                     let data = p.data_of(net.run_obj[r]);
@@ -118,6 +119,35 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
                 .collect();
             rows.sort_by(|a, b| a.cells[0].cmp(&b.cells[0]));
             (cols(&specs, us), rows)
+        }
+        "streams" => {
+            let specs: Vec<Spec> = vec![
+                ("number", "Stream", "", true), ("name", "Description", "", true), ("phase", "Phase", "", true), ("from", "From", "", false), ("to", "To", "", false),
+                ("mflow", "Mass flow", "mflow", true), ("flow", "Volume flow", "flow", true), ("temp", "Temperature", "temp", true), ("press", "Pressure", "press", true),
+                ("vfrac", "Vapour fraction", "", true), ("density", "Density", "density", true), ("hflow", "Enthalpy flow", "power", true), ("sheet", "Sheet", "", false),
+            ];
+            let mut rows: Vec<(u64, Row)> = net
+                .runs
+                .iter()
+                .enumerate()
+                .filter_map(|(r, lines)| {
+                    let o = p.obj(net.run_obj[r]).filter(|o| o.class == crate::model::STREAM_CLASS)?;
+                    let l = net.lines[&lines[0]];
+                    let (from, to) = net.run_ends(r);
+                    let cells = specs
+                        .iter()
+                        .map(|&(k, _, q, _)| match k {
+                            "from" => from.as_ref().map(|e| net.describe(e)).unwrap_or_default(),
+                            "to" => to.as_ref().map(|e| net.describe(e)).unwrap_or_default(),
+                            "sheet" => sheet_no(p, l.sheet),
+                            _ => val(&o.data, k, q, us),
+                        })
+                        .collect::<Vec<String>>();
+                    Some((cells[0].trim().parse().unwrap_or(u64::MAX), Row { ids: lines.clone(), sheet: l.sheet, cells, status: None }))
+                })
+                .collect();
+            rows.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cells[0].cmp(&b.1.cells[0])));
+            (cols(&specs, us), rows.into_iter().map(|x| x.1).collect())
         }
         "equipment" => {
             let specs: Vec<Spec> = vec![("tag", "Tag", "", true), ("kind", "Type", "", false), ("service", "Service", "", true), ("design_p", "Design P", "press", true), ("design_t", "Design T", "temp", true), ("oper_p", "Oper P", "press", true), ("oper_t", "Oper T", "temp", true), ("material", "Material", "", true), ("capacity", "Size / capacity", "", false), ("power", "Power", "power", true), ("area", "Area", "", false), ("sheet", "Sheet", "", false)];

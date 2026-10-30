@@ -241,7 +241,7 @@ const shots = process.env.SHOTS;
   check("Tell Me runs a command", (await p.textContent(".btabs button.on")).includes("Equipment"));
 
   // 21. The exhibition check: every example opens with 0 errors, prints and exports DXF.
-  for (const name of ["Pump transfer", "Compressor package", "Exchanger loop"]) {
+  for (const name of ["Pump transfer", "Compressor package", "Exchanger loop", "Crude preheat (PFD)"]) {
     await openEx(name);
     const errs = await p.textContent(".status .sbtn");
     check(`${name} opens with 0 errors and 0 warnings`, errs.includes("0 errors · 0 warnings"), errs);
@@ -480,6 +480,33 @@ const shots = process.env.SHOTS;
   { const ex = (await inv("exports")).filter(e => e.kind === "sim").pop(); const m = ex && JSON.parse(ex.text);
     check("a loop goes to Datum Sim as its model file", !!m && m.format === 2 && m.root.blocks.some(b => b.kind === "PID" && b.name === "LIC-101"), ex?.text.slice(0, 160)); }
   await p.keyboard.press("Escape"); await p.waitForTimeout(200);
+
+  // 35. A process flow diagram: streams numbered in diamonds, the stream table, balances that close;
+  // a wrong flow breaks the mass balance.
+  await openEx("Crude preheat (PFD)");
+  check("the PFD example checks clean", (await p.textContent(".status")).includes("0 errors"));
+  if (process.env.SHOT) {
+    await p.click(".tabs button:text-is('View')"); await p.click(".ribbon button:has-text('Whole Sheet')"); await p.waitForTimeout(300);
+    await p.screenshot({ path: `${process.env.SHOT}/pfd.png`, clip: { x: 236, y: 166, width: 922, height: 452 } });
+  }
+  { const frame = await p.$$eval(".dsvg .frame text", els => els.map(e => e.textContent));
+    check("the stream table is on the sheet", frame.some(t => t.startsWith("Mass flow")) && frame.includes("Flash vapour") && frame.includes("36000"), JSON.stringify(frame.slice(-30)));
+    const marks = await p.$$eval(".dsvg .lines text", els => els.map(e => e.textContent));
+    check("each stream has its number beside it", ["1", "2", "3", "4", "5", "6", "7", "8"].every(n => marks.includes(n)), JSON.stringify(marks)); }
+  await p.click(".btabs button:has-text('Streams')"); await p.waitForTimeout(400);
+  check("the stream list lists the streams", (await p.$$eval(".lists tbody tr.f", els => els.length)) === 8);
+  { check("streams in number order", (await p.$$eval(".lists tbody tr.f td:first-child input", els => els.map(e => e.value))).join(",") === "1,2,3,4,5,6,7,8");
+    const cell = p.locator(".lists tbody tr.f >> nth=4").locator("td:nth-child(6) input");
+    await cell.fill("9000"); await cell.press("Enter"); await p.waitForTimeout(400); }
+  await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
+  check("a wrong flow breaks the mass balance at the separator", (await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("Mass does not balance at V-301")));
+  await p.keyboard.press("Control+z"); await p.waitForTimeout(400);
+  check("undo puts it right", (await p.textContent(".status")).includes("0 errors"));
+  await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button:has-text('PFD Sheet')"); await p.waitForTimeout(400);
+  { const q = await project(); const sh = q.sheets[q.sheets.length - 1];
+    check("a new PFD sheet", sh.pfd && sh.number === "PFD-002" && sh.title === "Process flow diagram", JSON.stringify(sh)); }
+  await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title='This sheet in the DEXPI P&ID exchange format (XML)']"); await p.waitForTimeout(300);
+  check("DEXPI says it is for P&ID sheets", ((await p.textContent("#toast").catch(() => "")) || "").includes("P&ID exchange"));
 
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();

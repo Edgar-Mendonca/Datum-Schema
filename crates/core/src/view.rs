@@ -389,7 +389,14 @@ pub fn sheet(p: &Project, s: &Sheet, net: &Net, hyd: &[Option<Hyd>]) -> SheetVie
             let run = net.run_of.get(&l.id).copied();
             let badge = run.and_then(|r| hyd.get(r)).and_then(|x| x.as_ref()).map(|x| x.status);
             let labelled = run.is_some_and(|r| best.get(&r).is_some_and(|b| b.0 == l.id));
-            if let Some((at, vert)) = label_at(path).filter(|_| labelled) {
+            let stream = p.obj(l.obj).is_some_and(|o| o.class == crate::model::STREAM_CLASS);
+            if let Some((at, vert)) = label_at(path).filter(|_| labelled && stream && !number.is_empty()) {
+                // A stream's number in a diamond beside the line.
+                let c = if vert { [at[0] + 3.6, at[1]] } else { [at[0], at[1] - 3.6] };
+                let r = 2.6;
+                marks.push(Prim::Poly { pts: vec![[c[0], c[1] - r], [c[0] + r, c[1]], [c[0], c[1] + r], [c[0] - r, c[1]]], closed: true, fill: false, dash: false, w: 0.25 });
+                marks.push(text(c, if number.chars().count() > 2 { 1.6 } else { 2.0 }, number.clone(), 1, true));
+            } else if let Some((at, vert)) = label_at(path).filter(|_| labelled) {
                 if !number.is_empty() {
                     let (q, anchor) = if vert { ([at[0] + 1.5, at[1]], 0) } else { ([at[0], at[1] - 1.4], 1) };
                     marks.push(text(q, 2.2, number.clone(), anchor, false));
@@ -403,7 +410,7 @@ pub fn sheet(p: &Project, s: &Sheet, net: &Net, hyd: &[Option<Hyd>]) -> SheetVie
         })
         .collect();
     let notes = p.notes.iter().filter(|n| n.sheet == s.id).map(note_view).collect();
-    SheetView { id: s.id, number: s.number.clone(), title: s.title.clone(), w, h, legend: s.legend, frame: frame::frame(p, s), items, lines, notes, legend_rows: if s.legend { legend(p, s) } else { vec![] }, underlay: s.underlay.clone().filter(|u| u.show) }
+    SheetView { id: s.id, number: s.number.clone(), title: s.title.clone(), w, h, legend: s.legend, frame: { let mut f = frame::frame(p, s); f.extend(crate::pfd::table(p, s)); f }, items, lines, notes, legend_rows: if s.legend { legend(p, s) } else { vec![] }, underlay: s.underlay.clone().filter(|u| u.show) }
 }
 
 /// Text lines of a note, and their box.

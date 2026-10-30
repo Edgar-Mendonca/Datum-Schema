@@ -162,6 +162,9 @@ fn seg_id(l: u32) -> String {
 }
 
 /// One sheet as a DEXPI (Proteus XML) document.
+/// The exchange is for P&ID sheets.
+pub const NOT_PFD: &str = "DEXPI is the P&ID exchange: choose a P&ID sheet. A process flow diagram goes out as DXF, SVG or its stream list.";
+
 pub fn write(p: &Project, sheet: &Sheet) -> String {
     let (w, h) = sheet.dims();
     let mut x = X { s: String::with_capacity(1 << 16), h };
@@ -851,7 +854,7 @@ pub(crate) mod tests {
 
     #[test]
     fn every_example_comes_back_from_dexpi() {
-        for id in crate::examples::list().iter().map(|e| e.id) {
+        for id in crate::examples::list().iter().map(|e| e.id).filter(|id| *id != "pfd") {
             let p = crate::examples::get(id).unwrap();
             let sheet = p.sheets.iter().find(|s| !s.legend).unwrap();
             let (q, warn) = read(&write(&p, sheet)).unwrap();

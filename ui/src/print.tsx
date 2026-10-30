@@ -83,7 +83,7 @@ export const sheetSvg = async (id: number) => {
 };
 
 type Page = { w: number; h: number; body: () => JSX.Element; label: string };
-const LISTS: [string, string][] = [["lines", "Line list"], ["equipment", "Equipment list"], ["instruments", "Instrument index"], ["valves", "Valve list"], ["datasheets", "Datasheet index"]];
+const LISTS: [string, string][] = [["lines", "Line list"], ["streams", "Stream list"], ["equipment", "Equipment list"], ["instruments", "Instrument index"], ["valves", "Valve list"], ["datasheets", "Datasheet index"]];
 const [printing, setPrinting] = createSignal(false);
 /** Set by a datasheet's Print button: print only that object's datasheet. */
 export const [printOnly, setPrintOnly] = createSignal<number | null>(null);
@@ -96,7 +96,7 @@ export const PrintPage = () => {
   const [views] = createResource(viewsForPrint);
   const [which, setWhich] = createSignal<"all" | "this">("all");
   const [fitA3, setFitA3] = createSignal(false);
-  const [want, setWant] = createSignal<Record<string, boolean>>({ lines: true, equipment: true, instruments: true, valves: true, datasheets: false, legend: true, sheets_ds: false, loops: false, cause: false });
+  const [want, setWant] = createSignal<Record<string, boolean>>({ lines: true, streams: true, equipment: true, instruments: true, valves: true, datasheets: false, legend: true, sheets_ds: false, loops: false, cause: false });
   const [datasheets] = createResource(() => call<Datasheet[]>("datasheets_all"));
   const [loops] = createResource(async () => {
     const ls = (await call<LoopInfo[]>("loops")) ?? [];

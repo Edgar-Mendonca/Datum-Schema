@@ -104,13 +104,15 @@ const LinePanel = (p: { l: Line }) => {
   const hyd = () => { const r = run(); return r !== null ? derived()?.hyd[r] ?? null : null; };
   const number = () => derived()?.numbers[p.l.id] ?? "";
   const process = () => ["major", "minor", "utility"].includes(p.l.kind);
+  const stream = () => objOf(p.l.obj)?.class === "Stream";
+  const fields = () => stream() ? derived()?.attrs["Stream"] ?? lib()?.classes.find(c => c.name === "Stream")?.attrs ?? [] : derived()?.attrs["PipingNetworkSystem"] ?? lib()?.line_fields ?? [];
   return <>
-    <div class="iwhat"><b>{process() ? number() || "Line without a number" : lib()?.kinds.find(k => k[0] === p.l.kind)?.[1]}</b><Help k="lines" /></div>
+    <div class="iwhat"><b>{process() ? stream() ? `Stream ${number()}` : number() || "Line without a number" : lib()?.kinds.find(k => k[0] === p.l.kind)?.[1]}</b><Help k={stream() ? "pfd" : "lines"} /></div>
     <Row label="Line type"><Pick value={p.l.kind} set={k => act({ SetLine: { line: { ...p.l, kind: k } } })} options={(lib()?.kinds ?? []).map(k => [k[0], k[1]] as [string, string])} /></Row>
     <div class="ibtns"><button class="btn sm" onClick={() => C.reverse(p.l.id)} title="Flip the flow arrows">Reverse flow</button><Show when={p.l.pts.length}><button class="btn sm" onClick={() => act({ SetPts: { id: p.l.id, pts: [] } })}>Straighten</button></Show>
       <Show when={ids().length > 1}><button class="btn sm" onClick={() => setSel(ids())}>Select all {ids().length} pieces</button></Show></div>
     <Show when={process()}>
-      <Show when={ids().length > 1}><p class="muted small">This line number runs through {ids().length} drawn pieces; data typed here goes to all of them.</p></Show>
+      <Show when={ids().length > 1 && !stream()}><p class="muted small">This line number runs through {ids().length} drawn pieces; data typed here goes to all of them.</p></Show>
       <Show when={hyd()}>{h => <>
         <h4>Hydraulics <Help k="hydraulics" /></h4>
         <div class={["okline", "warnline", "badline"][h().status]}>{["✓ Within the limits", "! Close to or just outside the limits", "✗ Outside the limits"][h().status]} for {h().service_name.toLowerCase()}{h().reason ? `: ${h().reason}` : ""}</div>
@@ -126,8 +128,9 @@ const LinePanel = (p: { l: Line }) => {
         <p class="muted small">A sizing aid: check it as the engineer.</p>
       </>}</Show>
       <h4>Data</h4>
-      <For each={derived()?.attrs["PipingNetworkSystem"] ?? lib()?.line_fields ?? []}>{f => <FieldInput f={f} v={objOf(p.l.obj)?.data[f.key]} ids={[p.l.obj]} />}</For>
-      <div class="ibtns"><button class="btn sm" title="Give this piece a line number of its own (a copy of this line's data), as after a reducer" onClick={() => act({ NewLineObject: { line: p.l.id } })}>New line number from here</button></div>
+      <For each={fields()}>{f => <FieldInput f={f} v={objOf(p.l.obj)?.data[f.key]} ids={[p.l.obj]} />}</For>
+      <Show when={stream()}><p class="muted small">Enthalpy flow is the stream's heat content from your datum; the heat balance compares what goes in and out of each item with its duty.</p></Show>
+      <div class="ibtns" style={{ display: stream() ? "none" : undefined }}><button class="btn sm" title="Give this piece a line number of its own (a copy of this line's data), as after a reducer" onClick={() => act({ NewLineObject: { line: p.l.id } })}>New line number from here</button></div>
       <History id={p.l.obj} />
     </Show>
     <Issues id={p.l.id} />
@@ -167,6 +170,7 @@ const SheetPanel = () => {
       <Row label="Date"><input value={s().date} placeholder="29-Oct-26" onChange={e => setS("date", e.currentTarget.value)} /></Row>
     </div>
     <Row label="Scale"><input value={s().scale} onChange={e => setS("scale", e.currentTarget.value)} /></Row>
+    <Show when={!s().legend}><Check label="Process flow diagram (lines are streams, with a stream table)" value={s().pfd} set={v => setS("pfd", v)} /></Show>
     <h4>Old drawing behind <Help k="underlay" /></h4>
     <Show when={s().underlay} fallback={<div class="ibtns"><button class="btn sm" onClick={C.underlay}>Put a DXF behind this sheet…</button></div>}>{u => {
       const setU = (patch: Partial<Underlay>) => setS("underlay", { ...u(), ...patch });

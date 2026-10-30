@@ -4,7 +4,7 @@
 
 use crate::graph::{end_pt, Net};
 use crate::hydraulics::Hyd;
-use crate::model::{End, Item, Line, Project};
+use crate::model::{End, Item, Line, Project, STREAM_CLASS};
 use crate::symbols::{self, Cat};
 use crate::tags;
 use serde::Serialize;
@@ -19,6 +19,9 @@ pub struct Issue {
     pub sheet: u32,
     pub at: [f64; 2],
 }
+
+/// The number of rules.
+pub const RULES: u8 = 16;
 
 const ERROR: &str = "error";
 const WARNING: &str = "warning";
@@ -44,7 +47,13 @@ fn text(p: &Project, l: &Line, k: &str) -> String {
 }
 fn label(net: &Net, l: u32) -> String {
     let n = net.numbers.get(&l).cloned().unwrap_or_default();
-    if n.is_empty() { "a line".into() } else { format!("line {n}") }
+    let stream = net.lines.get(&l).and_then(|x| net.p.obj(x.obj)).is_some_and(|o| o.class == STREAM_CLASS);
+    match (n.is_empty(), stream) {
+        (true, true) => "a stream".into(),
+        (true, false) => "a line".into(),
+        (false, true) => format!("stream {n}"),
+        (false, false) => format!("line {n}"),
+    }
 }
 
 /// The process lines joined at an in-line item's two process ports (or an off-page pair), with the
@@ -67,6 +76,9 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
     let mut v = vec![];
     let on = |n: u8| p.rule_on(n);
     let sym = |it: &Item| symbols::get(&it.sym);
+    // P&ID rules (valves, relief, isolation, sizes and classes) leave process flow diagrams alone.
+    let pfd_sheets: std::collections::HashSet<u32> = p.sheets.iter().filter(|s| s.pfd).map(|s| s.id).collect();
+    let pid = |it: &Item| !pfd_sheets.contains(&it.sheet);
 
     // 1. Duplicate tags and line numbers.
     if on(1) {
@@ -131,11 +143,11 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
         let (l1, l2) = (net.lines[&la], net.lines[&lb]);
         let (s1, s2) = (text(p, l1, "size"), text(p, l2, "size"));
         let same_size = crate::pipes::nps_inches(&s1).zip(crate::pipes::nps_inches(&s2)).map_or(s1 == s2, |(a, b)| (a - b).abs() < 1e-9);
-        if on(4) && !s1.is_empty() && !s2.is_empty() && !same_size && !s.key.starts_with("reducer") {
+        if on(4) && pid(it) && !s1.is_empty() && !s2.is_empty() && !same_size && !s.key.starts_with("reducer") {
             v.push(on_item(4, ERROR, it, format!("The size changes from {s1}\" to {s2}\" at {} without a reducer.", name(p, it))));
         }
         let (c1, c2) = (text(p, l1, "class"), text(p, l2, "class"));
-        if on(5) && !c1.is_empty() && !c2.is_empty() && !c1.eq_ignore_ascii_case(&c2) && s.key != "specbreak" {
+        if on(5) && pid(it) && !c1.is_empty() && !c2.is_empty() && !c1.eq_ignore_ascii_case(&c2) && s.key != "specbreak" {
             v.push(on_item(5, WARNING, it, format!("The pipe class changes from {c1} to {c2} at {} without a spec-break mark.", name(p, it))));
         }
         // A line flows into the item when the item is at its downstream end.
@@ -167,14 +179,14 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
     if on(6) {
         for it in &p.items {
             let Some(s) = sym(it) else { continue };
-            let wants = matches!(s.cat, Cat::Vessel | Cat::Rotating | Cat::Heat | Cat::Control | Cat::Instrument | Cat::Primary) || (s.cat == Cat::Valve);
+            let wants = matches!(s.cat, Cat::Vessel | Cat::Rotating | Cat::Heat) || (pid(it) && matches!(s.cat, Cat::Control | Cat::Instrument | Cat::Primary | Cat::Valve));
             if wants && p.tag_of(it).trim().is_empty() {
                 v.push(on_item(6, WARNING, it, format!("This {} has no tag.", s.name.to_lowercase())));
             }
         }
         for lines in &net.runs {
             let l = net.lines[&lines[0]];
-            if !text(p, l, "number").is_empty() {
+            if !text(p, l, "number").is_empty() || p.obj(l.obj).is_some_and(|o| o.class == STREAM_CLASS) {
                 continue;
             }
             let req = crate::classes::attrs(Some(p), crate::model::LINE_CLASS);
@@ -201,7 +213,7 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
 
     // 8. Pump discharge without a check valve before the next equipment or branch.
     if on(8) {
-        for it in p.items.iter().filter(|i| i.base_key().starts_with("pump")) {
+        for it in p.items.iter().filter(|i| pid(i) && i.base_key().starts_with("pump")) {
             let Some(s) = sym(it) else { continue };
             let Some(k) = s.ports.iter().position(|x| x.name == "discharge") else { continue };
             if net.on_port(it.id, k as u8).is_empty() {
@@ -228,7 +240,7 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
     // 9. Vessels and exchanger shells need a relief path.
     if on(9) {
         const RELIEF: [&str; 4] = ["psv", "rupture", "breather", "vent"];
-        for it in &p.items {
+        for it in p.items.iter().filter(|i| pid(i)) {
             let Some(s) = sym(it) else { continue };
             let ports: Vec<u8> = match s.cat {
                 Cat::Vessel => (0..s.ports.len() as u8).collect(),
@@ -248,7 +260,7 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
     // 10. Control valves need isolation valves on both sides.
     if on(10) {
         const ISOLATE: [&str; 6] = ["gate", "globe", "ball", "butterfly", "plug", "diaphragm"];
-        for it in p.items.iter().filter(|i| matches!(i.base_key().as_str(), "cv_pneu" | "cv_motor")) {
+        for it in p.items.iter().filter(|i| pid(i) && matches!(i.base_key().as_str(), "cv_pneu" | "cv_motor")) {
             let Some(s) = sym(it) else { continue };
             let sides: Vec<bool> = s.ports.iter().enumerate().filter(|(_, x)| !x.signal).map(|(k, _)| net.reach(it.id, k as u8, false, 6, |ni, ns| (!ns.inline && ns.cat != Cat::Connector) || ISOLATE.contains(&ni.base_key().as_str())).iter().any(|(n, _, _)| ISOLATE.contains(&net.items[n].base_key().as_str()))).collect();
             if sides.iter().any(|x| !x) {
@@ -262,7 +274,7 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
     let insts: Vec<(&Item, String, String, Cat)> = p.items.iter().filter_map(|i| { let s = sym(i)?; (s.cat.instrument() || s.cat == Cat::Control).then(|| { let (l, n) = tags::loop_of(p.tag_of(i)); (i, l, n, s.cat) }) }).collect();
     if on(11) {
         for (it, l, n, cat) in &insts {
-            if *cat != Cat::Instrument || !tags::is_controller(l) || n.is_empty() {
+            if *cat != Cat::Instrument || !tags::is_controller(l) || n.is_empty() || !pid(it) {
                 continue;
             }
             let in_loop = |f: &dyn Fn(&str, Cat) -> bool| insts.iter().any(|(o, ol, on_, oc)| o.id != it.id && on_ == n && f(ol, *oc));
@@ -306,6 +318,16 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
                 v.push(on_lines(13, WARNING, p, net, lines, format!("{}: {} ({}).", cap(&label(net, lines[0])), h.reason, h.service_name.to_lowercase())));
             }
         }
+    }
+
+    // 14 and 15. Mass and heat balance round every item on a process flow diagram.
+    if on(14) || on(15) {
+        v.extend(crate::pfd::balances(p, net).into_iter().filter(|i| on(i.rule)));
+    }
+
+    // 16. A P&ID line that names a PFD stream carries what the stream says.
+    if on(16) {
+        v.extend(crate::pfd::line_vs_stream(p, net));
     }
     v
 }

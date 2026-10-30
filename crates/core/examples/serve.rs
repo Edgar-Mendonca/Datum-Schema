@@ -89,6 +89,9 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
                 }
                 "dexpi" => {
                     let sh = a["sheet"].as_u64().unwrap_or(0) as u32;
+                    if s.doc.p.sheet(sh).is_some_and(|x| x.pfd) {
+                        return Err(datum_core::dexpi::NOT_PFD.into());
+                    }
                     let sheet = s.doc.p.sheet(sh).or(s.doc.p.sheets.first()).ok_or("There is no sheet.")?.clone();
                     // Kept as the file the next DEXPI import reads (the test cannot pick one).
                     let text = datum_core::dexpi::write(&s.doc.p, &sheet);

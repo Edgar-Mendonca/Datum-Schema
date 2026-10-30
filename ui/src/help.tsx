@@ -21,6 +21,9 @@ export const RULES: [number, string, string][] = [
   [11, "Controller (xIC) without a measurement and a final element in its loop", "warning"],
   [12, "Instrument tag letters that do not match its symbol type or loop", "note"],
   [13, "Line velocity or pressure drop outside its limits", "warning"],
+  [14, "Mass does not balance round an item on a process flow diagram (streams in and out)", "error"],
+  [15, "Heat does not balance round an item on a process flow diagram (enthalpy flows and duty)", "warning"],
+  [16, "A P&ID line's mass flow disagrees with the PFD stream it names, or names no stream", "warning"],
 ];
 
 export const HELP: Record<string, Topic> = {
@@ -79,6 +82,9 @@ export const HELP: Record<string, Topic> = {
   send: { t: "Sending to Datum Pipe and Datum Sim", what: "A line goes to Datum Pipe as a model to start its stress analysis; a control loop goes to Datum Sim as a block diagram to tune. Each is saved as that app's own file.",
     how: ["Select a process line, then Format › Send › To Datum Pipe. The line's size, schedule, design pressure and temperature, density and length go with it; its valves sit at their places along the run, between two anchors.", "A P&ID has no routing in three dimensions: in Datum Pipe add the bends, supports and real lengths, and the valves' real masses.", "Open Lists › Loop Diagrams, choose a loop, then To Datum Sim. The set point, controller, valve, process and transmitter are blocks with a trend of SP, PV and OP.", "The dynamics are typical values for the measured variable (flow, level, pressure, temperature), kept as variables at the top of the model: set them from the plant, then tune."],
     tip: "What was assumed (a missing schedule, length or design condition) is listed when the file is saved and in the model's notes. Both are starting points checked by the engineer." },
+  pfd: { t: "Process flow diagrams", what: "A PFD sheet shows the process as streams between equipment, with a stream table on the sheet and heat and mass balance checks. Equipment on a PFD can be the same objects as on the P&IDs (same tag and data).",
+    how: ["Sheets › PFD Sheet. Place equipment and draw process lines: each line is a stream, numbered 1, 2, 3… in a diamond beside it.", "Select a stream and type its data in the Inspector: mass and volume flow, temperature, pressure, vapour fraction, density and enthalpy flow. The stream table along the bottom of the sheet fills in as you type; the Streams tab lists them all.", "Check 14: the mass flows into each item equal those out (within 0.5%). Check 15: the enthalpy flows out less those in equal the item's duty or shaft power, or nothing (within 2%).", "On the P&ID, type a line's PFD stream (Inspector › PFD stream): check 16 compares the line's mass flow with the stream's."],
+    tip: "The balances check the numbers you typed; they are not a simulation. Choose one enthalpy datum for the whole diagram. A sizing aid checked by the engineer." },
   history: { t: "History", what: "Every change to an object is recorded with who made it, when, and the old and new value. The history is saved in the project file, so it survives closing and reopening; undo and redo are recorded too." },
   inspector: { t: "Inspector", what: "The selected item's data, with units: tag, service, design and operating conditions, sizes, connections, and for lines the hydraulics. With nothing selected, the sheet, its revisions and the title block." },
   "cat:vessel": { t: "Vessels", what: "Vertical vessels, horizontal drums, tanks, columns (trays or packing), a separator with a boot, a filter vessel, a knock-out drum and a silo. Their nozzles are ports; each carries design and operating conditions, material, volume and a relief note." },

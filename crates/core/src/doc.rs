@@ -590,11 +590,15 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
         Op::AddSheet { mut sheet } => {
             sheet.id = p.id();
             if sheet.number.trim().is_empty() || p.sheets.iter().any(|s| s.number == sheet.number) {
-                let mut n = p.sheets.len() + 1;
-                while p.sheets.iter().any(|s| s.number == format!("PID-{n:03}")) {
+                let pre = if sheet.pfd { "PFD" } else { "PID" };
+                let mut n = if sheet.pfd { p.sheets.iter().filter(|s| s.pfd).count() + 1 } else { p.sheets.len() + 1 };
+                while p.sheets.iter().any(|s| s.number == format!("{pre}-{n:03}")) {
                     n += 1;
                 }
-                sheet.number = if sheet.legend { format!("PID-{n:03} (legend)") } else { format!("PID-{n:03}") };
+                sheet.number = if sheet.legend { format!("{pre}-{n:03} (legend)") } else { format!("{pre}-{n:03}") };
+                if sheet.pfd && sheet.title == Sheet::default().title {
+                    sheet.title = "Process flow diagram".into();
+                }
             }
             created.push(sheet.id);
             p.sheets.push(sheet);
