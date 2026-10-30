@@ -67,7 +67,7 @@ fn role(p: &Project, it: &Item) -> Role {
     let Some(s) = symbols::get(&it.sym) else { return Role::Skip };
     let class = p.obj(it.obj).map(|o| o.class.clone()).unwrap_or_default();
     let chain: Vec<&str> = classes::chain(&class).iter().map(|c| c.name.as_str()).collect();
-    if it.sym == "offpage" {
+    if it.base_key() == "offpage" {
         Role::OffPage
     } else if chain.contains(&"Equipment") {
         Role::Equipment
@@ -220,7 +220,7 @@ pub fn write(p: &Project, sheet: &Sheet) -> String {
         let Some(o) = p.obj(it.obj) else { continue };
         let _ = writeln!(x.s, "  <Equipment ID=\"{}\" TagName=\"{}\" ComponentClass=\"{}\">", eq_id(it), esc(&o.tag), esc(&o.class));
         x.pos("    ", it.x, it.y, it.rot, it.flip);
-        x.attrs(p, "    ", it.obj, &[], &[(SYMBOL, it.sym.clone())]);
+        x.attrs(p, "    ", it.obj, &[], &[(SYMBOL, it.base_key())]);
         let sym = symbols::get(&it.sym).expect("a known symbol");
         for (k, port) in sym.ports.iter().enumerate().filter(|(_, q)| !q.signal) {
             let q = place(it, k);
@@ -266,7 +266,7 @@ pub fn write(p: &Project, sheet: &Sheet) -> String {
                 let class = if roles[item] == Role::OffPage { "PipeOffPageConnector".to_string() } else { o.class.clone() };
                 let _ = writeln!(x.s, "      <{el} ID=\"{}\" TagName=\"{}\" ComponentClass=\"{}\">", comp_id(it), esc(&o.tag), esc(&class));
                 x.pos("        ", it.x, it.y, it.rot, it.flip);
-                x.attrs(p, "        ", it.obj, &[], &[(SYMBOL, it.sym.clone())]);
+                x.attrs(p, "        ", it.obj, &[], &[(SYMBOL, it.base_key())]);
                 let _ = writeln!(x.s, "      </{el}>");
             }
             let mut c = String::from("      <Connection");
@@ -291,7 +291,7 @@ pub fn write(p: &Project, sheet: &Sheet) -> String {
             let class = if roles[&it.id] == Role::OffPage { "PipeOffPageConnector".to_string() } else { o.class.clone() };
             let _ = writeln!(x.s, "      <PipingComponent ID=\"{}\" TagName=\"{}\" ComponentClass=\"{}\">", comp_id(it), esc(&o.tag), esc(&class));
             x.pos("        ", it.x, it.y, it.rot, it.flip);
-            x.attrs(p, "        ", it.obj, &[], &[(SYMBOL, it.sym.clone())]);
+            x.attrs(p, "        ", it.obj, &[], &[(SYMBOL, it.base_key())]);
             let _ = writeln!(x.s, "      </PipingComponent>");
         }
         let _ = writeln!(x.s, "    </PipingNetworkSegment>");
@@ -305,7 +305,7 @@ pub fn write(p: &Project, sheet: &Sheet) -> String {
         x.pos("    ", it.x, it.y, it.rot, it.flip);
         let cat: String = letters.chars().take(1).collect();
         let funcs: String = letters.chars().skip(1).collect();
-        x.attrs(p, "    ", it.obj, &[("ProcessInstrumentationFunctionCategory", cat), ("ProcessInstrumentationFunctions", funcs), ("ProcessInstrumentationFunctionNumber", n)], &[(SYMBOL, it.sym.clone())]);
+        x.attrs(p, "    ", it.obj, &[("ProcessInstrumentationFunctionCategory", cat), ("ProcessInstrumentationFunctions", funcs), ("ProcessInstrumentationFunctionNumber", n)], &[(SYMBOL, it.base_key())]);
         let _ = writeln!(x.s, "  </ProcessInstrumentationFunction>");
     }
     // Signal lines, and impulse lines to instruments, as information flows.
@@ -530,7 +530,7 @@ pub fn read(text: &str) -> Result<(Project, Vec<String>), String> {
         let obj = p.new_obj(class, tag);
         fill_attrs(p, obj, el);
         let id = p.id();
-        p.items.push(Item { id, sheet: sheet_id, sym: sym.into(), x: pt[0], y: pt[1], rot, flip, scale: 1.0, obj, link: 0 });
+        p.items.push(Item { id, sheet: sheet_id, sym: sym.into(), x: pt[0], y: pt[1], rot, flip, scale: 1.0, obj, link: 0, base: String::new() });
         id
     };
     let mut equipment: Vec<&El> = vec![];

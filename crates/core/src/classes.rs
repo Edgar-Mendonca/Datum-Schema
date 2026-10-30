@@ -125,6 +125,9 @@ pub fn attrs(p: Option<&Project>, class: &str) -> Vec<Attr> {
 
 /// The class a new object drawn with this symbol gets.
 pub fn class_name_for(sym: &str) -> String {
+    if let Some(d) = crate::symlib::definition(sym) {
+        return d.class;
+    }
     for_symbol(sym).map_or_else(|| sym.to_string(), |c| c.name.clone())
 }
 

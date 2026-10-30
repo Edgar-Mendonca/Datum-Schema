@@ -77,7 +77,7 @@ fn members<'a>(p: &'a Project, key: &str) -> Vec<&'a Item> {
 
 fn in_system(p: &Project, it: &Item) -> bool {
     let loc = p.data_of(it.obj).get("location").map(|v| v.text()).unwrap_or_default();
-    matches!(it.sym.as_str(), "inst_dcs" | "inst_plc" | "inst_panel" | "inst_interlock") || loc == "DCS" || loc == "Control room panel"
+    matches!(it.base_key().as_str(), "inst_dcs" | "inst_plc" | "inst_panel" | "inst_interlock") || loc == "DCS" || loc == "Control room panel"
 }
 
 fn rank(p: &Project, it: &Item) -> u8 {

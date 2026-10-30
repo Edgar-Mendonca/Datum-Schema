@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
 
 /// The file format written by this version. Older formats are migrated when read.
-pub const FORMAT: u32 = 3;
+pub const FORMAT: u32 = 4;
 /// Coordinates are kept inside ±this many millimetres (a few times the largest sheet).
 pub const MAX_COORD: f64 = 100_000.0;
 /// The most of any one kind of thing a file may hold (far more than any real drawing).
@@ -85,11 +85,77 @@ pub struct Sheet {
     pub revs: Vec<Rev>,
     /// The legend sheet: drawn automatically with every symbol the project uses.
     pub legend: bool,
+    /// An old drawing (read from DXF) shown faintly behind this sheet, to trace over.
+    pub underlay: Option<Underlay>,
+}
+
+/// An old drawing behind a sheet: its shapes in their own millimetres (top left at 0, 0), placed
+/// at (x, y) on the sheet and scaled by k.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
+pub struct Underlay {
+    /// The file it came from.
+    pub name: String,
+    /// Its shapes, in the symbol language. Shared, not copied, by undo; kept in the file's own
+    /// table and never sent to the window (which asks for the drawing by `rev`).
+    #[serde(skip)]
+    pub draw: std::sync::Arc<String>,
+    pub w: f64,
+    pub h: f64,
+    pub x: f64,
+    pub y: f64,
+    pub k: f64,
+    pub show: bool,
+    /// Printed and exported with the sheet (off: only shown while drawing).
+    pub print: bool,
+    /// A fingerprint of `draw`, so the window fetches the drawing only when it changes.
+    pub rev: String,
+}
+
+/// Underlays larger than this (in the symbol language) are refused.
+pub const MAX_UNDERLAY: usize = 16 << 20;
+
+impl Underlay {
+    pub fn fingerprint(draw: &str) -> String {
+        // FNV-1a.
+        let mut h: u64 = 0xcbf29ce484222325;
+        for b in draw.bytes() {
+            h = (h ^ b as u64).wrapping_mul(0x100000001b3);
+        }
+        format!("{h:016x}")
+    }
+    /// Its shapes placed on the sheet.
+    pub fn prims(&self) -> Vec<crate::symbols::Prim> {
+        use crate::symbols::Prim;
+        let (k, x, y) = (self.k, self.x, self.y);
+        let at = |p: [f64; 2]| [x + p[0] * k, y + p[1] * k];
+        crate::symbols::parse(&self.draw)
+            .into_iter()
+            .map(|p| match p {
+                Prim::Poly { pts, closed, fill, dash, w } => Prim::Poly { pts: pts.into_iter().map(at).collect(), closed, fill, dash, w },
+                Prim::Circle { c, r, fill, w } => Prim::Circle { c: at(c), r: r * k, fill, w },
+                Prim::Arc { c, r, a0, a1, w } => Prim::Arc { c: at(c), r: r * k, a0, a1, w },
+                Prim::Text { p, h, s, anchor, bold } => Prim::Text { p: at(p), h: h * k, s, anchor, bold },
+            })
+            .collect()
+    }
+    fn normalize(&mut self) {
+        let fin = |v: f64, d: f64| if v.is_finite() { v } else { d };
+        self.k = fin(self.k, 1.0).clamp(1e-3, 1e3);
+        self.x = fin(self.x, 0.0).clamp(-1e5, 1e5);
+        self.y = fin(self.y, 0.0).clamp(-1e5, 1e5);
+        self.w = fin(self.w, 0.0).clamp(0.0, 1e7);
+        self.h = fin(self.h, 0.0).clamp(0.0, 1e7);
+        self.name = crate::clip(&self.name, 120);
+        if self.rev.is_empty() {
+            self.rev = Self::fingerprint(&self.draw);
+        }
+    }
 }
 
 impl Default for Sheet {
     fn default() -> Self {
-        Self { id: 0, number: "PID-001".into(), title: "Piping and instrument diagram".into(), size: "A3".into(), rev: "A".into(), date: String::new(), scale: "NTS".into(), revs: vec![], legend: false }
+        Self { id: 0, number: "PID-001".into(), title: "Piping and instrument diagram".into(), size: "A3".into(), rev: "A".into(), date: String::new(), scale: "NTS".into(), revs: vec![], legend: false, underlay: None }
     }
 }
 
@@ -121,11 +187,30 @@ pub struct Item {
     pub obj: u32,
     /// Off-page connectors: the partner connector's id (0: none yet).
     pub link: u32,
+    /// Drawn with a library symbol by the drawing standard: the Datum Schema symbol it stands for
+    /// (empty: `sym` is what was placed).
+    pub base: String,
+}
+
+impl Item {
+    /// The Datum Schema symbol this item stands for: its own, the one the drawing standard
+    /// replaced, or the one a library symbol is like. What the checks and lists go by.
+    pub fn base_key(&self) -> String {
+        if !self.base.is_empty() {
+            return self.base.clone();
+        }
+        if self.sym.starts_with("x.") {
+            if let Some(d) = crate::symlib::definition(&self.sym).filter(|d| !d.like.is_empty()) {
+                return d.like;
+            }
+        }
+        self.sym.clone()
+    }
 }
 
 impl Default for Item {
     fn default() -> Self {
-        Self { id: 0, sheet: 0, sym: String::new(), x: 0.0, y: 0.0, rot: 0, flip: false, scale: 1.0, obj: 0, link: 0 }
+        Self { id: 0, sheet: 0, sym: String::new(), x: 0.0, y: 0.0, rot: 0, flip: false, scale: 1.0, obj: 0, link: 0, base: String::new() }
     }
 }
 
@@ -338,6 +423,17 @@ pub struct Settings {
     pub user_attrs: Vec<crate::classes::UserAttr>,
     /// The company's datasheet layout (Options › Datasheets).
     pub ds_layout: DsLayout,
+    /// The drawing standard: Datum Schema's symbols drawn with a library's.
+    pub standard: Standard,
+}
+
+/// A drawing standard: a library's name and, for each of Datum Schema's symbols, the library
+/// symbol that draws it.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
+pub struct Standard {
+    pub library: String,
+    pub map: BTreeMap<String, String>,
 }
 
 /// A company's datasheet layout: its form number, logo and footer, the rows it leaves out and the
@@ -362,7 +458,7 @@ pub const MAX_LOGO: usize = 280_000;
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default() }
+        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default() }
     }
 }
 
@@ -383,6 +479,8 @@ pub struct Project {
     pub notes: Vec<Note>,
     /// Issued datasheet revisions, oldest first.
     pub issues: Vec<Issue>,
+    /// Copies of the library symbols this project uses (so it opens without the library).
+    pub custom_syms: Vec<crate::symlib::CustomSym>,
     pub settings: Settings,
     /// The next id for anything (sheets, items, lines and notes share one sequence).
     pub next: u32,
@@ -397,7 +495,7 @@ impl Default for Project {
 impl Project {
     /// A new project with one blank A3 sheet.
     pub fn new() -> Self {
-        let mut p = Self { format: FORMAT, name: "Project1".into(), units: "SI".into(), title: Title::default(), nodes: vec![], objects: vec![], sheets: vec![], items: vec![], lines: vec![], notes: vec![], issues: vec![], settings: Settings::default(), next: 1 };
+        let mut p = Self { format: FORMAT, name: "Project1".into(), units: "SI".into(), title: Title::default(), nodes: vec![], objects: vec![], sheets: vec![], items: vec![], lines: vec![], notes: vec![], issues: vec![], custom_syms: vec![], settings: Settings::default(), next: 1 };
         let id = p.id();
         p.sheets.push(Sheet { id, ..Sheet::default() });
         p.default_nodes();
@@ -505,6 +603,13 @@ impl Project {
         if self.units != "SI" && self.units != "US" {
             self.units = "SI".into();
         }
+        // Library symbols this project carries are known before anything is drawn.
+        let (copies, mut lw) = crate::symlib::check_copies(std::mem::take(&mut self.custom_syms));
+        w.append(&mut lw);
+        self.custom_syms = copies;
+        for c in &self.custom_syms {
+            crate::symlib::register(c);
+        }
         for (what, n) in [("sheets", self.sheets.len()), ("items", self.items.len()), ("lines", self.lines.len()), ("notes", self.notes.len())] {
             if n > MAX_COUNT {
                 w.push(format!("The file had {n} {what}; only the first {MAX_COUNT} were kept."));
@@ -560,6 +665,12 @@ impl Project {
                 s.size = "A3".into();
             }
             s.revs.truncate(50);
+            if let Some(u) = s.underlay.as_mut() {
+                u.normalize();
+            }
+            if s.underlay.as_ref().is_some_and(|u| u.draw.is_empty() || u.draw.len() > MAX_UNDERLAY) {
+                s.underlay = None;
+            }
         }
         let sheets: HashSet<u32> = self.sheets.iter().map(|s| s.id).collect();
         let first = self.sheets[0].id;
@@ -578,6 +689,7 @@ impl Project {
                 it.sym = "unknown".into();
             }
         }
+        self.skin();
         let items: BTreeMap<u32, (u32, usize)> = self.items.iter().map(|i| (i.id, (i.sheet, crate::symbols::get(&i.sym).map_or(0, |s| s.ports.len())))).collect();
         for it in &mut self.items {
             if it.link != 0 && (it.link == it.id || !items.contains_key(&it.link)) {
@@ -678,6 +790,67 @@ impl Project {
         }
         self.format = FORMAT;
         w
+    }
+
+    /// The drawing standard applied: every item drawn with the library symbol its base symbol
+    /// maps to (or with its base again when the standard no longer maps it), its lines moved to
+    /// the port of the same name; then the copies of library symbols brought in step with use.
+    fn skin(&mut self) {
+        use crate::symbols::{self, Place, Sym};
+        let map = &self.settings.standard.map;
+        let mut moves: Vec<(u32, &'static Sym, &'static Sym, Item)> = vec![];
+        for it in &mut self.items {
+            let base = if it.base.is_empty() { it.sym.clone() } else { it.base.clone() };
+            let want = map.get(&base).filter(|k| symbols::get(k).is_some()).cloned().unwrap_or_else(|| base.clone());
+            if want == it.sym || symbols::get(&base).is_none() {
+                continue;
+            }
+            let (Some(old), Some(new)) = (symbols::get(&it.sym), symbols::get(&want)) else { continue };
+            let before = it.clone();
+            it.sym = want.clone();
+            it.base = if want == base { String::new() } else { base };
+            moves.push((it.id, old, new, before));
+        }
+        // A port of the old symbol on the new: the same name, else the nearest of its kind.
+        let remap = |old: &Sym, new: &Sym, k: u8| -> Option<u8> {
+            let op = old.ports.get(k as usize)?;
+            if let Some(i) = new.ports.iter().position(|q| q.name == op.name && q.signal == op.signal) {
+                return Some(i as u8);
+            }
+            let (ox, oy) = (op.x / old.w.max(1e-9), op.y / old.h.max(1e-9));
+            new.ports.iter().enumerate().filter(|(_, q)| q.signal == op.signal).min_by(|a, b| {
+                let d = |q: &crate::symbols::Port| (q.x / new.w.max(1e-9) - ox).powi(2) + (q.y / new.h.max(1e-9) - oy).powi(2);
+                d(a.1).total_cmp(&d(b.1))
+            }).map(|x| x.0 as u8)
+        };
+        for (id, old, new, before) in moves {
+            for l in &mut self.lines {
+                for e in [&mut l.a, &mut l.b] {
+                    if let End::Port { item, port } = *e {
+                        if item == id {
+                            *e = match remap(old, new, port) {
+                                Some(k) => End::Port { item, port: k },
+                                None => {
+                                    let q = old.ports.get(port as usize).map_or([before.x, before.y], |q| Place::of(&before).pt([q.x, q.y]));
+                                    End::Free { x: q[0], y: q[1] }
+                                }
+                            };
+                        }
+                    }
+                }
+            }
+        }
+        // Copies of exactly the library symbols in use (drawn, or named by the standard).
+        let used: std::collections::BTreeSet<String> = self.items.iter().map(|i| i.sym.clone()).chain(self.settings.standard.map.values().cloned()).filter(|k| k.starts_with("x.")).collect();
+        self.custom_syms.retain(|c| used.contains(&c.key));
+        for k in &used {
+            if !self.custom_syms.iter().any(|c| &c.key == k) {
+                if let Some(d) = crate::symlib::definition(k) {
+                    self.custom_syms.push(d);
+                }
+            }
+        }
+        self.settings.standard.map.retain(|k, v| crate::symbols::builtin(k).is_some() && crate::symbols::get(v).is_some());
     }
 
     /// The hierarchy and the objects: nodes form a tree of known levels, every object sits in an
@@ -835,6 +1008,7 @@ pub fn from_json(text: &str) -> Result<(Project, Vec<String>), String> {
     p.lines = list(raw_lines.clone(), "lines", &mut w);
     p.notes = list(part("notes", &mut w), "notes", &mut w);
     p.issues = list(o.get("issues").cloned(), "datasheet revisions", &mut w);
+    p.custom_syms = list(o.get("custom_syms").cloned(), "library symbols", &mut w);
     if format < 2 {
         migrate_1(&mut p, raw_items, raw_lines);
         w.push("This file was made by Datum Schema 0.1.4 or earlier; it now keeps its symbols' and lines' data in plant objects (save it to keep the new form).".into());

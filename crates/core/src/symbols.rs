@@ -9,11 +9,12 @@
 //! `c cx cy r` circle · `fc cx cy r` filled circle · `a cx cy r a0 a1` arc (degrees, clockwise
 //! from +x) · `e cx cy rx ry a0 a1` elliptical arc · `r x y w h` rectangle · `t x y size text`.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, Serialize, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum Cat {
+    #[default]
     Vessel,
     Rotating,
     Heat,
@@ -245,7 +246,13 @@ pub fn all() -> &'static [Sym] {
     })
 }
 
+/// A symbol: one of ours, or a library symbol registered from a client's legend (`symlib`).
 pub fn get(key: &str) -> Option<&'static Sym> {
+    builtin(key).or_else(|| crate::symlib::get(key))
+}
+
+/// One of Datum Schema's own symbols.
+pub fn builtin(key: &str) -> Option<&'static Sym> {
     all().iter().find(|s| s.key == key)
 }
 
@@ -274,11 +281,11 @@ pub fn parse(draw: &str) -> Vec<Prim> {
     for cmd in draw.split(';') {
         let cmd = cmd.trim();
         let (op, rest) = cmd.split_once(' ').unwrap_or((cmd, ""));
-        if op == "t" {
+        if op == "t" || op == "tl" || op == "tr" {
             let mut w = rest.splitn(4, ' ');
             let n: Vec<f64> = (0..3).filter_map(|_| w.next()?.parse().ok()).collect();
             if n.len() == 3 {
-                out.push(Prim::Text { p: [n[0], n[1]], h: n[2], s: w.next().unwrap_or("").to_string(), anchor: 1, bold: false });
+                out.push(Prim::Text { p: [n[0], n[1]], h: n[2], s: w.next().unwrap_or("").to_string(), anchor: match op { "tl" => 0, "tr" => 2, _ => 1 }, bold: false });
             }
             continue;
         }
@@ -376,7 +383,7 @@ pub fn svg(ps: &[Prim]) -> String {
                 let large = if (a1 - a0).rem_euclid(360.0) > 180.0 { 1 } else { 0 };
                 s += &format!("<path d=\"M{} {}A{} {} 0 {large} 1 {} {}\"/>", n(p0[0]), n(p0[1]), n(*r), n(*r), n(p1[0]), n(p1[1]));
             }
-            Prim::Text { p, h, s: t, .. } => s += &format!("<text x=\"{}\" y=\"{}\" font-size=\"{}\" class=\"st\">{}</text>", n(p[0]), n(p[1]), n(*h), crate::xml(t)),
+            Prim::Text { p, h, s: t, anchor, .. } => s += &format!("<text x=\"{}\" y=\"{}\" font-size=\"{}\" class=\"st\"{}>{}</text>", n(p[0]), n(p[1]), n(*h), match anchor { 0 => " text-anchor=\"start\"", 2 => " text-anchor=\"end\"", _ => "" }, crate::xml(t)),
         }
     }
     s
@@ -405,15 +412,16 @@ pub struct SymInfo {
     pub fields: Vec<crate::classes::Attr>,
 }
 
+/// Every symbol: ours, then the library symbols registered (their keys start with "x.").
 pub fn info() -> Vec<SymInfo> {
-    all()
-        .iter()
-        .map(|s| {
-            let ps = parse(s.draw);
-            let (texts, shapes): (Vec<Prim>, Vec<Prim>) = ps.into_iter().partition(|p| matches!(p, Prim::Text { .. }));
-            SymInfo { key: s.key, name: s.name, cat: s.cat, cat_name: s.cat.name(), w: s.w, h: s.h, ports: s.ports.clone(), prefix: s.prefix, inline: s.inline, terminal: s.terminal, rare: s.rare, svg: svg(&shapes), texts, class: crate::classes::class_name_for(s.key), fields: crate::classes::attrs(None, &crate::classes::class_name_for(s.key)) }
-        })
-        .collect()
+    all().iter().chain(crate::symlib::registered()).map(sym_info).collect()
+}
+
+pub fn sym_info(s: &'static Sym) -> SymInfo {
+    let ps = parse(s.draw);
+    let (texts, shapes): (Vec<Prim>, Vec<Prim>) = ps.into_iter().partition(|p| matches!(p, Prim::Text { .. }));
+    let class = crate::classes::class_name_for(s.key);
+    SymInfo { key: s.key, name: s.name, cat: s.cat, cat_name: s.cat.name(), w: s.w, h: s.h, ports: s.ports.clone(), prefix: s.prefix, inline: s.inline, terminal: s.terminal, rare: s.rare, svg: svg(&shapes), texts, fields: crate::classes::attrs(None, &class), class }
 }
 
 #[cfg(test)]

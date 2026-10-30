@@ -5,7 +5,7 @@
 // draws it and sends edits.
 import { For, Show, JSX, createSignal, createMemo, createEffect, onMount, onCleanup, batch, on } from "solid-js";
 import { Pt, Prim, ItemView, LineView, End, Kind, Item, Line, Note } from "./api";
-import { derived, sel, setSel, act, proj, sheet, opts, tool, setTool, symOf, lib, openMenu, MenuItem, hiNumber, hidden, setSheetId, lineOf, onFit } from "./store";
+import { derived, sel, setSel, act, proj, sheet, opts, tool, setTool, symOf, lib, openMenu, MenuItem, hiNumber, hidden, setSheetId, lineOf, onFit, bgs, loadBg } from "./store";
 import { C } from "./cmds";
 import { helpCard } from "./help";
 
@@ -336,6 +336,7 @@ export const Canvas = () => {
   // The first drawing is fitted when it arrives.
   const hasView = createMemo(() => !!v());
   createEffect(on(hasView, has => { if (has) requestAnimationFrame(fit); }));
+  createEffect(() => { const sv = v(); if (sv?.underlay) loadBg(sv.id, sv.underlay.rev); });
   onMount(() => { addEventListener("mousemove", move); addEventListener("mouseup", up); addEventListener("keyup", keyup); });
   onCleanup(() => { removeEventListener("mousemove", move); removeEventListener("mouseup", up); removeEventListener("keyup", keyup); });
 
@@ -395,6 +396,7 @@ export const Canvas = () => {
         <SymbolDefs />
         <Show when={v()}>{sv => <g transform={`translate(${pan()[0]} ${pan()[1]}) scale(${zoom()})`}>
           <rect x={0} y={0} width={sv().w} height={sv().h} class="paper" />
+          <Show when={sv().underlay}>{u => <g class="underlay" transform={`translate(${u().x} ${u().y}) scale(${u().k})`} innerHTML={bgs()[u().rev] ?? ""} />}</Show>
           <g class="frame"><For each={sv().frame}>{p => <PrimEl p={p} />}</For></g>
           <Show when={sv().legend}><g class="legend"><For each={sv().legend_rows}>{r => <LegendEl r={r} />}</For></g></Show>
           <g class="lines"><For each={lines()}>{l => {

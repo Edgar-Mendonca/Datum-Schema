@@ -65,7 +65,7 @@ fn action(p: &Project, it: &Item) -> String {
 fn is_effect(p: &Project, it: &Item) -> bool {
     let Some(s) = symbols::get(&it.sym) else { return false };
     let letters = tags::loop_of(p.tag_of(it)).0;
-    s.cat.valve() || s.cat == Cat::Control && !it.sym.starts_with("psv") || s.cat.equipment() || matches!(s.cat, Cat::Rotating) || tags::is_final(&letters)
+    s.cat.valve() || s.cat == Cat::Control && !it.base_key().starts_with("psv") || s.cat.equipment() || matches!(s.cat, Cat::Rotating) || tags::is_final(&letters)
 }
 
 /// An instrument's trip in words, from its letters: LSHH is "Level high-high".
@@ -89,7 +89,7 @@ fn words(letters: &str) -> String {
 }
 
 fn is_interlock(it: &Item) -> bool {
-    it.sym == "inst_interlock"
+    it.base_key() == "inst_interlock"
 }
 
 /// A switch: an instrument whose letters after the first hold an S (LSHH, PSL…), not a safety valve.

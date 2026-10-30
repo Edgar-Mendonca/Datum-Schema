@@ -19,8 +19,9 @@ CREATE TABLE nodes (id INTEGER PRIMARY KEY, parent INTEGER NOT NULL, level TEXT 
 CREATE TABLE objects (id INTEGER PRIMARY KEY, uid TEXT NOT NULL, class TEXT NOT NULL, tag TEXT NOT NULL, node INTEGER NOT NULL);
 CREATE TABLE attributes (object INTEGER NOT NULL, name TEXT NOT NULL, number REAL, text TEXT, PRIMARY KEY (object, name));
 CREATE TABLE sheets (id INTEGER PRIMARY KEY, position INTEGER NOT NULL, sheet TEXT NOT NULL);
-CREATE TABLE items (id INTEGER PRIMARY KEY, sheet INTEGER NOT NULL, object INTEGER NOT NULL, symbol TEXT NOT NULL, x REAL NOT NULL, y REAL NOT NULL, rot INTEGER NOT NULL, flip INTEGER NOT NULL, scale REAL NOT NULL, link INTEGER NOT NULL);
+CREATE TABLE items (id INTEGER PRIMARY KEY, sheet INTEGER NOT NULL, object INTEGER NOT NULL, symbol TEXT NOT NULL, x REAL NOT NULL, y REAL NOT NULL, rot INTEGER NOT NULL, flip INTEGER NOT NULL, scale REAL NOT NULL, link INTEGER NOT NULL, base TEXT NOT NULL DEFAULT '');
 CREATE TABLE lines (id INTEGER PRIMARY KEY, sheet INTEGER NOT NULL, object INTEGER NOT NULL, line TEXT NOT NULL);
+CREATE TABLE underlays (sheet INTEGER PRIMARY KEY, draw TEXT NOT NULL);
 CREATE TABLE notes (id INTEGER PRIMARY KEY, sheet INTEGER NOT NULL, note TEXT NOT NULL);
 CREATE TABLE issues (seq INTEGER PRIMARY KEY, object INTEGER NOT NULL, rev TEXT NOT NULL, status TEXT NOT NULL, date TEXT NOT NULL, issued_by TEXT NOT NULL, note TEXT NOT NULL, snapshot TEXT NOT NULL);
 CREATE TABLE history (seq INTEGER PRIMARY KEY, time INTEGER NOT NULL, user TEXT NOT NULL, what TEXT NOT NULL, object INTEGER NOT NULL, uid TEXT NOT NULL, name TEXT NOT NULL, old TEXT NOT NULL, new TEXT NOT NULL);
@@ -41,7 +42,7 @@ pub fn write(path: &Path, p: &Project, history: &[Change]) -> Result<(), String>
         c.execute_batch(SCHEMA).map_err(sql)?;
         let t = c.transaction().map_err(sql)?;
         let js = |v: &dyn erased::Ser| v.json();
-        for (k, v) in [("format", model::FORMAT.to_string()), ("app", format!("Datum Schema {}", env!("CARGO_PKG_VERSION"))), ("name", p.name.clone()), ("units", p.units.clone()), ("next", p.next.to_string()), ("title", js(&p.title)), ("settings", js(&p.settings))] {
+        for (k, v) in [("format", model::FORMAT.to_string()), ("app", format!("Datum Schema {}", env!("CARGO_PKG_VERSION"))), ("name", p.name.clone()), ("units", p.units.clone()), ("next", p.next.to_string()), ("title", js(&p.title)), ("settings", js(&p.settings)), ("symbols", js(&p.custom_syms))] {
             t.execute("INSERT INTO meta VALUES (?1, ?2)", params![k, v]).map_err(sql)?;
         }
         for n in &p.nodes {
@@ -56,9 +57,12 @@ pub fn write(path: &Path, p: &Project, history: &[Change]) -> Result<(), String>
         }
         for (i, s) in p.sheets.iter().enumerate() {
             t.execute("INSERT INTO sheets VALUES (?1, ?2, ?3)", params![s.id, i as i64, js(s)]).map_err(sql)?;
+            if let Some(u) = &s.underlay {
+                t.execute("INSERT INTO underlays VALUES (?1, ?2)", params![s.id, u.draw.as_str()]).map_err(sql)?;
+            }
         }
         for it in &p.items {
-            t.execute("INSERT INTO items VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)", params![it.id, it.sheet, it.obj, it.sym, it.x, it.y, it.rot, it.flip, it.scale, it.link]).map_err(sql)?;
+            t.execute("INSERT INTO items VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)", params![it.id, it.sheet, it.obj, it.sym, it.x, it.y, it.rot, it.flip, it.scale, it.link, it.base]).map_err(sql)?;
         }
         for l in &p.lines {
             t.execute("INSERT INTO lines VALUES (?1, ?2, ?3, ?4)", params![l.id, l.sheet, l.obj, js(l)]).map_err(sql)?;
@@ -130,6 +134,7 @@ fn read_sqlite(path: &Path) -> Result<(Project, Vec<Change>, Vec<String>), Strin
     p.next = meta("next").and_then(|n| n.parse().ok()).unwrap_or(1);
     p.title = meta("title").and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default();
     p.settings = meta("settings").and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default();
+    p.custom_syms = meta("symbols").and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default();
     // Each table on its own; rows that cannot be read are counted and left out.
     fn table<T>(c: &Connection, q: &str, what: &str, w: &mut Vec<String>, f: impl Fn(&rusqlite::Row) -> rusqlite::Result<Option<T>>) -> Vec<T> {
         let mut out = vec![];
@@ -169,8 +174,19 @@ fn read_sqlite(path: &Path) -> Result<(Project, Vec<Change>, Vec<String>), Strin
     let mut sheets: Vec<(i64, Sheet)> = table(&c, "SELECT position, sheet FROM sheets", "sheets", &mut w, |r| Ok(serde_json::from_str::<Sheet>(&r.get::<_, String>(1)?).ok().map(|s| (r.get::<_, i64>(0).unwrap_or(0), s))));
     sheets.sort_by_key(|x| x.0);
     p.sheets = sheets.into_iter().map(|x| x.1).collect();
-    p.items = table(&c, "SELECT id, sheet, object, symbol, x, y, rot, flip, scale, link FROM items", "symbols", &mut w, |r| {
-        Ok(Some(Item { id: r.get(0)?, sheet: r.get(1)?, obj: r.get(2)?, sym: r.get(3)?, x: r.get(4)?, y: r.get(5)?, rot: r.get::<_, i64>(6)?.rem_euclid(4) as u8, flip: r.get(7)?, scale: r.get(8)?, link: r.get(9)? }))
+    // Old drawings behind sheets (from format 4).
+    if p.sheets.iter().any(|s| s.underlay.is_some()) {
+        let draws: std::collections::HashMap<u32, String> = table(&c, "SELECT sheet, draw FROM underlays", "background drawings", &mut w, |r| Ok(Some((r.get(0)?, r.get(1)?)))).into_iter().collect();
+        for s in &mut p.sheets {
+            if let Some(u) = s.underlay.as_mut() {
+                u.draw = std::sync::Arc::new(draws.get(&s.id).cloned().unwrap_or_default());
+            }
+        }
+    }
+    // The drawing standard's base symbol is in the items table from format 4.
+    let base = if format >= 4 { ", base" } else { ", ''" };
+    p.items = table(&c, &format!("SELECT id, sheet, object, symbol, x, y, rot, flip, scale, link{base} FROM items"), "symbols", &mut w, |r| {
+        Ok(Some(Item { id: r.get(0)?, sheet: r.get(1)?, obj: r.get(2)?, sym: r.get(3)?, x: r.get(4)?, y: r.get(5)?, rot: r.get::<_, i64>(6)?.rem_euclid(4) as u8, flip: r.get(7)?, scale: r.get(8)?, link: r.get(9)?, base: r.get(10)? }))
     });
     p.lines = table(&c, "SELECT line FROM lines", "lines", &mut w, |r| Ok(serde_json::from_str::<Line>(&r.get::<_, String>(0)?).ok()));
     p.notes = table(&c, "SELECT note FROM notes", "notes", &mut w, |r| Ok(serde_json::from_str::<Note>(&r.get::<_, String>(0)?).ok()));
@@ -208,7 +224,7 @@ mod tests {
         assert!(w.is_empty() && p.issues.is_empty(), "{w:?}");
         // A file from a newer version says so.
         let c = Connection::open(&path).unwrap();
-        c.execute("UPDATE meta SET value = '4' WHERE key = 'format'", []).unwrap();
+        c.execute("UPDATE meta SET value = ?1 WHERE key = 'format'", [(model::FORMAT + 1).to_string()]).unwrap();
         drop(c);
         assert!(read(&path).unwrap_err().contains("newer"));
     }

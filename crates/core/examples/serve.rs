@@ -121,6 +121,48 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             s.doc.dirty = true;
             out(s, vec![], w)
         }
+        "libraries" => serde_json::to_value(datum_core::symlib::load_dir(&lib_dir())).unwrap(),
+        "legend_scan" => {
+            // The test cannot pick a file: it scans the pump example's legend sheet as DXF.
+            let mut p = examples::get("pump").ok_or("no example")?;
+            let id = p.id();
+            p.sheets.push(model::Sheet { id, number: "LEG-1".into(), legend: true, ..Default::default() });
+            let sheet = p.sheets.last().cloned().ok_or("no sheet")?;
+            let scan = datum_core::symlib::scan_legend(&dxf::write(&p, &sheet), "Client legend")?;
+            let mut lib = scan.library;
+            lib.source = "client-legend.dxf".into();
+            serde_json::to_value(datum_core::symlib::view("", lib, scan.warnings)).unwrap()
+        }
+        "library_save" => {
+            let lib: datum_core::symlib::Library = serde_json::from_value(a["lib"].clone()).map_err(|e| e.to_string())?;
+            let old = a["old"].as_str().map(str::to_string);
+            serde_json::to_value(datum_core::symlib::save(&lib_dir(), lib, old.as_deref())?).unwrap()
+        }
+        "library_delete" => {
+            let _ = std::fs::remove_file(lib_dir().join(str_("file")));
+            Value::Null
+        }
+        "underlay_import" => {
+            // The test cannot pick a file: the pump example's sheet, on A1, as an old drawing.
+            let mut p = examples::get("pump").ok_or("no example")?;
+            p.sheets[0].size = "A1".into();
+            let text = dxf::write(&p, &p.sheets[0]);
+            let id = a["sheet"].as_u64().unwrap_or(0) as u32;
+            let mut sh = s.doc.p.sheets.iter().find(|x| x.id == id).cloned().ok_or("no sheet")?;
+            let (u, warnings) = datum_core::dxfin::underlay(&text, "old-pid.dxf", &sh)?;
+            sh.underlay = Some(u);
+            s.doc.apply(Op::SetSheet { sheet: sh })?;
+            out(s, vec![], warnings)
+        }
+        "underlay_svg" => {
+            let id = a["sheet"].as_u64().unwrap_or(0) as u32;
+            json!(s.doc.p.sheets.iter().find(|x| x.id == id).and_then(|x| x.underlay.as_ref()).map(|u| datum_core::symbols::svg(&datum_core::symbols::parse(&u.draw))).unwrap_or_default())
+        }
+        "symbol_like" => {
+            let c: datum_core::symlib::CustomSym = serde_json::from_value(a["sym"].clone()).map_err(|e| e.to_string())?;
+            serde_json::to_value(datum_core::symlib::restyle(c, &str_("like"))).unwrap()
+        }
+        "port_at" => serde_json::to_value(datum_core::symlib::port_at(&str_("draw"), a["w"].as_f64().unwrap_or(10.0), a["h"].as_f64().unwrap_or(10.0), a["x"].as_f64().unwrap_or(0.0), a["y"].as_f64().unwrap_or(0.0))).unwrap(),
         "cause_effect" => serde_json::to_value(datum_core::cause::matrix(&s.doc.p)).unwrap(),
         "loops" => serde_json::to_value(datum_core::loops::all(&s.doc.p)).unwrap(),
         "loop_diagram" => serde_json::to_value(datum_core::loops::diagram(&s.doc.p, &str_("key"))?).unwrap(),
@@ -131,6 +173,10 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
         "version" => json!("test"),
         _ => Value::Null,
     })
+}
+
+fn lib_dir() -> std::path::PathBuf {
+    std::env::temp_dir().join(format!("datum-schema-ui-libs-{}", std::process::id()))
 }
 
 fn import_file() -> std::path::PathBuf {

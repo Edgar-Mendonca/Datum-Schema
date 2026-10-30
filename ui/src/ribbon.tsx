@@ -151,6 +151,7 @@ export const Ribbon = () => {
       <Show when={tab() === "sheets"}>
         <G l="Sheets" h="sheets"><B big i="sheet" l="New Sheet" run={() => C.addSheet()} /><B big i="legend" l="Legend Sheet" run={() => C.addSheet(true)} title="A sheet that shows every symbol the project uses" /><S><B i="left" l="Move Left" run={() => C.moveSheet(-1)} /><B i="right" l="Move Right" run={() => C.moveSheet(1)} /><B i="del" l="Delete Sheet" run={C.deleteSheet} /></S></G>
         <G l="Size" h="sheets"><S><For each={["A3", "A1"]}>{z => <B i="sheet" l={z} on={sheet()?.size === z} run={() => sheet() && act({ SetSheet: { sheet: { ...sheet()!, size: z } } })} />}</For></S><S><For each={["ANSI B", "ANSI D"]}>{z => <B i="sheet" l={z} on={sheet()?.size === z} run={() => sheet() && act({ SetSheet: { sheet: { ...sheet()!, size: z } } })} />}</For></S></G>
+        <G l="Background" h="underlay"><B big i="open" l="Old Drawing" title="Put an old drawing (DXF) behind this sheet, to trace over" run={C.underlay} /></G>
         <G l="Output" h="export"><B big i="print" l="Print / PDF" run={C.print} /><B big i="dxf" l="DXF" run={C.exportDxf} /><B big i="svg" l="SVG" run={C.exportSvg} /><B big i="export" l="DEXPI" title="This sheet in the DEXPI P&ID exchange format (XML)" run={C.exportDexpi} /></G>
       </Show>
       <Show when={tab() === "view"}>

@@ -1052,3 +1052,37 @@ tr.behind td { background: var(--err-bg); }
 .pcem .cem { font-size: 8pt; margin-bottom: 4mm; }
 .pcem .cem th, .pcem .cem td { border-color: #888; color: #000; background: #fff; }
 .pcem .cem td.x.on { background: #eee; }
+/* Symbol libraries. */
+.libraries { padding: 0 4px; }
+.libbtns { display: flex; gap: 8px; }
+.libcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.libcard { border: 1px solid var(--line); background: var(--bg2); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.libpics { display: flex; gap: 6px; flex-wrap: wrap; min-height: 30px; }
+.libcbtns { display: flex; gap: 6px; margin-top: 6px; }
+.libpic { color: var(--text); stroke: currentColor; fill: none; stroke-width: .25; }
+.libpic .sf { fill: currentColor; }
+.libpic text, .pedsvg text { fill: currentColor; stroke: none; }
+.libedit { display: flex; flex-direction: column; gap: 8px; height: 100%; }
+.libhead { display: flex; gap: 10px; align-items: center; }
+.libhead input { width: 260px; margin-left: 6px; }
+.libscroll { flex: 1; overflow: auto; min-height: 0; }
+.libtbl { width: 100%; }
+.libtbl td { vertical-align: middle; }
+.libtbl input:not([type=checkbox]), .libtbl select { width: 100%; }
+.libtbl tr.warn td:first-child { box-shadow: inset 3px 0 0 var(--amber, #C88A12); }
+.libtbl td.c { text-align: center; }
+.pedit { display: grid; grid-template-columns: 360px 1fr; gap: 14px; }
+.pedsvg { width: 360px; height: 360px; border: 1px solid var(--line); background: var(--bg2); color: var(--text); stroke: currentColor; fill: none; stroke-width: .2; cursor: crosshair; }
+.pedsvg .pedbox { stroke: var(--line3); stroke-dasharray: .6 .4; stroke-width: .1; }
+.pedport circle { fill: var(--blue); stroke: none; }
+.pedport.sig circle { fill: #2A7AB8; }
+.pedport.on circle { stroke: var(--navy); stroke-width: .3; }
+.pedport text { fill: var(--blue); }
+.stdsec .inline { display: flex; gap: 8px; align-items: center; }
+/* An old drawing behind a sheet: faint, under everything, never picked. */
+.dsvg .underlay { pointer-events: none; opacity: .5; stroke: var(--text3); fill: none; }
+.dsvg .underlay * { vector-effect: non-scaling-stroke; stroke-width: .7px; }
+.dsvg .underlay .sf { fill: var(--text3); }
+.dsvg .underlay .st { fill: var(--text3); stroke: none; dominant-baseline: central; }
+.ubox { display: flex; flex-direction: column; gap: 6px; }
+.ubox .uname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text2); }

@@ -5,7 +5,7 @@
 import { For, Show, JSX, createSignal, createMemo, createResource, onMount, onCleanup } from "solid-js";
 import { Portal } from "solid-js/web";
 import { SheetView, Prim, List, Datasheet, LoopInfo, LoopView, CauseMatrix } from "./api";
-import { call, proj, lib, sheet, setBackstage, symOf } from "./store";
+import { call, proj, lib, sheet, setBackstage, symOf, bgs, loadBg } from "./store";
 import { Help } from "./help";
 import { Check, Pick } from "./ui";
 import { DatasheetTable, RevBlock, revLine } from "./datasheet";
@@ -40,6 +40,8 @@ export const svgString = (v: SheetView, opts: { width?: number; height?: number 
   const defs = (lib()?.symbols ?? []).filter(s => used.has(s.key)).map(s => `<g id="s-${s.key}" stroke-width="0.25">${s.svg.replace(/class="sf"/g, 'fill="#000"')}</g>`).join("");
   const body: string[] = [];
   body.push(`<rect width="${n(v.w)}" height="${n(v.h)}" fill="#fff" stroke="none"/>`);
+  const u = v.underlay;
+  if (u?.print) body.push(`<g transform="translate(${n(u.x)} ${n(u.y)}) scale(${u.k})" stroke="#8a8a8a" stroke-width="${n(0.18 / u.k)}" opacity="0.7">${(bgs()[u.rev] ?? "").replace(/class="sf"/g, 'fill="#8a8a8a"').replace(/class="st"/g, 'fill="#8a8a8a" stroke="none" dominant-baseline="central"')}</g>`);
   body.push(`<g>${v.frame.map(p => prim(p)).join("")}</g>`);
   for (const l of v.lines) {
     const dash = l.kind === "electric" ? ' stroke-dasharray="1.5 1"' : "";
@@ -67,8 +69,15 @@ export const primsSvg = (ps: Prim[], w: number, h: number, opts: { width?: numbe
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n(w)} ${n(h)}" width="${n(opts.width ?? w)}mm" height="${n(opts.height ?? h)}mm" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" font-family="IBM Plex Sans, Segoe UI, Arial, sans-serif"><rect width="${n(w)}" height="${n(h)}" fill="#fff" stroke="none"/>${ps.map(p => prim(p)).join("")}</svg>`;
 
 /** One sheet as an SVG file's text. */
-export const sheetSvg = async (id: number) => {
+/** The sheets' views, with the old drawings behind them that print fetched. */
+const viewsForPrint = async () => {
   const vs = await call<SheetView[]>("views");
+  await Promise.all((vs ?? []).filter(v => v.underlay?.print).map(v => loadBg(v.id, v.underlay!.rev)));
+  return vs;
+};
+
+export const sheetSvg = async (id: number) => {
+  const vs = await viewsForPrint();
   const v = vs?.find(x => x.id === id) ?? vs?.[0];
   return v ? `<?xml version="1.0" encoding="UTF-8"?>\n${svgString(v)}` : "";
 };
@@ -84,7 +93,7 @@ export const [printCause, setPrintCause] = createSignal(false);
 export const [printLoop, setPrintLoop] = createSignal<string | null>(null);
 
 export const PrintPage = () => {
-  const [views] = createResource(() => call<SheetView[]>("views"));
+  const [views] = createResource(viewsForPrint);
   const [which, setWhich] = createSignal<"all" | "this">("all");
   const [fitA3, setFitA3] = createSignal(false);
   const [want, setWant] = createSignal<Record<string, boolean>>({ lines: true, equipment: true, instruments: true, valves: true, datasheets: false, legend: true, sheets_ds: false, loops: false, cause: false });

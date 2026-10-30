@@ -1,12 +1,12 @@
 // The inspector: the selected item's or line's data with units, its connections and (for lines)
 // the hydraulics; with nothing selected, the sheet and the title block.
 import { For, Show, JSX, createMemo, createResource } from "solid-js";
-import { Field, Item, Line, Note, Rev, Val, Change, num, parseNum } from "./api";
+import { Field, Item, Line, Note, Rev, Val, Change, Underlay, num, parseNum } from "./api";
 import { sel, proj, sheet, itemOf, lineOf, objOf, symOf, lib, act, derived, setSel, toast, call } from "./store";
 import { toU, fromU, unit, fmt } from "./units";
 import { Help } from "./help";
 import { C } from "./cmds";
-import { Pick } from "./ui";
+import { Check, Pick } from "./ui";
 import { openDatasheet } from "./datasheet";
 import { openLoops } from "./loops";
 
@@ -167,6 +167,21 @@ const SheetPanel = () => {
       <Row label="Date"><input value={s().date} placeholder="29-Oct-26" onChange={e => setS("date", e.currentTarget.value)} /></Row>
     </div>
     <Row label="Scale"><input value={s().scale} onChange={e => setS("scale", e.currentTarget.value)} /></Row>
+    <h4>Old drawing behind <Help k="underlay" /></h4>
+    <Show when={s().underlay} fallback={<div class="ibtns"><button class="btn sm" onClick={C.underlay}>Put a DXF behind this sheet…</button></div>}>{u => {
+      const setU = (patch: Partial<Underlay>) => setS("underlay", { ...u(), ...patch });
+      const mm = (v: string, d: number) => (Number.isFinite(parseFloat(v)) ? parseFloat(v) : d);
+      return <div class="ubox">
+        <div class="small mono uname" title={u().name}>{u().name}</div>
+        <div class="two"><Check label="Show" value={u().show} set={v => setU({ show: v })} /><Check label="Print and export" value={u().print} set={v => setU({ print: v })} /></div>
+        <div class="three">
+          <Row label="Size" unit="%"><input class="mono" value={+(u().k * 100).toFixed(2)} onChange={e => setU({ k: Math.max(0.1, mm(e.currentTarget.value, u().k * 100)) / 100 })} /></Row>
+          <Row label="Left" unit="mm"><input class="mono" value={+u().x.toFixed(1)} onChange={e => setU({ x: mm(e.currentTarget.value, u().x) })} /></Row>
+          <Row label="Top" unit="mm"><input class="mono" value={+u().y.toFixed(1)} onChange={e => setU({ y: mm(e.currentTarget.value, u().y) })} /></Row>
+        </div>
+        <div class="ibtns"><button class="btn sm" onClick={C.underlay}>Replace…</button><button class="btn sm" onClick={() => setS("underlay", null)}>Remove</button></div>
+      </div>;
+    }}</Show>
     <h4>Revisions <button class="btn sm" onClick={() => setS("revs", [...s().revs, { rev: String.fromCharCode(65 + s().revs.length), date: new Date().toLocaleDateString(), desc: "", by: p().title.by, checked: "", approved: "" }])}>Add</button></h4>
     <For each={s().revs}>{(r, i) => <div class="revrow">
       <input class="mono" value={r.rev} onChange={e => setRev(i(), "rev", e.currentTarget.value)} style={{ width: "34px" }} />

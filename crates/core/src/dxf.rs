@@ -127,7 +127,12 @@ pub fn line_layer(k: Kind) -> String {
 pub fn sym_layer(c: Cat) -> String {
     format!("SYM-{:?}", c).to_uppercase()
 }
+/// A symbol's block name: ours "SYM_GATE"; a library symbol keeps the client's own block name.
 fn block(key: &str) -> String {
+    if let Some(d) = crate::symlib::definition(key).filter(|d| !d.block.trim().is_empty()) {
+        let name: String = d.block.chars().map(|c| if c.is_ascii_alphanumeric() || "_-$".contains(c) { c.to_ascii_uppercase() } else { '_' }).collect();
+        return crate::clip(&name, 200);
+    }
     format!("SYM_{}", key.to_uppercase())
 }
 
@@ -138,7 +143,7 @@ pub fn write(p: &Project, s: &Sheet) -> String {
     let v = view::sheet(p, s, &net, &hyd);
     let mut w = W { s: String::with_capacity(1 << 16), h: v.h };
     let syms: BTreeSet<&str> = v.items.iter().map(|i| i.sym.as_str()).chain(v.legend_rows.iter().filter_map(|r| r.sym.as_deref())).collect();
-    let mut layers: Vec<String> = vec!["FRAME".into(), "TEXT".into(), "NOTES".into(), "MARKS".into()];
+    let mut layers: Vec<String> = vec!["FRAME".into(), "TEXT".into(), "NOTES".into(), "MARKS".into(), "BACKGROUND".into()];
     layers.extend(Kind::ALL.iter().map(|k| line_layer(*k)));
     layers.extend(Cat::ALL.iter().map(|c| sym_layer(*c)));
     head(&mut w, &layers, v.w, v.h);
@@ -175,6 +180,10 @@ pub fn write(p: &Project, s: &Sheet) -> String {
     // Entities.
     w.g(0, "SECTION");
     w.g(2, "ENTITIES");
+    // An old drawing behind the sheet, when it is set to print, on a layer of its own.
+    for pr in s.underlay.iter().filter(|u| u.show && u.print).flat_map(|u| u.prims()) {
+        w.prim(&pr, "BACKGROUND", true, false);
+    }
     for pr in &v.frame {
         w.prim(pr, if matches!(pr, Prim::Text { .. }) { "TEXT" } else { "FRAME" }, true, false);
     }
@@ -215,7 +224,22 @@ pub fn write(p: &Project, s: &Sheet) -> String {
             w.prim(pr, "NOTES", true, false);
         }
     }
+    // The legend: each symbol as an insert of its block (as legend sheets in CAD are drawn), its
+    // name as text beside it.
     for r in &v.legend_rows {
+        if let Some(sym) = r.sym.as_deref().and_then(symbols::get) {
+            let sc = (30.0 / sym.w).min(1.0);
+            w.g(0, "INSERT");
+            w.g(8, sym_layer(sym.cat));
+            w.g(2, block(sym.key));
+            w.xy(0, [r.x + 15.0, r.y], true);
+            w.f(41, sc);
+            w.f(42, sc);
+            for pr in view::legend_prims(r).iter().filter(|p| matches!(p, Prim::Text { s, .. } if *s == r.name)) {
+                w.prim(pr, "TEXT", true, false);
+            }
+            continue;
+        }
         for pr in view::legend_prims(r) {
             w.prim(&pr, "TEXT", true, false);
         }

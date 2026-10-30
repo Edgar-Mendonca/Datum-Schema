@@ -2,7 +2,7 @@
 // instrument functions ready-lettered. Drag a symbol onto the sheet, or click it and then click the
 // sheet.
 import { For, Show, createSignal, createMemo } from "solid-js";
-import { lib, setTool, tool } from "./store";
+import { lib, setTool, tool, libs, proj } from "./store";
 import { SymInfo, Cat } from "./api";
 import { PrimEl } from "./canvas";
 import { Help } from "./help";
@@ -34,7 +34,7 @@ export const Palette = () => {
   const [open, setOpen] = createSignal<Record<string, boolean>>({ vessel: true, rotating: true, valve: true, presets: true });
   const groups = createMemo(() => {
     const s = q().trim().toLowerCase();
-    const all = lib()?.symbols.filter(x => x.key !== "unknown") ?? [];
+    const all = lib()?.symbols.filter(x => x.key !== "unknown" && !x.key.startsWith("x.")) ?? [];
     const match = (x: SymInfo) => !s || x.name.toLowerCase().includes(s) || x.cat_name.toLowerCase().includes(s) || x.key.includes(s);
     return CATS.map(c => ({ c, name: all.find(x => x.cat === c)?.cat_name ?? c, syms: all.filter(x => x.cat === c && match(x)).sort((a, b) => Number(a.rare) - Number(b.rare)) })).filter(g => g.syms.length);
   });
@@ -43,11 +43,21 @@ export const Palette = () => {
   const drag = (e: DragEvent, sym: string, tag?: string) => { e.dataTransfer?.setData("text/x-datum-sym", sym); if (tag) e.dataTransfer?.setData("text/x-datum-tag", tag); e.dataTransfer!.effectAllowed = "copy"; };
   const on = (sym: string, tag?: string) => { const t = tool(); return t.k === "place" && t.sym === sym && (t.tag ?? "") === (tag ?? ""); };
   const sym = (k: string) => lib()?.symbols.find(s => s.key === k);
-  const [side, setSide] = createSignal<"symbols" | "plant">("symbols");
+  const [side, setSide] = createSignal<"symbols" | "library" | "plant">("symbols");
+  // With a drawing standard, our symbols are shown as the library draws them.
+  const shown = (s: SymInfo) => { const k = proj()?.settings.standard.map[s.key]; return (k && sym(k)) || s; };
+  const libGroups = createMemo(() => libs().map(v => ({ name: v.library.name, syms: v.library.symbols.map(c => sym(c.key)).filter(Boolean) as SymInfo[] })).filter(g => g.syms.length));
   return (
     <aside class="palette">
-      <header><button classList={{ on: side() === "symbols" }} onClick={() => setSide("symbols")}>Symbols</button><button classList={{ on: side() === "plant" }} onClick={() => setSide("plant")}>Plant</button><Help k={side() === "plant" ? "plant" : "palette"} /></header>
+      <header><button classList={{ on: side() === "symbols" }} onClick={() => setSide("symbols")}>Symbols</button><Show when={libs().length}><button classList={{ on: side() === "library" }} onClick={() => setSide("library")}>Library</button></Show><button classList={{ on: side() === "plant" }} onClick={() => setSide("plant")}>Plant</button><Help k={side() === "plant" ? "plant" : "palette"} /></header>
       <Show when={side() === "plant"}><PlantPanel /></Show>
+      <Show when={side() === "library"}>
+        <div class="pbody"><For each={libGroups()}>{g => <section>
+          <div class="pcat"><span>▾</span>{g.name}<small>{g.syms.length}</small></div>
+          <div class="pgrid"><For each={g.syms}>{s => <button class="psym" classList={{ on: on(s.key) }} draggable={true} title={s.name} onDragStart={e => drag(e, s.key)} onClick={() => pick(s.key)}><SymPic s={s} /><span>{s.name}</span></button>}</For></div>
+        </section>}</For>
+        <p class="muted small plhint">A library's symbols, to place one by one. To draw the whole project to a client's standard, use File › Options › Drawing standard.</p></div>
+      </Show>
       <Show when={side() === "symbols"}>
       <input class="psearch" placeholder="Find a symbol (ball valve, pump…)" value={q()} onInput={e => setQ(e.currentTarget.value)} />
       <div class="pbody">
@@ -56,7 +66,7 @@ export const Palette = () => {
           <Show when={open()[g.c] || q()}>
             <div class="pgrid">
               <For each={g.syms}>{s => <button class="psym" classList={{ on: on(s.key), rare: s.rare }} draggable={true} title={`${s.name}${s.inline ? " (goes in a line)" : ""}`} onDragStart={e => drag(e, s.key)} onClick={() => pick(s.key)}>
-                <SymPic s={s} /><span>{s.name}</span></button>}</For>
+                <SymPic s={shown(s)} /><span>{s.name}</span></button>}</For>
             </div>
           </Show>
         </section>}</For>

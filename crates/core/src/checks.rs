@@ -201,7 +201,7 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
 
     // 8. Pump discharge without a check valve before the next equipment or branch.
     if on(8) {
-        for it in p.items.iter().filter(|i| i.sym.starts_with("pump")) {
+        for it in p.items.iter().filter(|i| i.base_key().starts_with("pump")) {
             let Some(s) = sym(it) else { continue };
             let Some(k) = s.ports.iter().position(|x| x.name == "discharge") else { continue };
             if net.on_port(it.id, k as u8).is_empty() {
@@ -209,7 +209,7 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
             }
             // A check valve counts when the flow from the pump reaches its inlet; reached at its
             // outlet it is fitted the wrong way round and would stop the flow.
-            let checks: Vec<(u32, u8)> = net.reach(it.id, k as u8, false, 8, |_, ns| !ns.inline && ns.cat != Cat::Connector).into_iter().filter(|(n, _, _)| matches!(net.items[n].sym.as_str(), "check" | "nonslam")).map(|(n, np, _)| (n, np)).collect();
+            let checks: Vec<(u32, u8)> = net.reach(it.id, k as u8, false, 8, |_, ns| !ns.inline && ns.cat != Cat::Connector).into_iter().filter(|(n, _, _)| matches!(net.items[n].base_key().as_str(), "check" | "nonslam")).map(|(n, np, _)| (n, np)).collect();
             if checks.iter().any(|&(_, np)| np == 0) {
                 continue;
             }
@@ -232,13 +232,13 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
             let Some(s) = sym(it) else { continue };
             let ports: Vec<u8> = match s.cat {
                 Cat::Vessel => (0..s.ports.len() as u8).collect(),
-                Cat::Heat if it.sym.starts_with("hx_") || it.sym == "jacketed" => s.ports.iter().enumerate().filter(|(_, x)| x.name.starts_with("shell") || x.name.starts_with("vapour") || x.name.starts_with("liquid") || !it.sym.starts_with("hx_")).map(|(k, _)| k as u8).collect(),
+                Cat::Heat if it.base_key().starts_with("hx_") || it.base_key() == "jacketed" => s.ports.iter().enumerate().filter(|(_, x)| x.name.starts_with("shell") || x.name.starts_with("vapour") || x.name.starts_with("liquid") || !it.base_key().starts_with("hx_")).map(|(k, _)| k as u8).collect(),
                 _ => continue,
             };
             if p.data_of(it.obj).get("relief").is_some_and(|x| !x.text().trim().is_empty()) {
                 continue;
             }
-            let found = ports.iter().any(|&k| net.reach(it.id, k, true, 10, |_, ns| ns.cat.equipment()).iter().any(|(n, _, _)| RELIEF.contains(&net.items[n].sym.as_str())));
+            let found = ports.iter().any(|&k| net.reach(it.id, k, true, 10, |_, ns| ns.cat.equipment()).iter().any(|(n, _, _)| RELIEF.contains(&net.items[n].base_key().as_str())));
             if !found {
                 v.push(on_item(9, WARNING, it, format!("{} has no relief path: add a safety valve or a rupture disc, or say where relief is in its Relief path field.", cap(&name(p, it)))));
             }
@@ -248,9 +248,9 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
     // 10. Control valves need isolation valves on both sides.
     if on(10) {
         const ISOLATE: [&str; 6] = ["gate", "globe", "ball", "butterfly", "plug", "diaphragm"];
-        for it in p.items.iter().filter(|i| matches!(i.sym.as_str(), "cv_pneu" | "cv_motor")) {
+        for it in p.items.iter().filter(|i| matches!(i.base_key().as_str(), "cv_pneu" | "cv_motor")) {
             let Some(s) = sym(it) else { continue };
-            let sides: Vec<bool> = s.ports.iter().enumerate().filter(|(_, x)| !x.signal).map(|(k, _)| net.reach(it.id, k as u8, false, 6, |ni, ns| (!ns.inline && ns.cat != Cat::Connector) || ISOLATE.contains(&ni.sym.as_str())).iter().any(|(n, _, _)| ISOLATE.contains(&net.items[n].sym.as_str()))).collect();
+            let sides: Vec<bool> = s.ports.iter().enumerate().filter(|(_, x)| !x.signal).map(|(k, _)| net.reach(it.id, k as u8, false, 6, |ni, ns| (!ns.inline && ns.cat != Cat::Connector) || ISOLATE.contains(&ni.base_key().as_str())).iter().any(|(n, _, _)| ISOLATE.contains(&net.items[n].base_key().as_str()))).collect();
             if sides.iter().any(|x| !x) {
                 v.push(on_item(10, NOTE, it, format!("Control valve {} has no isolation valve {}.", name(p, it), if sides.iter().all(|x| !x) { "on either side" } else { "on one side" })));
             }
@@ -267,7 +267,7 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
             }
             let in_loop = |f: &dyn Fn(&str, Cat) -> bool| insts.iter().any(|(o, ol, on_, oc)| o.id != it.id && on_ == n && f(ol, *oc));
             let meas = in_loop(&|ol, oc| oc.instrument() && tags::is_measurement(ol));
-            let fin = insts.iter().any(|(o, ol, on_, _)| on_ == n && matches!(o.sym.as_str(), "cv_pneu" | "cv_motor" | "cv_solenoid" | "regulator") && tags::is_final(ol));
+            let fin = insts.iter().any(|(o, ol, on_, _)| on_ == n && matches!(o.base_key().as_str(), "cv_pneu" | "cv_motor" | "cv_solenoid" | "regulator") && tags::is_final(ol));
             if !meas || !fin {
                 let what = match (meas, fin) { (false, false) => "a measurement or a final element", (false, true) => "a measurement (a transmitter or element)", _ => "a final element (a control valve)" };
                 v.push(on_item(11, WARNING, it, format!("Controller {} has no {what} in loop {n}.", p.tag_of(it))));
@@ -283,7 +283,7 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
                 v.push(on_item(12, NOTE, it, format!("{} does not start with ISA-5.1 letters.", p.tag_of(it))));
                 continue;
             }
-            if let Some(ends) = tags::expected_end(&it.sym) {
+            if let Some(ends) = tags::expected_end(&it.base_key()) {
                 if !ends.iter().any(|e| l.ends_with(e)) {
                     let s = sym(it).map_or("", |s| s.name);
                     v.push(on_item(12, NOTE, it, format!("{} is a {}; its letters would end in {}.", p.tag_of(it), s.to_lowercase(), ends.join(" or "))));

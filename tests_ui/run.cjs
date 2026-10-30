@@ -418,6 +418,53 @@ const shots = process.env.SHOTS;
     await p.mouse.click(hx, hy, { button: "right" }); await p.click(".menu button:has-text('Turn round')"); await p.waitForTimeout(400);
     check("Turn round puts it right", !(await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("wrong way round"))); }
 
+  // 32. A client's legend (DXF) becomes a symbol library; the project is drawn to it, and back.
+  await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Libraries')"); await p.waitForTimeout(200);
+  await p.click(".libraries button:has-text('Import a legend')"); await p.waitForSelector(".libtbl tbody tr");
+  { const rows = await p.$$eval(".libtbl tbody tr", els => els.length);
+    const matched = await p.$$eval(".libtbl tbody tr:not(.warn)", els => els.length);
+    check("the legend's symbols are read, most matched to ours", rows >= 4 && matched / rows >= 0.8, `${matched}/${rows}`); }
+  await p.click(".libtbl tbody tr:first-child button:has-text('Edit')"); await p.waitForSelector(".pedsvg");
+  { const n0 = await p.$$eval(".pedport", els => els.length);
+    const bx = await p.$(".pedsvg").then(e => e.boundingBox());
+    await p.mouse.click(bx.x + bx.width * 0.5, bx.y + bx.height * 0.2); await p.waitForTimeout(200);
+    check("a click adds a connection point", (await p.$$eval(".pedport", els => els.length)) === n0 + 1);
+    await p.click(".pedside button:has-text('Remove')"); await p.click(".dlg footer button:has-text('Use these')"); await p.waitForTimeout(200); }
+  await p.click(".libhead button:has-text('Save library')"); await p.waitForSelector(".libcard");
+  check("the library is saved", (await p.textContent(".libcard")).includes("Client legend"));
+  await openEx("Pump transfer");
+  const syms0 = (await project()).items.map(i => i.sym).join(",");
+  const tied = q => q.lines.flatMap(l => [l.a, l.b]).filter(e => e.at === "port").length;
+  const tied0 = tied(await project());
+  await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Options')"); await p.waitForTimeout(200);
+  await p.selectOption(".stdsec select", "Client legend"); await p.click(".stdsec button:has-text('Apply')"); await p.waitForTimeout(400);
+  { const q = await project(); const n = q.items.filter(i => i.sym.startsWith("x.")).length;
+    check("the drawing standard draws our symbols with the library's", n > 0 && q.settings.standard.library === "Client legend", String(n));
+    check("objects and lines stay the same", q.items.every(i => !i.sym.startsWith("x.") || i.base) && tied(q) === tied0, `${tied(q)} of ${tied0} line ends on nozzles`); }
+  await p.click(".bs .back"); await p.waitForTimeout(400);
+  check("the re-skinned drawing still checks clean", (await p.textContent(".status")).includes("0 errors"));
+  await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Options')"); await p.waitForTimeout(200);
+  await p.selectOption(".stdsec select", ""); await p.click(".stdsec button:has-text('Apply')"); await p.waitForTimeout(400);
+  check("back to our own symbols exactly", (await project()).items.map(i => i.sym).join(",") === syms0);
+  await p.click(".bs .back"); await p.waitForTimeout(400);
+
+  // 33. An old drawing behind a sheet: faint, scaled to fit, moved in the Inspector, printed on request.
+  await openEx("Compressor package");
+  await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button:has-text('Old Drawing')"); await p.waitForTimeout(500);
+  await p.waitForFunction(() => document.querySelectorAll(".dsvg .underlay polyline, .dsvg .underlay line, .dsvg .underlay path").length > 50);
+  { const q = await project(); const u = q.sheets[0].underlay;
+    check("an old drawing goes behind the sheet, scaled to fit", !!u && u.k < 0.6 && !("draw" in u), JSON.stringify(u && { ...u }));
+    check("its text shows", (await p.$$eval(".dsvg .underlay text", els => els.map(e => e.textContent))).includes("P-101A")); }
+  await p.keyboard.press("Escape"); await p.waitForTimeout(200);
+  await p.fill(".ubox .three input >> nth=1", "40"); await p.keyboard.press("Tab"); await p.waitForTimeout(300);
+  check("the Inspector moves it, keeping the drawing", (await project()).sheets[0].underlay?.x === 40 && (await p.$$eval(".dsvg .underlay text", els => els.length)) > 0);
+  await p.click(".ubox label.chk:has-text('Print') input"); await p.waitForTimeout(300);
+  await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button:has-text('DXF')"); await p.waitForTimeout(400);
+  { const ex = await inv("exports"); const dx = ex.filter(e => e.kind === "dxf").pop();
+    check("when printed, the sheet's DXF carries it on its own layer", !!dx && dx.text.includes("  8\r\nBACKGROUND\r\n")); }
+  await p.click(".ubox button:has-text('Remove')"); await p.waitForTimeout(300);
+  check("Remove takes it away", !(await project()).sheets[0].underlay && !(await p.$(".dsvg .underlay")));
+
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();
   await fetch(`${url}quit`).catch(() => {});

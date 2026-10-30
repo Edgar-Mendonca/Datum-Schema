@@ -10,8 +10,8 @@ import "@fontsource/ibm-plex-mono/latin-400.css";
 import "@fontsource/ibm-plex-mono/latin-500.css";
 import "@fontsource/ibm-plex-mono/latin-600.css";
 import "./styles.css";
-import { invoke, listen, Out, Options, Shown, Library } from "./api";
-import { out, setOut, backstage, setBackstage, setOpts, opts, dialogs, toast, loadOut, setThemeRaw, applyTheme, sel, proj, sheet, setSheetId, setLib, derived, tool, setTool, openMenu, hidden } from "./store";
+import { invoke, listen, Out, Options, Shown } from "./api";
+import { out, setOut, backstage, setBackstage, setOpts, opts, dialogs, toast, loadOut, setThemeRaw, applyTheme, sel, proj, sheet, setSheetId, refreshLibs, derived, tool, setTool, openMenu, hidden } from "./store";
 import { C, setFit, setCentre, setCopy, setViewCentre } from "./cmds";
 import { TitleBar, Ribbon, palette } from "./ribbon";
 import { Backstage, update, checkUpdate } from "./backstage";
@@ -58,7 +58,7 @@ const App = () => {
     try {
       const o = await invoke<Options>("options"); setOpts(o); setThemeRaw(o.theme || "auto"); applyTheme();
       setUnitTable(await invoke<[Shown[], Shown[]]>("unit_table"));
-      setLib(await invoke<Library>("library"));
+      await refreshLibs();
       setOut(await invoke<Out>("state"));
       const start = await invoke<string | null>("startup_file");
       if (start) await loadOut("open", { path: start });

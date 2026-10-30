@@ -1,5 +1,6 @@
 // File (backstage): home with examples and recent projects, export, print, options (including the
 // check rules and hydraulic limits), roadmap, updates. From Datum Plan by way of Datum Pipe.
+import { LibrariesPage, StandardSec } from "./libraries";
 import { LayoutSec } from "./datasheet";
 import { For, Show, createSignal, createResource, onMount, JSX } from "solid-js";
 import { PrintPage } from "./print";
@@ -161,6 +162,9 @@ const ProjectSettings = () => {
       <Opt l="Snap grid" hint="Symbols, bends and ends snap to it."><span class="inline"><input type="number" step="0.5" style={{ width: "90px" }} value={s().grid} onChange={e => set({ grid: Math.max(0.5, +e.currentTarget.value || 2.5) })} /> mm</span></Opt>
     </Sec>
     <ClassesSec />
+    <Sec t="Drawing standard" about="Draw this project with a client's symbols (File › Libraries). Objects, tags and data stay the same; switch back at any time.">
+      <StandardSec />
+    </Sec>
     <Sec t="Datasheets" about="Your company's datasheet form: its number, your logo, a footer, the rows it shows and the order of its sections. Saved with the project; use it for new projects too.">
       <LayoutSec />
     </Sec>
@@ -209,7 +213,7 @@ export const Backstage = () => (
   <div class="bs">
     <aside>
       <button class="back" onClick={() => out() && setBackstage(null)} title="Back">←</button>
-      <For each={[["home", "home", "Home"], ["new", "new", "New"], ["open", "open", "Open"], ["save", "save", "Save"], ["saveas", "save", "Save As"], ["export", "export", "Export"], ["print", "print", "Print"], ["roadmap", "list", "Roadmap"]]}>{([k, i, l]) =>
+      <For each={[["home", "home", "Home"], ["new", "new", "New"], ["open", "open", "Open"], ["save", "save", "Save"], ["saveas", "save", "Save As"], ["export", "export", "Export"], ["print", "print", "Print"], ["libraries", "symbols", "Libraries"], ["roadmap", "list", "Roadmap"]]}>{([k, i, l]) =>
         <button classList={{ on: backstage() === k }} onClick={() => {
           if (k === "open") C.open(); else if (k === "save") C.save(); else if (k === "saveas") C.save(true);
           else setBackstage(k === "new" ? "home" : k);
@@ -224,6 +228,7 @@ export const Backstage = () => (
       <Show when={backstage() === "options"}><OptionsPage /></Show>
       <Show when={backstage() === "print"}><PrintPage /></Show>
       <Show when={backstage() === "roadmap"}><RoadmapPage /></Show>
+      <Show when={backstage() === "libraries"}><LibrariesPage /></Show>
       <Show when={backstage() === "about"}><div class="about"><h1>Updates</h1><UpdateCard /><p><button class="btn" onClick={() => D.shortcuts()}>Keyboard shortcuts</button></p></div></Show>
     </section>
   </div>

@@ -208,6 +208,39 @@ fn damaged_files_open_or_say_why() {
     assert!(model::from_json(r#"{"format":99}"#).unwrap_err().contains("newer"));
 }
 
+/// Random and damaged DXF into the legend scan and the sheet background: an answer or a clear
+/// error, never a panic; whatever is read is a sound library or background.
+#[test]
+fn random_dxf_never_panics() {
+    let mut r = Rng(0x5eed_d0f0);
+    let good = dxf::write(&crate::examples::get("pump").unwrap(), &crate::examples::get("pump").unwrap().sheets[0]);
+    let words = ["0", "SECTION", "ENTITIES", "BLOCKS", "BLOCK", "ENDBLK", "INSERT", "ATTRIB", "LWPOLYLINE", "LINE", "CIRCLE", "ARC", "TEXT", "MTEXT", "HATCH", "SEQEND", "ENDSEC", "EOF", "2", "8", "10", "20", "40", "42", "70", "90", "-1e308", "nan", "1e9", "VLV", "*U2"];
+    let sheet = Sheet::default();
+    for i in 0..60 {
+        let text: String = if i % 3 == 0 {
+            // A real drawing with lines cut out or swapped.
+            let mut ls: Vec<&str> = good.lines().collect();
+            for _ in 0..r.below(40) + 1 {
+                let (a, b) = (r.below(ls.len()), r.below(ls.len()));
+                if r.below(2) == 0 { ls.swap(a, b) } else { ls.remove(a); }
+            }
+            ls.join("\n")
+        } else {
+            (0..r.below(3000)).map(|_| *r.pick(&words).unwrap()).collect::<Vec<_>>().join("\n")
+        };
+        if let Ok(scan) = crate::symlib::scan_legend(&text, HOSTILE[i % HOSTILE.len()]) {
+            let (lib, _) = crate::symlib::validate(scan.library);
+            for c in &lib.symbols {
+                assert!(c.w.is_finite() && c.h.is_finite() && c.ports.iter().all(|q| q.x.is_finite() && q.y.is_finite()));
+            }
+        }
+        if let Ok((u, _)) = crate::dxfin::underlay(&text, HOSTILE[i % HOSTILE.len()], &sheet) {
+            assert!(u.k.is_finite() && u.k > 0.0 && u.x.is_finite() && u.y.is_finite());
+            let _ = symbols::svg(&u.prims());
+        }
+    }
+}
+
 #[test]
 fn hostile_values_are_clamped() {
     let mut p = Project::new();

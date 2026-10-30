@@ -263,6 +263,106 @@ async fn open(app: AppHandle, st: State<'_, St>, path: Option<String>) -> R<Opti
     Ok(Some(o))
 }
 
+// ---------------------------------------------------------------- symbol libraries
+
+use datum_core::symlib::{self, LibView, Library};
+
+/// The folder of the user's symbol libraries.
+fn lib_dir(app: &AppHandle) -> R<PathBuf> {
+    dir(app, true).map(|d| d.join("libraries")).ok_or_else(|| "The folder for symbol libraries could not be made.".to_string())
+}
+
+/// Every symbol library on this computer (read and made drawable).
+#[tauri::command]
+fn libraries(app: AppHandle) -> R<Vec<LibView>> {
+    let d = lib_dir(&app)?;
+    guard(|| Ok(symlib::load_dir(&d)))
+}
+
+/// Reads a client's legend sheet (DXF) into a library to review; nothing is saved yet.
+#[tauri::command]
+async fn legend_scan(app: AppHandle, path: Option<String>) -> R<Option<LibView>> {
+    let Some(path) = path.map(PathBuf::from).or_else(|| pick(&app, "DXF drawing (save a DWG as DXF from any CAD program)", &["dxf"])) else { return Ok(None) };
+    let text = String::from_utf8_lossy(&std::fs::read(&path).map_err(|e| format!("Could not open {}: {e}", path.display()))?).into_owned();
+    let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("Library").to_string();
+    let scan = guard(|| symlib::scan_legend(&text, &name))?;
+    let mut lib = scan.library;
+    lib.source = path.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    Ok(Some(symlib::view("", lib, scan.warnings)))
+}
+
+/// Puts an old drawing (DXF) behind a sheet.
+#[tauri::command]
+async fn underlay_import(app: AppHandle, st: State<'_, St>, sheet: u32) -> R<Option<Out>> {
+    let Some(path) = pick(&app, "DXF drawing (save a DWG as DXF from any CAD program)", &["dxf"]) else { return Ok(None) };
+    let text = String::from_utf8_lossy(&std::fs::read(&path).map_err(|e| format!("Could not open {}: {e}", path.display()))?).into_owned();
+    let name = path.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    guard(|| {
+        let mut a = st.lock();
+        let mut s = a.doc.p.sheets.iter().find(|s| s.id == sheet).cloned().ok_or("That sheet no longer exists.")?;
+        let (u, warnings) = datum_core::dxfin::underlay(&text, &name, &s)?;
+        s.underlay = Some(u);
+        a.doc.apply(Op::SetSheet { sheet: s })?;
+        let mut o = out(&a);
+        o.warnings = warnings;
+        Ok(Some(o))
+    })
+}
+
+/// The old drawing behind a sheet, as SVG in its own millimetres.
+#[tauri::command]
+fn underlay_svg(st: State<St>, sheet: u32) -> String {
+    let a = st.lock();
+    a.doc.p.sheets.iter().find(|s| s.id == sheet).and_then(|s| s.underlay.as_ref()).map(|u| datum_core::symbols::svg(&datum_core::symbols::parse(&u.draw))).unwrap_or_default()
+}
+
+#[tauri::command]
+fn library_save(app: AppHandle, lib: Library, old: Option<String>) -> R<LibView> {
+    let d = lib_dir(&app)?;
+    guard(|| symlib::save(&d, lib, old.as_deref()))
+}
+
+#[tauri::command]
+fn library_delete(app: AppHandle, file: String) -> R<()> {
+    if file.contains(['/', '\\']) || !file.ends_with(".dschemalib") {
+        return Err("That is not a library file.".into());
+    }
+    std::fs::remove_file(lib_dir(&app)?.join(file)).map_err(|e| format!("Could not delete the library: {e}"))
+}
+
+/// Saves a copy of a library file elsewhere (to send to a colleague).
+#[tauri::command]
+async fn library_export(app: AppHandle, file: String) -> R<Option<String>> {
+    if file.contains(['/', '\\']) {
+        return Err("That is not a library file.".into());
+    }
+    let src = lib_dir(&app)?.join(&file);
+    let Some(to) = app.dialog().file().add_filter("Datum Schema symbol library", &["dschemalib"]).set_file_name(&file).blocking_save_file().and_then(|f| f.into_path().ok()) else { return Ok(None) };
+    std::fs::copy(&src, &to).map_err(|e| format!("Could not save {}: {e}", to.display()))?;
+    Ok(Some(to.display().to_string()))
+}
+
+/// Adds a library file someone sent to this computer's libraries.
+#[tauri::command]
+async fn library_import(app: AppHandle) -> R<Option<LibView>> {
+    let Some(path) = pick(&app, "Datum Schema symbol library", &["dschemalib"]) else { return Ok(None) };
+    let lib = guard(|| symlib::read_file(&path))?;
+    let d = lib_dir(&app)?;
+    guard(|| symlib::save(&d, lib, None)).map(Some)
+}
+
+/// A library symbol made to stand for another of our symbols, its ports suggested afresh.
+#[tauri::command]
+fn symbol_like(sym: symlib::CustomSym, like: String) -> symlib::CustomSym {
+    symlib::restyle(sym, &like)
+}
+
+/// Where a connection point clicked on a symbol goes: onto its drawing, leaving the nearer side.
+#[tauri::command]
+fn port_at(draw: String, w: f64, h: f64, x: f64, y: f64) -> symlib::CPort {
+    symlib::port_at(&draw, w, h, x, y)
+}
+
 /// Opens a DEXPI P&ID exchange file as a new, unsaved project (Save keeps it as a .dschema).
 #[tauri::command]
 async fn import_dexpi(app: AppHandle, st: State<'_, St>, path: Option<String>) -> R<Option<Out>> {
@@ -524,6 +624,10 @@ fn main() {
                     default(info);
                 }));
             }
+            // The user's symbol libraries are drawable from the start (projects may use them).
+            if let Ok(d) = lib_dir(app.handle()) {
+                let _ = std::panic::catch_unwind(|| symlib::load_dir(&d));
+            }
             let opts: Options = options_file(app.handle()).and_then(|f| doc::read_limited(&f).ok()).and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default();
             let mut a = App { doc: Doc::new(Project::new()), opts };
             a.doc.user = user_name(&a.opts);
@@ -544,7 +648,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
+            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
             options, set_options, autosave, recovery, recover, recent, startup_file, open_url, version, quit, check_update, install_update
         ])
         .run(tauri::generate_context!())

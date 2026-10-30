@@ -599,8 +599,15 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
             created.push(sheet.id);
             p.sheets.push(sheet);
         }
-        Op::SetSheet { sheet } => {
+        Op::SetSheet { mut sheet } => {
             let old = p.sheets.iter_mut().find(|s| s.id == sheet.id).ok_or("That sheet no longer exists.")?;
+            // The window sends a background without its drawing: keep the one the sheet has.
+            if let Some(u) = sheet.underlay.as_mut().filter(|u| u.draw.is_empty()) {
+                match old.underlay.as_ref().filter(|o| o.rev == u.rev) {
+                    Some(o) => u.draw = o.draw.clone(),
+                    None => sheet.underlay = None,
+                }
+            }
             *old = sheet;
         }
         Op::DeleteSheet { id } => {

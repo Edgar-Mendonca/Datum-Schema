@@ -90,6 +90,8 @@ pub struct SheetView {
     pub lines: Vec<LineView>,
     pub notes: Vec<NoteView>,
     pub legend_rows: Vec<LegendRow>,
+    /// An old drawing behind the sheet (its drawing is fetched by `rev`, with `underlay_svg`).
+    pub underlay: Option<crate::model::Underlay>,
 }
 
 /// The layer a line type is drawn on.
@@ -401,7 +403,7 @@ pub fn sheet(p: &Project, s: &Sheet, net: &Net, hyd: &[Option<Hyd>]) -> SheetVie
         })
         .collect();
     let notes = p.notes.iter().filter(|n| n.sheet == s.id).map(note_view).collect();
-    SheetView { id: s.id, number: s.number.clone(), title: s.title.clone(), w, h, legend: s.legend, frame: frame::frame(p, s), items, lines, notes, legend_rows: if s.legend { legend(p, s) } else { vec![] } }
+    SheetView { id: s.id, number: s.number.clone(), title: s.title.clone(), w, h, legend: s.legend, frame: frame::frame(p, s), items, lines, notes, legend_rows: if s.legend { legend(p, s) } else { vec![] }, underlay: s.underlay.clone().filter(|u| u.show) }
 }
 
 /// Text lines of a note, and their box.

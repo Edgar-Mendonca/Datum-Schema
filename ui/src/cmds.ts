@@ -32,7 +32,7 @@ export const C = {
   /** Place a symbol at a point; an in-line symbol on a line (`on`) goes into it. */
   place: async (sym: string, at: Pt, on: number | null, tag?: string, obj?: number) => {
     const s = symOf(sym); if (!s || !sheet()) return;
-    const item: Item = { id: 0, sheet: sid(), sym, x: at[0], y: at[1], rot: 0, flip: false, scale: 1, obj: 0, link: 0 };
+    const item: Item = { id: 0, sheet: sid(), sym, x: at[0], y: at[1], rot: 0, flip: false, scale: 1, obj: 0, link: 0, base: "" };
     let o = await act({ AddItem: { item, on, tag: tag ?? "", obj: obj ?? null } });
     if (o && obj === undefined && (s.cat === "instrument" || s.cat === "primary")) {
       const placed = o.p.items.find(i => i.id === o!.created[0]);
@@ -121,6 +121,13 @@ export const C = {
   exportDatasheets: async () => { const f = await call<string | null>("export", { kind: "datasheets", what: "", sheet: sid() }); if (f) toast(`Saved ${f}.`, true); },
   importDexpi: () => D.keepChanges(async () => { const o = await loadOut("import_dexpi"); if (o) toast(o.warnings.length ? `Opened with notes: ${o.warnings.join(" ")}` : "Opened the DEXPI file as a new project. Save keeps it as a Datum Schema project.", !o.warnings.length); }),
   exportCause: async () => { const f = await call<string | null>("export", { kind: "cause", what: "", sheet: 0 }); if (f) toast(`Saved ${f}.`, true); },
+  underlay: async () => {
+    const o = await call<Out | null>("underlay_import", { sheet: sid() });
+    if (!o) return;
+    setOut({ ...o, warnings: [] });
+    const u = o.p.sheets.find(s => s.id === sid())?.underlay;
+    toast(`${u?.name ?? "The drawing"} is behind this sheet, faint, to trace over.${o.warnings.length ? " " + o.warnings.join(" ") : ""}`, true);
+  },
   exportDexpi: async () => { const f = await call<string | null>("export", { kind: "dexpi", what: "", sheet: sid() }); if (f) toast(`Saved ${f}: this sheet in the DEXPI P&ID exchange format.`, true); },
   exportDxf: async () => { const f = await call<string | null>("export", { kind: "dxf", what: "", sheet: sid() }); if (f) toast(`Saved ${f}. It opens in any CAD program.`, true); },
   exportSvg: async () => { const s = sheet(); if (!s) return; const svg = await sheetSvg(s.id); const f = await call<string | null>("save_file", { name: `${s.number}.svg`, data: svg }); if (f) toast(`Saved ${f}.`, true); },

@@ -13,8 +13,10 @@ export type Val = number | string;
 export type Data = Record<string, Val>;
 export interface Title { company: string; project: string; client: string; unit: string; by: string; checked: string; approved: string }
 export interface Rev { rev: string; date: string; desc: string; by: string; checked: string; approved: string }
-export interface Sheet { id: number; number: string; title: string; size: string; rev: string; date: string; scale: string; revs: Rev[]; legend: boolean }
-export interface Item { id: number; sheet: number; sym: string; x: number; y: number; rot: number; flip: boolean; scale: number; obj: number; link: number }
+export interface Sheet { id: number; number: string; title: string; size: string; rev: string; date: string; scale: string; revs: Rev[]; legend: boolean; underlay: Underlay | null }
+/** An old drawing behind a sheet, placed at (x, y) mm and scaled by k; its drawing is fetched by rev. */
+export interface Underlay { name: string; w: number; h: number; x: number; y: number; k: number; show: boolean; print: boolean; rev: string }
+export interface Item { id: number; sheet: number; sym: string; x: number; y: number; rot: number; flip: boolean; scale: number; obj: number; link: number; base: string }
 /** A plant object: the master of a tag and its data; symbols and line pieces are views of it. */
 export interface Obj { id: number; uid: string; class: string; tag: string; node: number; data: Data }
 export interface PlantNode { id: number; parent: number; level: "plant" | "unit" | "area"; name: string }
@@ -25,7 +27,16 @@ export interface Line { id: number; sheet: number; kind: Kind; a: End; b: End; p
 export type NoteKind = "note" | "leader" | "hold";
 export interface Note { id: number; sheet: number; kind: NoteKind; x: number; y: number; w: number; h: number; text: string; to: Pt }
 export interface Limit { service: string; name: string; vmin: number; vmax: number; dp: number }
-export interface Settings { line_format: string; off: number[]; limits: Limit[]; roughness: number; grid: number; hidden: string[]; user_attrs: UserAttr[]; ds_layout: DsLayout }
+export interface Settings { line_format: string; off: number[]; limits: Limit[]; roughness: number; grid: number; hidden: string[]; user_attrs: UserAttr[]; ds_layout: DsLayout; standard: Standard }
+/** A drawing standard: a library, and for each of our symbols the library symbol that draws it. */
+export interface Standard { library: string; map: Record<string, string> }
+/** A connection point of a library symbol (dir: 0 right, 1 down, 2 left, 3 up). */
+export interface CPort { x: number; y: number; dir: number; name: string; signal: boolean }
+/** A library symbol: drawn from a client's legend; `like` is the Datum Schema symbol it stands for. */
+export interface CustomSym { key: string; name: string; library: string; block: string; like: string; class: string; cat: Cat; w: number; h: number; draw: string; ports: CPort[]; prefix: string; inline: boolean; terminal: boolean }
+export interface SymLibrary { format: number; name: string; source: string; symbols: CustomSym[] }
+/** A library as listed: its file (empty: not saved yet), the library, each symbol's picture, notes. */
+export interface LibView { file: string; library: SymLibrary; svgs: string[]; warnings: string[] }
 /** The company's datasheet layout: form number, logo (data URL), footer, rows left out ("Section › Label"), section order. */
 export interface DsLayout { form: string; logo: string; footer: string; hidden: string[]; order: string[] }
 export interface Project { format: number; name: string; units: "SI" | "US"; title: Title; nodes: PlantNode[]; objects: Obj[]; sheets: Sheet[]; items: Item[]; lines: Line[]; notes: Note[]; settings: Settings; next: number }
@@ -43,7 +54,7 @@ export interface ItemView { id: number; obj: number; sym: string; cat: Cat; x: n
 export interface LineView { id: number; obj: number; kind: Kind; path: Pt[]; segs: Pt[][]; marks: Prim[]; number: string; badge: number | null; run: number | null; layer: string }
 export interface NoteView { id: number; kind: NoteKind; prims: Prim[]; bbox: [number, number, number, number] }
 export interface LegendRow { sym: string | null; kind: Kind | null; x: number; y: number; name: string }
-export interface SheetView { id: number; number: string; title: string; w: number; h: number; legend: boolean; frame: Prim[]; items: ItemView[]; lines: LineView[]; notes: NoteView[]; legend_rows: LegendRow[] }
+export interface SheetView { id: number; number: string; title: string; w: number; h: number; legend: boolean; frame: Prim[]; items: ItemView[]; lines: LineView[]; notes: NoteView[]; legend_rows: LegendRow[]; underlay: Underlay | null }
 export interface Issue { rule: number; level: "error" | "warning" | "note"; msg: string; ids: number[]; sheet: number; at: Pt }
 export interface Hyd { id: number; v: number; re: number; f: number; dp100: number; dp: number; length: number; service: string; service_name: string; vmin: number; vmax: number; dpmax: number; status: number; reason: string }
 export interface Derived { view: SheetView | null; issues: Issue[]; hyd: (Hyd | null)[]; runs: number[][]; numbers: Record<string, string>; attrs: Record<string, Field[]> }

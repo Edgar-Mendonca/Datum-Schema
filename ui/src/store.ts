@@ -1,13 +1,30 @@
 // Window state: the open project, the open sheet, what the engine works out from it (the sheet's
 // drawing, the checks, the hydraulics), the selection, the drawing tool, menus, dialogs and messages.
 import { createSignal, createMemo, batch, JSX } from "solid-js";
-import { invoke, Out, Options, Project, Derived, Library, SymInfo, Kind, NoteKind, Item, Line, Obj } from "./api";
+import { invoke, Out, Options, Project, Derived, Library, SymInfo, Kind, NoteKind, Item, Line, Obj, LibView } from "./api";
 
 export const [out, setOutRaw] = createSignal<Out | null>(null);
 export const proj = (): Project | undefined => out()?.p;
 export const [sheetId, setSheetIdRaw] = createSignal(0);
 export const [derived, setDerived] = createSignal<Derived | null>(null);
 export const [lib, setLib] = createSignal<Library | null>(null);
+/** The symbol libraries on this computer. */
+export const [libs, setLibs] = createSignal<LibView[]>([]);
+/** Reads the libraries again (and the symbols, which include theirs). */
+export const refreshLibs = async () => {
+  try {
+    setLibs(await invoke<LibView[]>("libraries"));
+    setLib(await invoke<Library>("library"));
+  } catch (e) { toast(String(e)); }
+};
+/** Old drawings behind sheets, as SVG, by fingerprint: fetched once each. */
+export const [bgs, setBgs] = createSignal<Record<string, string>>({});
+const bgWant = new Set<string>();
+export const loadBg = async (sheet: number, rev: string) => {
+  if (bgWant.has(rev)) return;
+  bgWant.add(rev);
+  try { const s = await invoke<string>("underlay_svg", { sheet }); setBgs({ ...bgs(), [rev]: s }); } catch { bgWant.delete(rev); }
+};
 const symMap = createMemo(() => new Map((lib()?.symbols ?? []).map(s => [s.key, s])));
 export const symOf = (k: string): SymInfo | undefined => symMap().get(k);
 export const sheet = () => proj()?.sheets.find(s => s.id === sheetId()) ?? proj()?.sheets[0];
