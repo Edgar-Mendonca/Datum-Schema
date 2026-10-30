@@ -1,14 +1,15 @@
 //! The project file (`.dschema`): one SQLite database. Plant objects and their attribute values are
 //! tables of their own, so the file can be queried by any SQLite tool; the views (sheets, symbols,
-//! line pieces, notes) are rows with their geometry; every change to an object is a row of the
-//! history. Files from 0.1.0–0.1.4 (JSON) open and convert.
+//! line pieces, notes) are rows with their geometry; issued datasheet revisions keep their snapshot;
+//! every change to an object is a row of the history. Files from 0.1.0–0.1.4 (JSON) open and
+//! convert.
 //!
 //! Writing is atomic: the database is built in a temporary file next to the target, which then
 //! replaces it in one step. Reading takes each table on its own, so a damaged one is reported and
 //! left out instead of the whole file failing.
 
 use crate::doc::{read_limited, Change, MAX_FILE};
-use crate::model::{self, Data, Item, Line, Node, Note, Obj, Project, Sheet, Val};
+use crate::model::{self, Data, Issue, Item, Line, Node, Note, Obj, Project, Sheet, Val};
 use rusqlite::{params, Connection, OpenFlags};
 use std::path::Path;
 
@@ -21,6 +22,7 @@ CREATE TABLE sheets (id INTEGER PRIMARY KEY, position INTEGER NOT NULL, sheet TE
 CREATE TABLE items (id INTEGER PRIMARY KEY, sheet INTEGER NOT NULL, object INTEGER NOT NULL, symbol TEXT NOT NULL, x REAL NOT NULL, y REAL NOT NULL, rot INTEGER NOT NULL, flip INTEGER NOT NULL, scale REAL NOT NULL, link INTEGER NOT NULL);
 CREATE TABLE lines (id INTEGER PRIMARY KEY, sheet INTEGER NOT NULL, object INTEGER NOT NULL, line TEXT NOT NULL);
 CREATE TABLE notes (id INTEGER PRIMARY KEY, sheet INTEGER NOT NULL, note TEXT NOT NULL);
+CREATE TABLE issues (seq INTEGER PRIMARY KEY, object INTEGER NOT NULL, rev TEXT NOT NULL, status TEXT NOT NULL, date TEXT NOT NULL, issued_by TEXT NOT NULL, note TEXT NOT NULL, snapshot TEXT NOT NULL);
 CREATE TABLE history (seq INTEGER PRIMARY KEY, time INTEGER NOT NULL, user TEXT NOT NULL, what TEXT NOT NULL, object INTEGER NOT NULL, uid TEXT NOT NULL, name TEXT NOT NULL, old TEXT NOT NULL, new TEXT NOT NULL);
 CREATE VIEW object_attributes AS SELECT o.tag, o.class, a.name, coalesce(a.number, a.text) AS value FROM objects o JOIN attributes a ON a.object = o.id;
 ";
@@ -63,6 +65,9 @@ pub fn write(path: &Path, p: &Project, history: &[Change]) -> Result<(), String>
         }
         for n in &p.notes {
             t.execute("INSERT INTO notes VALUES (?1, ?2, ?3)", params![n.id, n.sheet, js(n)]).map_err(sql)?;
+        }
+        for (i, s) in p.issues.iter().enumerate() {
+            t.execute("INSERT INTO issues VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)", params![i as i64, s.obj, s.rev, s.status, s.date, s.by, s.note, js(&s.values)]).map_err(sql)?;
         }
         for h in history {
             t.execute("INSERT INTO history VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", params![h.seq as i64, h.time as i64, h.user, h.what, h.obj, h.uid, h.key, h.old, h.new]).map_err(sql)?;
@@ -169,6 +174,12 @@ fn read_sqlite(path: &Path) -> Result<(Project, Vec<Change>, Vec<String>), Strin
     });
     p.lines = table(&c, "SELECT line FROM lines", "lines", &mut w, |r| Ok(serde_json::from_str::<Line>(&r.get::<_, String>(0)?).ok()));
     p.notes = table(&c, "SELECT note FROM notes", "notes", &mut w, |r| Ok(serde_json::from_str::<Note>(&r.get::<_, String>(0)?).ok()));
+    // Datasheet revisions (format 3 on; format 2 files have none).
+    if format >= 3 {
+        p.issues = table(&c, "SELECT object, rev, status, date, issued_by, note, snapshot FROM issues ORDER BY seq", "datasheet revisions", &mut w, |r| {
+            Ok(serde_json::from_str(&r.get::<_, String>(6)?).ok().map(|values| Issue { obj: r.get(0).unwrap_or(0), rev: r.get(1).unwrap_or_default(), status: r.get(2).unwrap_or_default(), date: r.get(3).unwrap_or_default(), by: r.get(4).unwrap_or_default(), note: r.get(5).unwrap_or_default(), values }))
+        });
+    }
     let history = table(&c, "SELECT seq, time, user, what, object, uid, name, old, new FROM history ORDER BY seq", "history entries", &mut w, |r| {
         Ok(Some(Change { seq: r.get::<_, i64>(0)?.max(0) as u64, time: r.get::<_, i64>(1)?.max(0) as u64, user: r.get(2)?, what: r.get(3)?, obj: r.get(4)?, uid: r.get(5)?, key: r.get(6)?, old: r.get(7)?, new: r.get(8)? }))
     });
@@ -184,6 +195,22 @@ mod tests {
         let d = std::env::temp_dir().join(format!("datum-schema-test-{}-{}", std::process::id(), name));
         let _ = std::fs::create_dir_all(&d);
         d.join("p.dschema")
+    }
+
+    #[test]
+    fn format_2_files_have_no_datasheet_revisions_and_open_cleanly() {
+        let path = tmp("f2");
+        crate::doc::Doc::new(crate::examples::get("pump").unwrap()).save(&path).unwrap();
+        let c = Connection::open(&path).unwrap();
+        c.execute_batch("DROP TABLE issues; UPDATE meta SET value = '2' WHERE key = 'format';").unwrap();
+        drop(c);
+        let (p, _, w) = read(&path).unwrap();
+        assert!(w.is_empty() && p.issues.is_empty(), "{w:?}");
+        // A file from a newer version says so.
+        let c = Connection::open(&path).unwrap();
+        c.execute("UPDATE meta SET value = '4' WHERE key = 'format'", []).unwrap();
+        drop(c);
+        assert!(read(&path).unwrap_err().contains("newer"));
     }
 
     #[test]

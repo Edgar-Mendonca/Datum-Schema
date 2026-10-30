@@ -140,7 +140,7 @@ export const ALL_CMDS: [string, () => void, string?][] = [
   ["Off-page connector", () => C.placeTool("offpage")], ["Renumber every tag", C.renumber],
   ["New sheet", () => C.addSheet()], ["Legend sheet", () => C.addSheet(true)], ["Delete this sheet", C.deleteSheet],
   ["SI units", () => C.units("SI")], ["US units", () => C.units("US")], ["Fit the sheet", C.fit, "F"],
-  ["Checks panel", () => C.panel("checks")], ["Line list", () => C.panel("lines")], ["Equipment list", () => C.panel("equipment")], ["Instrument index", () => C.panel("instruments")], ["Valve list", () => C.panel("valves")],
+  ["Checks panel", () => C.panel("checks")], ["Line list", () => C.panel("lines")], ["Equipment list", () => C.panel("equipment")], ["Instrument index", () => C.panel("instruments")], ["Valve list", () => C.panel("valves")], ["Datasheet index", () => C.panel("datasheets")],
   ["Export DXF", C.exportDxf], ["Save the sheet as SVG", C.exportSvg],
   ["Options", () => setBackstage("options")], ["Check for updates", () => setBackstage("about")], ["Roadmap", () => setBackstage("roadmap")],
   ["Keyboard shortcuts", () => D.shortcuts(), "F1"], ["Getting started", () => D.gettingStarted()], ["Glossary", () => D.glossary()],

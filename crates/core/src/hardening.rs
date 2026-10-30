@@ -122,7 +122,7 @@ fn random_edits_never_panic_and_failed_ones_change_nothing() {
         let ids: Vec<u32> = d.p.items.iter().map(|i| i.id).chain(d.p.lines.iter().map(|l| l.id)).chain(d.p.notes.iter().map(|n| n.id)).chain([0, 999_999, u32::MAX]).collect();
         let id = *r.pick(&ids).unwrap();
         let sheet = d.p.sheets[r.below(d.p.sheets.len())].id;
-        let op = match r.below(14) {
+        let op = match r.below(15) {
             0 => Op::Move { ids: vec![id], dx: [1.0, -1e9, f64::NAN, 5.0][r.below(4)], dy: 2.5 },
             1 => Op::Rotate { ids: vec![id] },
             2 => Op::Flip { ids: vec![id] },
@@ -136,6 +136,7 @@ fn random_edits_never_panic_and_failed_ones_change_nothing() {
             10 => Op::Renumber,
             11 => Op::SetData { ids: vec![id], key: "flow".into(), val: Some(Val::Num(f64::INFINITY)) },
             12 => Op::MoveSheet { id: sheet, to: usize::MAX },
+            13 => Op::IssueDatasheet { ids: vec![id], rev: [String::new(), HOSTILE[r.below(8)].into()][r.below(2)].clone(), status: ["Preliminary", "As-built", "", "<b>x</b>"][r.below(4)].into(), date: HOSTILE[r.below(8)].into(), note: HOSTILE[r.below(8)].into(), by: String::new() },
             _ => Op::AddItem { item: Item { sheet, sym: "gate".into(), x: r.f(0.0, 400.0), y: r.f(0.0, 290.0), ..Item::default() }, on: Some(id), tag: String::new(), obj: None },
         };
         let before = d.p.clone();

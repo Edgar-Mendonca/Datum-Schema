@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
 
 /// The file format written by this version. Older formats are migrated when read.
-pub const FORMAT: u32 = 2;
+pub const FORMAT: u32 = 3;
 /// Coordinates are kept inside ±this many millimetres (a few times the largest sheet).
 pub const MAX_COORD: f64 = 100_000.0;
 /// The most of any one kind of thing a file may hold (far more than any real drawing).
@@ -232,6 +232,25 @@ pub struct Obj {
 /// The class of a line-number object.
 pub const LINE_CLASS: &str = "PipingNetworkSystem";
 
+/// An issued revision of an object's datasheet: its revision, status, date and who issued it,
+/// with what the datasheet said then (so the next revision can mark what changed).
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
+pub struct Issue {
+    pub obj: u32,
+    pub rev: String,
+    pub status: String,
+    /// The date as the person issuing it reads it (YYYY-MM-DD).
+    pub date: String,
+    pub by: String,
+    pub note: String,
+    /// "Section › Label" → the value with its unit as the datasheet showed it in SI units (bar, °C…).
+    pub values: BTreeMap<String, String>,
+}
+
+/// The statuses a datasheet is issued with, in their usual order.
+pub const STATUSES: [&str; 4] = ["Preliminary", "Issued for Enquiry", "Issued for Purchase", "As-built"];
+
 /// A level of the plant hierarchy: plant › unit › area.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
 #[serde(default)]
@@ -340,6 +359,8 @@ pub struct Project {
     pub items: Vec<Item>,
     pub lines: Vec<Line>,
     pub notes: Vec<Note>,
+    /// Issued datasheet revisions, oldest first.
+    pub issues: Vec<Issue>,
     pub settings: Settings,
     /// The next id for anything (sheets, items, lines and notes share one sequence).
     pub next: u32,
@@ -354,7 +375,7 @@ impl Default for Project {
 impl Project {
     /// A new project with one blank A3 sheet.
     pub fn new() -> Self {
-        let mut p = Self { format: FORMAT, name: "Project1".into(), units: "SI".into(), title: Title::default(), nodes: vec![], objects: vec![], sheets: vec![], items: vec![], lines: vec![], notes: vec![], settings: Settings::default(), next: 1 };
+        let mut p = Self { format: FORMAT, name: "Project1".into(), units: "SI".into(), title: Title::default(), nodes: vec![], objects: vec![], sheets: vec![], items: vec![], lines: vec![], notes: vec![], issues: vec![], settings: Settings::default(), next: 1 };
         let id = p.id();
         p.sheets.push(Sheet { id, ..Sheet::default() });
         p.default_nodes();
@@ -697,6 +718,18 @@ impl Project {
                 l.obj = 0;
             }
         }
+        // Issued revisions belong to their object and go with it.
+        self.issues.retain(|i| objs.contains(&i.obj));
+        for i in &mut self.issues {
+            i.rev = crate::clip(&i.rev, 12);
+            if !STATUSES.contains(&i.status.as_str()) {
+                i.status = STATUSES[0].into();
+            }
+            i.date = crate::clip(&i.date, 20);
+            i.by = crate::clip(&i.by, 80);
+            i.note = crate::clip(&i.note, 400);
+            i.values.retain(|k, v| k.len() <= 200 && v.len() <= 1000);
+        }
         w
     }
 }
@@ -767,6 +800,7 @@ pub fn from_json(text: &str) -> Result<(Project, Vec<String>), String> {
     p.items = list(raw_items.clone(), "symbols", &mut w);
     p.lines = list(raw_lines.clone(), "lines", &mut w);
     p.notes = list(part("notes", &mut w), "notes", &mut w);
+    p.issues = list(o.get("issues").cloned(), "datasheet revisions", &mut w);
     if format < 2 {
         migrate_1(&mut p, raw_items, raw_lines);
         w.push("This file was made by Datum Schema 0.1.4 or earlier; it now keeps its symbols' and lines' data in plant objects (save it to keep the new form).".into());

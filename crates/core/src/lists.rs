@@ -37,7 +37,7 @@ pub struct List {
     pub rows: Vec<Row>,
 }
 
-pub const KINDS: [(&str, &str); 4] = [("lines", "Line list"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list")];
+pub const KINDS: [(&str, &str); 5] = [("lines", "Line list"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list"), ("datasheets", "Datasheet index")];
 
 /// (key, label, quantity, editable)
 type Spec = (&'static str, &'static str, &'static str, bool);
@@ -149,6 +149,31 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
                 .map(|(o, it)| {
                     let cells = specs.iter().map(|&(k, _, q, _)| match k { "tag" => o.tag.clone(), "kind" => sym_name(it), "on" => attached(&net, it), "sheet" => sheet_no(p, it.sheet), "area" => p.node_path(o.node), _ => val(&o.data, k, q, us) }).collect();
                     Row { ids: vec![it.id], sheet: it.sheet, cells, status: None }
+                })
+                .collect();
+            (cols(&specs, us), rows)
+        }
+        "datasheets" => {
+            let specs: Vec<Spec> = vec![("tag", "Tag", "", false), ("kind", "Type", "", false), ("rev", "Rev", "", false), ("status", "Status", "", false), ("date", "Date", "", false), ("by", "By", "", false), ("changed", "Changed since issue", "", false), ("area", "Area", "", false), ("sheet", "Sheet", "", false)];
+            let rows = crate::datasheets::all(p)
+                .into_iter()
+                .map(|d| {
+                    let it = p.item(d.item);
+                    let cells = specs
+                        .iter()
+                        .map(|&(k, _, _, _)| match k {
+                            "tag" => d.tag.clone(),
+                            "kind" => it.map(sym_name).unwrap_or_default(),
+                            "rev" => d.rev.clone(),
+                            "status" => if d.status.is_empty() { "Not issued".into() } else { d.status.clone() },
+                            "date" => d.date.clone(),
+                            "by" => d.by.clone(),
+                            "changed" => if d.rev.is_empty() { String::new() } else if d.changed == 0 { "none".into() } else { format!("Δ {}", d.changed) },
+                            "area" => p.obj(d.obj).map(|o| p.node_path(o.node)).unwrap_or_default(),
+                            _ => sheet_no(p, d.sheet),
+                        })
+                        .collect();
+                    Row { ids: vec![d.item], sheet: d.sheet, cells, status: if d.rev.is_empty() { None } else { Some(u8::from(d.changed > 0)) } }
                 })
                 .collect();
             (cols(&specs, us), rows)

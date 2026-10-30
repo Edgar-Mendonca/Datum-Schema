@@ -81,5 +81,9 @@ export const num = (v: number, sig = 4) => {
 };
 
 /** A datasheet row: the object's own value (key set, editable) or one taken from elsewhere (source set). */
-export interface DsRow { key: string; label: string; value: string; unit: string; q: string; choices: string[]; required: boolean; source: string }
-export interface Datasheet { obj: number; item: number; sheet: number; tag: string; title: string; sections: { title: string; rows: DsRow[] }[] }
+export interface DsRow { key: string; label: string; value: string; unit: string; q: string; choices: string[]; required: boolean; source: string; changed: boolean; was: string }
+export interface DsIssue { rev: string; status: string; date: string; by: string; note: string }
+/** A datasheet with its revision state: the last issue (rev empty: never issued), the revision block, the Δ count and the next revision per status. */
+export interface Datasheet { obj: number; item: number; sheet: number; tag: string; title: string; sections: { title: string; rows: DsRow[] }[]; rev: string; status: string; date: string; by: string; issues: DsIssue[]; changed: number; next_rev: Record<string, string> }
+/** The statuses a datasheet is issued with, in order (model::STATUSES). */
+export const STATUSES = ["Preliminary", "Issued for Enquiry", "Issued for Purchase", "As-built"];

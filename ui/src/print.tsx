@@ -8,7 +8,7 @@ import { SheetView, Prim, List, Datasheet } from "./api";
 import { call, proj, lib, sheet, setBackstage, symOf } from "./store";
 import { Help } from "./help";
 import { Check, Pick } from "./ui";
-import { DatasheetTable } from "./datasheet";
+import { DatasheetTable, RevBlock, revLine } from "./datasheet";
 
 export const MM = 96 / 25.4;
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -69,7 +69,7 @@ export const sheetSvg = async (id: number) => {
 };
 
 type Page = { w: number; h: number; body: () => JSX.Element; label: string };
-const LISTS: [string, string][] = [["lines", "Line list"], ["equipment", "Equipment list"], ["instruments", "Instrument index"], ["valves", "Valve list"]];
+const LISTS: [string, string][] = [["lines", "Line list"], ["equipment", "Equipment list"], ["instruments", "Instrument index"], ["valves", "Valve list"], ["datasheets", "Datasheet index"]];
 const [printing, setPrinting] = createSignal(false);
 /** Set by a datasheet's Print button: print only that object's datasheet. */
 export const [printOnly, setPrintOnly] = createSignal<number | null>(null);
@@ -78,7 +78,7 @@ export const PrintPage = () => {
   const [views] = createResource(() => call<SheetView[]>("views"));
   const [which, setWhich] = createSignal<"all" | "this">("all");
   const [fitA3, setFitA3] = createSignal(false);
-  const [want, setWant] = createSignal<Record<string, boolean>>({ lines: true, equipment: true, instruments: true, valves: true, legend: true, datasheets: false });
+  const [want, setWant] = createSignal<Record<string, boolean>>({ lines: true, equipment: true, instruments: true, valves: true, datasheets: false, legend: true, sheets_ds: false });
   const [datasheets] = createResource(() => call<Datasheet[]>("datasheets_all"));
   onCleanup(() => setPrintOnly(null));
   const [lists] = createResource(async () => Promise.all(LISTS.map(([k]) => call<List>("list", { kind: k }).then(l => l ?? null).catch(() => null))));
@@ -91,10 +91,11 @@ export const PrintPage = () => {
     const p = proj();
     return { w: 210, h: 297, label: `Datasheet ${d.tag}`, body: () => (
       <div class="plist pds">
-        <header><b>{d.title} · {d.tag}</b><span>{p?.title.project || p?.name}</span></header>
+        <header><b>{d.title} · {d.tag}</b><span>{p?.title.project || p?.name}</span><span class="grow" /><span>{revLine(d)}</span></header>
         <DatasheetTable d={d} />
+        <RevBlock d={d} />
         <table class="ptb"><tbody><tr>
-          <td><small>COMPANY</small>{p?.title.company || "—"}</td><td><small>PROJECT</small>{p?.title.project || p?.name}</td><td><small>TAG</small>{d.tag}</td>
+          <td><small>COMPANY</small>{p?.title.company || "—"}</td><td><small>PROJECT</small>{p?.title.project || p?.name}</td><td><small>TAG</small>{d.tag}</td><td><small>REV</small>{d.rev || "—"}</td>
           <td><small>BY</small>{p?.title.by || "—"}</td><td><small>CHECKED</small>{p?.title.checked || "—"}</td><td><small>DATE</small>{new Date().toLocaleDateString()}</td>
         </tr></tbody></table>
       </div>) };
@@ -122,7 +123,7 @@ export const PrintPage = () => {
           </tr></tbody></table>
         </div>) });
     });
-    if (want().datasheets) for (const d of datasheets() ?? []) out.push(dsPage(d));
+    if (want().sheets_ds) for (const d of datasheets() ?? []) out.push(dsPage(d));
     if (want().legend && !(views() ?? []).some(v => v.legend)) {
       const used = [...new Set((p?.items ?? []).map(i => i.sym))].map(k => symOf(k)).filter(Boolean);
       if (used.length) out.push({ w: 420, h: 297, label: "Legend", body: () => (
@@ -157,7 +158,7 @@ export const PrintPage = () => {
         <h4>Lists</h4>
         <For each={LISTS}>{([k, l]) => <Check label={l} value={!!want()[k]} set={v => setWant({ ...want(), [k]: v })} />}</For>
         <Check label="Legend (when there is no legend sheet)" value={!!want().legend} set={v => setWant({ ...want(), legend: v })} />
-        <Check label={`Datasheets (${datasheets()?.length ?? 0}, one A4 page each)`} value={!!want().datasheets} set={v => setWant({ ...want(), datasheets: v })} />
+        <Check label={`Datasheets (${datasheets()?.length ?? 0}, one A4 page each)`} value={!!want().sheets_ds} set={v => setWant({ ...want(), sheets_ds: v })} />
         </Show>
         <p class="muted small">Sheets print at their own size (A3, A1, ANSI B, ANSI D) unless fitted to A3; the lists print on A3 landscape with a header and page numbers; datasheets on A4 portrait.</p>
         <p><button class="btn sm" onClick={() => setBackstage(null)}>Back to the drawing</button></p>

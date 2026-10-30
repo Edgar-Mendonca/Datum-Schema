@@ -990,3 +990,12 @@ tr.behind td { background: var(--err-bg); }
 .pds .ds td { border: 1px solid #888; padding: 0.6mm 1.5mm; color: #000; }
 .pds .ds td.src, .pds .ds td.u { color: #333; width: auto; }
 .pds .ds tr.dsh th { color: #000; background: #eee; border: 1px solid #888; padding: 1mm 1.5mm; }
+.ds td.dlt { width: 18px; text-align: center; font-weight: 700; color: var(--blue); }
+.ds tr.chg td:first-child { box-shadow: inset 3px 0 0 var(--blue); }
+.ds.revs { margin-top: 12px; }
+.ds.revs th { text-align: left; padding: 4px 6px; color: var(--navy); border-bottom: 1px solid var(--line3); font-size: 12px; }
+.dsrev { margin: 0 0 4px; }
+.pds header .grow { flex: 1; }
+.pds .ds td.dlt { color: #000; }
+.pds .ds.revs { margin-top: 3mm; font-size: 8pt; }
+.pds .ds.revs th, .pds .ds.revs td { border: 1px solid #888; padding: 0.6mm 1.5mm; color: #000; background: #fff; }

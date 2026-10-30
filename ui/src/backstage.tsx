@@ -94,7 +94,7 @@ const Export = () => (
       <button class="tile" onClick={() => setBackstage("print")}><div class="pic"><svg class="ic"><use href="#i-print" /></svg></div><b>Print or save as PDF</b><span>The sheets at their size or fitted to A3, the lists and the legend.</span></button>
       <button class="tile" onClick={() => C.exportDxf()}><div class="pic"><svg class="ic"><use href="#i-dxf" /></svg></div><b>DXF of this sheet</b><span>R12 DXF: a layer per line type and symbol category, symbols as blocks with their tags. Opens in any CAD program.</span></button>
       <button class="tile" onClick={() => C.exportSvg()}><div class="pic"><svg class="ic"><use href="#i-svg" /></svg></div><b>SVG of this sheet</b><span>The sheet as a vector picture, for documents and the web.</span></button>
-      <For each={[["lines", "Line list"], ["equipment", "Equipment list"], ["instruments", "Instrument index"], ["valves", "Valve list"]]}>{([k, l]) =>
+      <For each={[["lines", "Line list"], ["equipment", "Equipment list"], ["instruments", "Instrument index"], ["valves", "Valve list"], ["datasheets", "Datasheet index"]]}>{([k, l]) =>
         <button class="tile" onClick={() => C.exportList(k, "xlsx")}><div class="pic"><svg class="ic"><use href="#i-xlsx" /></svg></div><b>{l} to Excel</b><span>Or to CSV: <a href="#" onClick={e => { e.preventDefault(); e.stopPropagation(); C.exportList(k, "csv"); }}>save as CSV</a>.</span></button>}</For>
     </div>
   </div>

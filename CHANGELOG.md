@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.9 — 2026-10-30
+
+Datasheet revisions: issue, track what changed, issue again.
+
+**Issue a datasheet.** **Issue…** on a datasheet gives it a revision and a status: Preliminary, Issued for Enquiry, Issued for Purchase or As-built. Revisions run A, B, C… before purchase and 0, 1, 2… from purchase on, suggested for you; type your own if your company numbers differently. Each issue records the date, who issued it (File › Options › Your name) and a note, and it appears in the object's history.
+
+**See what changed since.** The issue keeps what the datasheet said. From then on every value that changes, whether typed on the datasheet or changed on its line or vessel, is marked **Δ**; hover it to see what it was at the last revision. The marks clear at the next issue.
+
+**Revision block.** Every datasheet shows, prints and exports its revisions, newest first. Printed datasheets carry the revision in the header and the title block; the Excel workbook has the revision on each sheet, a Δ column with the old values, and the revision state in its index.
+
+**Datasheet index.** A new list (Lists › Datasheets) shows every datasheet with its revision, status, date, who issued it and how many values changed since. Click a row to open the datasheet. **Issue the … shown** issues every datasheet in the filtered list at once, each with its own next revision. Like every list, it sorts, filters, groups, prints and exports to Excel and CSV.
+
+**File format.** Projects saved by 0.1.9 keep the issued revisions in the file, so 0.1.8 and earlier cannot open them; they ask you to update. Files from earlier versions open as before.
+
 ## 0.1.8 — 2026-10-29
 
 Instrument datasheets, made from the drawing.

@@ -63,6 +63,20 @@ pub enum Op {
     AddNode { node: model::Node },
     SetNode2 { node: model::Node },
     DeleteNode { id: u32 },
+    /// Issue the datasheets of objects (ids of symbols mean their objects) with a status: each
+    /// keeps what its datasheet says now. An empty `rev` gives each its next revision for the
+    /// status; `by` empty means the document's user.
+    IssueDatasheet {
+        ids: Vec<u32>,
+        #[serde(default)]
+        rev: String,
+        status: String,
+        date: String,
+        #[serde(default)]
+        note: String,
+        #[serde(default)]
+        by: String,
+    },
     /// Put an in-line item into a line.
     Split { line: u32, item: u32 },
     /// Copies of items, lines and notes on a sheet, moved by (dx, dy), with the next free tags.
@@ -145,6 +159,18 @@ pub fn diff(old: &Project, new: &Project, how: &str) -> Vec<Change> {
             v.push(ch("delete", o, "tag", o.tag.clone(), String::new()));
         }
     }
+    // Datasheet issues (and, by undo, their withdrawal).
+    let label = |i: &model::Issue| format!("{} · {}", i.rev, i.status);
+    for i in new.issues.iter().filter(|i| !old.issues.contains(i)) {
+        if let Some(o) = after.get(&i.obj) {
+            v.push(ch("issue", o, "datasheet", String::new(), label(i)));
+        }
+    }
+    for i in old.issues.iter().filter(|i| !new.issues.contains(i)) {
+        if let Some(o) = after.get(&i.obj) {
+            v.push(ch("withdraw", o, "datasheet", label(i), String::new()));
+        }
+    }
     v
 }
 
@@ -163,6 +189,10 @@ impl Doc {
     pub fn apply(&mut self, op: Op) -> Result<Vec<u32>, String> {
         let mut q = self.p.clone();
         let mut created = vec![];
+        let op = match op {
+            Op::IssueDatasheet { ids, rev, status, date, note, by } if by.trim().is_empty() => Op::IssueDatasheet { ids, rev, status, date, note, by: self.user.clone() },
+            op => op,
+        };
         exec(&mut q, op, &mut created)?;
         let w = q.normalize();
         if let Some(first) = w.first() {
@@ -582,6 +612,30 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
             let i = p.sheets.iter().position(|s| s.id == id).ok_or("That sheet no longer exists.")?;
             let s = p.sheets.remove(i);
             p.sheets.insert(to.min(p.sheets.len()), s);
+        }
+        Op::IssueDatasheet { ids, rev, status, date, note, by } => {
+            if !model::STATUSES.contains(&status.as_str()) {
+                return Err(format!("A datasheet is issued as {}.", model::STATUSES.join(", ")));
+            }
+            let mut objs: Vec<u32> = ids.iter().filter_map(|i| p.obj_id(*i)).collect();
+            objs.dedup();
+            if objs.is_empty() {
+                return Err("Choose the datasheets to issue.".into());
+            }
+            let rev = rev.trim().to_string();
+            if rev.chars().count() > 12 {
+                return Err("A revision is at most 12 characters (A, B, 0, 1…).".into());
+            }
+            let mut out = vec![];
+            for o in objs {
+                let values = crate::datasheets::snapshot(p, o)?;
+                let r = if rev.is_empty() { crate::datasheets::next_rev(p, o, &status) } else { rev.clone() };
+                if p.issues.iter().chain(&out).any(|i: &model::Issue| i.obj == o && i.rev.eq_ignore_ascii_case(&r)) {
+                    return Err(format!("Revision {r} of {} is already issued; give the new one another name.", p.obj(o).map_or("", |x| x.tag.as_str())));
+                }
+                out.push(model::Issue { obj: o, rev: r, status: status.clone(), date: crate::clip(date.trim(), 20), by: by.clone(), note: crate::clip(note.trim(), 400), values });
+            }
+            p.issues.extend(out);
         }
         Op::SetTitle { title } => p.title = title,
         Op::SetProject { name, units } => {

@@ -7,8 +7,9 @@ import { panel, setPanel, panelOpen, setPanelOpen, derived, call, out, act, proj
 import { fromU } from "./units";
 import { C } from "./cmds";
 import { Help } from "./help";
+import { openDatasheet, issueDialog } from "./datasheet";
 
-const TABS: [string, string][] = [["checks", "Checks"], ["lines", "Line list"], ["equipment", "Equipment"], ["instruments", "Instruments"], ["valves", "Valves"]];
+const TABS: [string, string][] = [["checks", "Checks"], ["lines", "Line list"], ["equipment", "Equipment"], ["instruments", "Instruments"], ["valves", "Valves"], ["datasheets", "Datasheets"]];
 
 const level = (l: string) => (l === "error" ? 0 : l === "warning" ? 1 : 2);
 
@@ -64,6 +65,7 @@ const ListView = (p: { kind: string }) => {
         <input class="lsearch" placeholder="Filter" value={q()} onInput={e => setQ(e.currentTarget.value)} />
         <label class="inline small">Group by <select onChange={e => setGroup(+e.currentTarget.value)}><option value="-1">—</option><For each={list()?.cols ?? []}>{(c, i) => <option value={i()}>{c.label}</option>}</For></select></label>
         <span class="grow" /><span class="muted small">{rows().length} rows</span>
+        <Show when={p.kind === "datasheets" && rows().length}><button class="btn sm" title="Issue every datasheet shown (use the filter to choose), each with its next revision" onClick={() => issueDialog(rows().map(r => r.ids[0]))}>Issue the {rows().length} shown…</button></Show>
         <button class="btn sm" onClick={() => C.exportList(p.kind, "xlsx")}>Excel</button><button class="btn sm" onClick={() => C.exportList(p.kind, "csv")}>CSV</button><button class="btn sm" onClick={C.print}>Print</button>
       </div>
       <div class="lscroll">
@@ -72,7 +74,7 @@ const ListView = (p: { kind: string }) => {
           <tbody>
             <For each={rows()} fallback={<tr><td colSpan={l().cols.length} class="muted" style={{ padding: "8px" }}>{l().kind === "lines" ? "Lines with a number appear here: draw a process line and give it a size, fluid, sequence and class." : "Tagged items appear here as you place them."}</td></tr>}>{(r, ri) => <>
               <Show when={group() >= 0 && (ri() === 0 || rows()[ri() - 1].cells[group()] !== r.cells[group()])}><tr class="grow"><td colSpan={l().cols.length}><b>{l().cols[group()].label}: {r.cells[group()] || "—"}</b></td></tr></Show>
-              <tr class="f" classList={{ bad: r.status === 2, warn: r.status === 1 }} onClick={() => C.goTo(r.ids, r.sheet)}>
+              <tr class="f" classList={{ bad: r.status === 2, warn: r.status === 1 }} onClick={() => p.kind === "datasheets" ? openDatasheet(r.ids[0]) : C.goTo(r.ids, r.sheet)}>
                 <For each={l().cols}>{(c, i) => <td classList={{ r: c.num }}>
                   <Show when={c.edit} fallback={<span>{r.cells[i()]}</span>}><input value={r.cells[i()]} classList={{ mono: c.num }} onClick={e => e.stopPropagation()} onChange={e => edit(r, c, e.currentTarget.value)} /></Show>
                 </td>}</For>
