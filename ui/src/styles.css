@@ -1096,3 +1096,15 @@ tr.behind td { background: var(--err-bg); }
 .cmptbl tr.removed td.k { color: #B3261E; }
 .cmptbl tr.changed td.k { color: #C88A12; }
 .compsec .comps { width: 100%; max-width: 420px; font-family: inherit; }
+/* Options › Title block. */
+.tbsec .tbprev { width: 100%; max-width: 640px; display: block; margin: 8px 0; background: var(--bg2); border: 1px solid var(--line); color: var(--text); }
+.tbsec .tbprev .frame { stroke: var(--text2); fill: none; }
+.tbsec .tbprev text { fill: var(--text2); stroke: none; dominant-baseline: central; }
+.tbcells input:not([type=checkbox]) { width: 100%; }
+.tbcells input.num { width: 52px; }
+.tbcells td.c { text-align: center; }
+.tbbtns { display: flex; gap: 6px; flex-wrap: wrap; }
+.tbcells { table-layout: auto; }
+.tbcells td.r, .tbcells th.r { width: 62px; }
+.tbcells td select { min-width: 160px; }
+.tbcells input.num { width: 56px !important; }

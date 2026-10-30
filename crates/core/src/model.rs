@@ -56,6 +56,38 @@ pub struct Title {
     pub by: String,
     pub checked: String,
     pub approved: String,
+    /// The company title block's own fields, by name.
+    pub extra: BTreeMap<String, String>,
+}
+
+/// A cell of a company title block, in millimetres from the block's top left corner.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
+pub struct TbCell {
+    pub x: f64,
+    pub y: f64,
+    pub w: f64,
+    pub h: f64,
+    /// The small caption at the top of the cell.
+    pub label: String,
+    /// What it shows: company, project, client, unit, title, number, rev, scale, sheet, date,
+    /// by, checked, approved, logo, "text:<fixed text>" or "f:<field>" (a field of the template's own).
+    pub field: String,
+    /// Text height (mm).
+    pub size: f64,
+    pub bold: bool,
+}
+
+/// The title block: the standard one, or a company template.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
+pub struct TitleBlock {
+    /// Use the company template (otherwise the standard block).
+    pub on: bool,
+    pub name: String,
+    pub w: f64,
+    pub h: f64,
+    pub cells: Vec<TbCell>,
 }
 
 /// One row of a sheet's revision table.
@@ -458,6 +490,8 @@ pub struct Settings {
     pub ds_layout: DsLayout,
     /// The drawing standard: Datum Schema's symbols drawn with a library's.
     pub standard: Standard,
+    /// The title block: standard, or the company's template.
+    pub title_block: TitleBlock,
     /// The components of the process flow diagrams' streams (each stream's mass fractions are
     /// its data "x:<component>").
     pub components: Vec<String>,
@@ -494,7 +528,7 @@ pub const MAX_LOGO: usize = 280_000;
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), components: vec![] }
+        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), components: vec![] }
     }
 }
 
@@ -833,6 +867,10 @@ impl Project {
         l.hidden.retain(|h| h.len() <= 200);
         l.order.truncate(50);
         l.order.retain(|h| h.len() <= 100);
+        s.title_block.normalize();
+        let t = &mut self.title;
+        t.extra = std::mem::take(&mut t.extra).into_iter().filter(|(k, _)| !k.trim().is_empty()).take(40).map(|(k, v)| (crate::clip(k.trim(), 40), crate::clip(&v, 200))).collect();
+        let s = &mut self.settings;
         let mut seen = HashSet::new();
         s.components = std::mem::take(&mut s.components).into_iter().map(|c| crate::clip(c.trim(), 40)).filter(|c| !c.is_empty() && seen.insert(c.to_lowercase())).take(MAX_COMPONENTS).collect();
         if s.line_format.trim().is_empty() || s.line_format.len() > 200 {
@@ -1020,6 +1058,31 @@ impl Project {
                 used.insert(n);
                 o.data.insert("number".into(), Val::Text(n.to_string()));
             }
+        }
+    }
+}
+
+impl TitleBlock {
+    /// Sizes and cells made sound: the block between 60 × 15 mm and 400 × 150 mm, at most 60
+    /// cells, each inside the block with a readable text height.
+    fn normalize(&mut self) {
+        let fin = |v: f64, d: f64| if v.is_finite() { v } else { d };
+        self.w = fin(self.w, 180.0).clamp(60.0, 400.0);
+        self.h = fin(self.h, 44.0).clamp(15.0, 150.0);
+        self.name = crate::clip(self.name.trim(), 80);
+        self.cells.truncate(60);
+        if self.cells.is_empty() {
+            self.on = false;
+        }
+        let (bw, bh) = (self.w, self.h);
+        for c in &mut self.cells {
+            c.x = fin(c.x, 0.0).clamp(0.0, bw - 2.0);
+            c.y = fin(c.y, 0.0).clamp(0.0, bh - 2.0);
+            c.w = fin(c.w, 20.0).clamp(2.0, bw - c.x);
+            c.h = fin(c.h, 8.0).clamp(2.0, bh - c.y);
+            c.size = fin(c.size, 2.5).clamp(1.0, 10.0);
+            c.label = crate::clip(&c.label, 40);
+            c.field = crate::clip(c.field.trim(), 120);
         }
     }
 }

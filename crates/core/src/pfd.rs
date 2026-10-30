@@ -82,7 +82,7 @@ pub fn table(p: &Project, s: &Sheet) -> Vec<Prim> {
     }
     let us = p.units == "US";
     let (x0, _, _, y1) = crate::frame::inner(s);
-    let (rx, _) = crate::frame::reserved(s);
+    let (rx, _) = crate::frame::reserved(p, s);
     let x0 = x0 + 3.0;
     let per = (((rx - 5.0 - x0 - LABEL_W) / COL_W).floor() as usize).max(1);
     // The fixed rows, then a mass fraction for each component.

@@ -149,7 +149,7 @@ pub fn diagram(p: &Project, key: &str) -> Result<LoopView, String> {
     let sheet = Sheet { number: format!("LD-{key}"), title: format!("Loop diagram {key}"), rev: String::new(), revs: vec![], ..Sheet::default() };
     let (w, h) = sheet.dims();
     let (x0, y0, x1, _) = crate::frame::inner(&sheet);
-    let (_, ytb) = crate::frame::reserved(&sheet);
+    let (_, ytb) = crate::frame::reserved(p, &sheet);
     let mut v = crate::frame::frame(p, &sheet);
     // Zones across: field, junction box, control system.
     let (xa, xb) = (x0 + (x1 - x0) * 0.42, x0 + (x1 - x0) * 0.62);

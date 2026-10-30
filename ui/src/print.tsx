@@ -43,6 +43,8 @@ export const svgString = (v: SheetView, opts: { width?: number; height?: number 
   const u = v.underlay;
   if (u?.print) body.push(`<g transform="translate(${n(u.x)} ${n(u.y)}) scale(${u.k})" stroke="#8a8a8a" stroke-width="${n(0.18 / u.k)}" opacity="0.7">${(bgs()[u.rev] ?? "").replace(/class="sf"/g, 'fill="#8a8a8a"').replace(/class="st"/g, 'fill="#8a8a8a" stroke="none" dominant-baseline="central"')}</g>`);
   body.push(`<g>${v.frame.map(p => prim(p)).join("")}</g>`);
+  const lg = proj()?.settings.ds_layout.logo;
+  if (v.logo && lg) body.push(`<image href="${esc(lg)}" x="${n(v.logo[0])}" y="${n(v.logo[1])}" width="${n(v.logo[2])}" height="${n(v.logo[3])}" preserveAspectRatio="xMidYMid meet"/>`);
   for (const l of v.lines) {
     const dash = l.kind === "electric" ? ' stroke-dasharray="1.5 1"' : "";
     body.push(`<g stroke-width="${WIDTH[l.kind] ?? 0.35}"${dash}>${l.segs.map(s => `<polyline points="${s.map(q => `${n(q[0])},${n(q[1])}`).join(" ")}"/>`).join("")}</g>`);

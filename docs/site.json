@@ -33,6 +33,7 @@
     "Send a line to Datum Pipe and a control loop to Datum Sim",
     "Stream compositions with a component balance; an I/O summary per control system with spare",
     "A valve and fitting take-off by type, size, pipe class and rating",
+    "Your company's title block: its cells, fields and logo, shared as a file",
     "Plant objects in a plant › unit › area hierarchy; symbols are views, every change is recorded",
     "A class library you can extend with your company's attributes",
     "Instrument datasheets with process conditions from the P&ID; revisions with what changed (Δ); your company's form; import from Excel; print and Excel",
@@ -56,27 +57,20 @@
   "roadmap": [
     {
       "v": "0.3",
-      "title": "Instrument documents and compositions",
+      "title": "Instrument documents, compositions and company templates",
       "when": "Now",
       "items": [
         "Stream compositions and the component balance",
         "I/O summary per control system, with spare",
         "Checks: instrument ranges, control valve fail positions, loop wiring",
-        "0.3.1: valve and fitting take-off"
-      ]
-    },
-    {
-      "v": "0.3.2",
-      "title": "Company title blocks",
-      "when": "Next",
-      "items": [
-        "Company title-block templates: your fields, layout and logo on every sheet"
+        "0.3.1: valve and fitting take-off",
+        "0.3.2: company title blocks"
       ]
     },
     {
       "v": "0.3.3",
       "title": "Review",
-      "when": "Later",
+      "when": "Next",
       "items": [
         "Review comments from several people, pinned to the drawing"
       ]

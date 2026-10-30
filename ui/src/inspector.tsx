@@ -203,6 +203,8 @@ const SheetPanel = () => {
     <h4>Title block (every sheet)</h4>
     <For each={[["company", "Company"], ["project", "Project"], ["client", "Client"], ["unit", "Unit or area"], ["by", "Drawn by"], ["checked", "Checked by"], ["approved", "Approved by"]] as [string, string][]}>{([k, l]) =>
       <Row label={l}><input value={(p().title as any)[k]} onChange={e => setT(k, e.currentTarget.value)} /></Row>}</For>
+    <For each={p().settings.title_block.on ? [...new Set(p().settings.title_block.cells.filter(c => c.field.startsWith("f:")).map(c => c.field.slice(2)))] : []}>{k =>
+      <Row label={k}><input value={p().title.extra?.[k] ?? ""} onChange={e => act({ SetTitle: { title: { ...p().title, extra: { ...(p().title.extra ?? {}), [k]: e.currentTarget.value } } } })} /></Row>}</For>
     <h4>Project</h4>
     <Row label="Name"><input value={p().name} onChange={e => act({ SetProject: { name: e.currentTarget.value, units: p().units } })} /></Row>
     <Row label="Units" hint="How values are shown and typed. The file keeps SI units."><Pick value={p().units} set={u => act({ SetProject: { name: p().name, units: u } })} options={[["SI", "SI: bar, °C, m³/h, kg/m³, cP, m"], ["US", "US: psi, °F, gpm, lb/ft³, cP, ft"]]} /></Row>

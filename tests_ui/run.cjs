@@ -563,6 +563,23 @@ const shots = process.env.SHOTS;
   await p.click(".cfilter button:has-text('CSV')"); await p.waitForTimeout(400);
   { const csv = (await inv("exports")).filter(e => e.kind === "csv").pop(); check("the take-off exports to CSV", !!csv && csv.what === "takeoff" && csv.text.startsWith("Item,Size,Pipe class,Rating,Quantity"), csv?.text.slice(0, 80)); }
 
+  // 40. A company title block: from the standard, a cell of our own filled in from the Inspector.
+  await openEx("Pump transfer");
+  await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Options')"); await p.waitForTimeout(300);
+  await p.click(".tbsec label.chk:has-text('company title block') input"); await p.waitForSelector(".tbsec .tbcells tbody tr");
+  check("the company block starts from the standard one", (await p.$$(".tbsec .tbcells tbody tr")).length === 12 && !!(await p.$(".tbsec .tbprev .frame")));
+  await p.click(".tbsec button:has-text('Add a cell')"); await p.waitForTimeout(400);
+  { const last = p.locator(".tbsec .tbcells tbody tr").last();
+    await last.locator("td:nth-child(1) input").fill("CONTRACT"); await last.locator("td:nth-child(1) input").press("Tab"); await p.waitForTimeout(300);
+    await last.locator("td:nth-child(3) input").fill("Contract"); await last.locator("td:nth-child(3) input").press("Tab"); await p.waitForTimeout(300);
+    for (const [k, v] of [[4, "140"], [5, "0"], [6, "40"], [7, "12"]]) { const c = last.locator(`td:nth-child(${k}) input`); await c.fill(v); await c.press("Tab"); await p.waitForTimeout(200); } }
+  { const tb = (await project()).settings.title_block; const c = tb.cells[tb.cells.length - 1];
+    check("the new cell is kept inside the block", tb.on && c.field === "f:Contract" && c.label === "CONTRACT" && c.x + c.w <= tb.w, JSON.stringify(c)); }
+  if (process.env.SHOT) { await p.locator(".tbsec").scrollIntoViewIfNeeded(); await p.locator(".tbsec").screenshot({ path: `${process.env.SHOT}/tb.png` }); }
+  await p.click(".bs .back"); await p.waitForTimeout(300); await p.keyboard.press("Escape");
+  { const inp = p.locator(".insp .iprow:has-text('Contract') input"); await inp.fill("C-2026-17"); await inp.press("Tab"); await p.waitForTimeout(400); }
+  check("the field of our own is drawn in the title block", (await p.$$eval(".dsvg .frame text", els => els.map(e => e.textContent))).includes("C-2026-17"));
+
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();
   await fetch(`${url}quit`).catch(() => {});

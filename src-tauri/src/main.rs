@@ -95,9 +95,12 @@ fn fresh(a: &App, mut p: Project) -> Project {
     if let (Some(s), true) = (&a.opts.defaults, p.items.is_empty()) {
         p.settings = s.clone();
     }
-    // The company datasheet layout goes with every new project, examples too.
+    // The company datasheet layout and title block go with every new project, examples too.
     if let Some(s) = &a.opts.defaults {
         p.settings.ds_layout = s.ds_layout.clone();
+        if s.title_block.on {
+            p.settings.title_block = s.title_block.clone();
+        }
     }
     p
 }
@@ -307,6 +310,21 @@ async fn underlay_import(app: AppHandle, st: State<'_, St>, sheet: u32) -> R<Opt
         o.warnings = warnings;
         Ok(Some(o))
     })
+}
+
+/// A title block on its own, drawn for the editor (with the open sheet's values).
+#[tauri::command]
+fn title_preview(st: State<St>, block: model::TitleBlock, sheet: u32) -> R<datum_core::frame::Preview> {
+    let a = st.lock();
+    let p = &a.doc.p;
+    let s = p.sheet(sheet).or(p.sheets.first()).ok_or("There is no sheet.")?;
+    Ok(datum_core::frame::preview(p, s, &block))
+}
+
+/// The standard title block, to start a company template from.
+#[tauri::command]
+fn title_standard() -> model::TitleBlock {
+    datum_core::frame::standard()
 }
 
 /// What has changed on a sheet since it was issued at a revision.
@@ -684,7 +702,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
+            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, title_preview, title_standard, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
             options, set_options, autosave, recovery, recover, recent, startup_file, open_url, version, quit, check_update, install_update
         ])
         .run(tauri::generate_context!())

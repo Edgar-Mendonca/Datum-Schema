@@ -2,6 +2,7 @@
 // check rules and hydraulic limits), roadmap, updates. From Datum Plan by way of Datum Pipe.
 import { LibrariesPage, StandardSec } from "./libraries";
 import { LayoutSec } from "./datasheet";
+import { TitleBlockSec } from "./titleblock";
 import { For, Show, createSignal, createResource, onMount, JSX } from "solid-js";
 import { PrintPage } from "./print";
 import { RoadmapPage } from "./roadmap";
@@ -162,6 +163,9 @@ const ProjectSettings = () => {
       <Opt l="Snap grid" hint="Symbols, bends and ends snap to it."><span class="inline"><input type="number" step="0.5" style={{ width: "90px" }} value={s().grid} onChange={e => set({ grid: Math.max(0.5, +e.currentTarget.value || 2.5) })} /> mm</span></Opt>
     </Sec>
     <ClassesSec />
+    <Sec t="Title block" about="The block in the bottom right corner of every sheet: the standard one, or your company's (its own cells, fields and logo). Save it as a file to use in other projects or share it.">
+      <TitleBlockSec />
+    </Sec>
     <Sec t="Stream components" about="The components of the process flow diagrams' streams, one per line. Each stream then has a mass fraction for each (Inspector › Composition), the stream table a row, and check 17 balances each component.">
       <ComponentsSec />
     </Sec>

@@ -398,6 +398,7 @@ export const Canvas = () => {
           <rect x={0} y={0} width={sv().w} height={sv().h} class="paper" />
           <Show when={sv().underlay}>{u => <g class="underlay" transform={`translate(${u().x} ${u().y}) scale(${u().k})`} innerHTML={bgs()[u().rev] ?? ""} />}</Show>
           <g class="frame"><For each={sv().frame}>{p => <PrimEl p={p} />}</For></g>
+          <Show when={sv().logo && proj()?.settings.ds_layout.logo}><image class="tblogo" href={proj()!.settings.ds_layout.logo} x={sv().logo![0]} y={sv().logo![1]} width={sv().logo![2]} height={sv().logo![3]} preserveAspectRatio="xMidYMid meet" /></Show>
           <Show when={sv().legend}><g class="legend"><For each={sv().legend_rows}>{r => <LegendEl r={r} />}</For></g></Show>
           <g class="lines"><For each={lines()}>{l => {
             const pv = () => preview(l);

@@ -6,7 +6,7 @@
 | | |
 | --- | --- |
 | **Product** | Datum Schema: intelligent P&IDs and process flow diagrams: draw, check and list (symbols and lines that carry their data and connections; live line list, equipment list, instrument index and valve list; drawing checks; line hydraulics; print, SVG and DXF) |
-| **Current version** | 0.3.1 (2026-10-30) |
+| **Current version** | 0.3.2 (2026-10-30) |
 | **Repo** | `Edgar-Mendonca/Datum-Schema` · branch `claude/vigilant-hamilton-ku7r0w` (the first branch pushed, so the default branch) |
 | **Stack** | Rust engine (`crates/core`: model, symbols, graph, tags, checks, hydraulics, lists, frame, routing, DXF), Tauri 2, SolidJS + strict TypeScript; no Python |
 | **Identifier** | `com.edgarmendonca.datumschema` · files `.dschema` (SQLite, `format` 4 from 0.2.0 (items.base, `underlays` and `snapshots` tables, meta "symbols"); 3 from 0.1.9; 2 before: no `issues` table; JSON `format` 1 from 0.1.0–0.1.4 converts) · symbol libraries `.dschemalib` (JSON, in app data › libraries) · installer `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` · publisher "Datum" |
@@ -48,7 +48,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | `crates/core/src/tags.rs` | Tags: split, next free per prefix and sheet, copies (P-101A → P-101B), renumber, duplicates, ISA-5.1 letters, controllers, measurements, final elements |
 | `crates/core/src/route.rs` | Sim's orthogonal router, extended to ports facing four directions and open ends |
 | `crates/core/src/view.rs` | What the window draws for a sheet: items with ports and upright texts (tags, instrument letters and loop numbers, fail positions, connector partners), lines (route, pieces with hops, arrows or signal marks, line number, hydraulic badge), notes and Hold clouds, the legend |
-| `crates/core/src/frame.rs` | The sheet frame: border, zones, title block, revision table, as primitives |
+| `crates/core/src/frame.rs` | The sheet frame: border, zones, title block (drawn from cells: `standard()` or `settings.title_block`; `value` of each field; `logo` place; `preview` for the editor; `reserved(p, s)`), revision table spread over the block's width, as primitives |
+| `ui/src/titleblock.tsx` | Options › Title block: the cell editor, the engine's preview, save a copy, load, use for new projects |
 | `crates/core/src/hydraulics.rs` | Inside diameter, velocity, Reynolds, Colebrook (or 64/Re), Δp per 100 m and over length + fittings, limits by service, status |
 | `crates/core/src/checks.rs` (+ `checks/tests.rs`) | The 20 checks (`RULES`; P&ID rules skip PFD sheets; 14–17 in `pfd.rs`, 18–20 in `instruments.rs`), one function per rule, each issue with level, reason, ids and place; a passing and a failing test per rule |
 | `crates/core/src/lists.rs` | The line list (one row per line number: from/to, hydraulics), equipment list, instrument index, valve list; CSV with a formula guard; Excel (rust_xlsxwriter) |
@@ -97,6 +98,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 
 | Version | Decision | Why |
 | --- | --- | --- |
+| 0.3.2 | The standard title block is data (`frame::standard()`); a company block is the same cells in `settings.title_block`, with own fields in `title.extra` ("f:<name>") and fixed text ("text:…"). The logo is the datasheet logo, drawn by the window and print at the engine's `logo` place and left out of DXF (R12 has no images) | One drawing path for both; a company has one logo |
 | 0.3.1 | The user asked to step the 0.4 roadmap as 0.3.1, 0.3.2, … (one item per release) | The user's call |
 | 0.3.1 | Take-off groups by (category, type, size, line pipe class, own rating), one count per object, P&ID sheets only; size is the item's own, else its lines' (largest first, joined with ×) | A requisition counts components, not drawings; a reducer or relief valve spans two sizes |
 | 0.3.0 | Compositions are mass fractions in each stream's data under "x:<component>", with the component list in `settings.components`; the class library adds them to the Stream class's attributes (group "Composition"), so the Inspector, the list and the table need no special case. A blank fraction is none of it once a stream has any composition | No schema change; the list's `Col.key` became a `String` for these columns |
@@ -179,8 +181,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.2.0 | DXF reader; client symbol libraries from a legend (review, connection points, share); drawing standards; an old drawing behind a sheet; send a line to Datum Pipe and a loop to Datum Sim; PFD sheets with streams, the stream table, the Streams list and checks 14–16; sheet revisions with comparison and clouds; the Crude preheat example; file format 4 | ✅ |
 | 0.3.0 | Stream compositions and check 17 (component balance, fractions add up); I/O summary (list, print, Excel); checks 18 (range covers the operating value), 19 (fail position), 20 (loop wiring) | ✅ |
 | 0.3.1 | Valve and fitting take-off (list, print, Excel, CSV; Tell Me entries for the newer lists) | ✅ |
-| 0.3.2 | Company title-block templates | 🔜 |
-| 0.3.3 | Review comments | ⬜ |
+| 0.3.2 | Company title blocks (cells, fields, own fields, logo; editor with the engine's preview; save, load, use for new projects) | ✅ |
+| 0.3.3 | Review comments | 🔜 |
 | 0.5 | Company templates; project reports (valve and fitting take-off); review comments | ⬜ |
 | 1.0 | User guide, a validation note for the hydraulics, signed installer | ⬜ |
 
@@ -265,4 +267,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 ### 2026-10-30: Session 1, 0.3.1 (take-off)
 - The user asked to step the next roadmap items as 0.3.1, 0.3.2 and so on. 0.3.1 is the valve and fitting take-off (`lists.rs` kind `takeoff`), with Tell Me entries for the take-off, I/O summary and stream list.
 - Tests: engine 104 (take-off groups, sizes across two lines, one count per object, nothing from a PFD); UI checks for the take-off and its CSV.
+
+### 2026-10-30: Session 1, 0.3.2 (company title blocks)
+- The title block is now drawn from cells; the standard block is the default list and draws exactly as before. Company blocks have their own size (60–400 × 15–150 mm, sound after `normalize`), fields of their own filled in the Inspector, fixed text and the logo; files to share (`*.dstitle.json`), and a default for new projects (applied in `fresh`).
+- Tests: engine 105 (a company block with logo, own field, fixed text and an absurd cell clamped inside; reserved space; preview; JSON round trip; fallback to standard); UI checks for turning it on, adding a cell and filling the field from the Inspector.
 

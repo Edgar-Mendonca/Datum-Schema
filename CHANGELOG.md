@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.2 — 2026-10-30
+
+Your company's title block.
+
+**Company title block.** File › Options › **Title block** › *Use a company title block on every sheet* starts from a copy of the standard block; change, add or remove cells, with the block drawn as you edit. The block can be any size up to 400 × 150 mm. Each cell has a caption and shows a field (company, project, client, unit, sheet title, drawing number, revision, scale, sheet n of m, date, drawn, checked, approved), fixed text, a field of your own, or the company logo (the one chosen under Datasheets). The revision table above the block follows its width, and the drawing area keeps clear of it.
+
+**Fields of your own** (a contract number, a document code) are filled in for each project in the Inspector, with nothing selected, under Title block.
+
+**Share it.** *Save a copy* writes the block as a file; *Load a title block* reads one into another project; *Use for new projects* starts every new project with it. It prints, exports to DXF (without the logo) and is kept in the project file.
+
 ## 0.3.1 — 2026-10-30
 
 The valve and fitting take-off.

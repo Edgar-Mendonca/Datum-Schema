@@ -166,6 +166,14 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             s.exports.push(json!({ "kind": str_("kind"), "what": what, "text": sent.text }));
             json!({ "path": sent.file, "notes": sent.notes })
         }
+        "title_preview" => {
+            let b: datum_core::model::TitleBlock = serde_json::from_value(a["block"].clone()).map_err(|e| e.to_string())?;
+            let id = a["sheet"].as_u64().unwrap_or(0) as u32;
+            let p = &s.doc.p;
+            let sh = p.sheet(id).or(p.sheets.first()).ok_or("no sheet")?;
+            serde_json::to_value(datum_core::frame::preview(p, sh, &b)).unwrap()
+        }
+        "title_standard" => serde_json::to_value(datum_core::frame::standard()).unwrap(),
         "sheet_compare" => {
             let id = a["sheet"].as_u64().unwrap_or(0) as u32;
             let sh = s.doc.p.sheet(id).ok_or("no sheet")?;

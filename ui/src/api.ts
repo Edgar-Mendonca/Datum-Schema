@@ -11,7 +11,10 @@ export const listen = (e: string, f: (p: any) => void) => window.__TAURI__?.even
 export type Pt = [number, number];
 export type Val = number | string;
 export type Data = Record<string, Val>;
-export interface Title { company: string; project: string; client: string; unit: string; by: string; checked: string; approved: string }
+export interface Title { company: string; project: string; client: string; unit: string; by: string; checked: string; approved: string; extra: Record<string, string> }
+/** A title block cell in mm from the block's top left; `field` is a key, "text:…" or "f:<own field>". */
+export interface TbCell { x: number; y: number; w: number; h: number; label: string; field: string; size: number; bold: boolean }
+export interface TitleBlock { on: boolean; name: string; w: number; h: number; cells: TbCell[] }
 export interface Rev { rev: string; date: string; desc: string; by: string; checked: string; approved: string }
 export interface Sheet { id: number; number: string; title: string; size: string; rev: string; date: string; scale: string; revs: Rev[]; legend: boolean; underlay: Underlay | null; pfd: boolean; snaps: Snap[]; clouds: string }
 /** A sheet as issued at a revision (its contents stay in the engine). */
@@ -31,7 +34,7 @@ export interface Line { id: number; sheet: number; kind: Kind; a: End; b: End; p
 export type NoteKind = "note" | "leader" | "hold";
 export interface Note { id: number; sheet: number; kind: NoteKind; x: number; y: number; w: number; h: number; text: string; to: Pt }
 export interface Limit { service: string; name: string; vmin: number; vmax: number; dp: number }
-export interface Settings { line_format: string; off: number[]; limits: Limit[]; roughness: number; grid: number; hidden: string[]; user_attrs: UserAttr[]; ds_layout: DsLayout; standard: Standard; components: string[] }
+export interface Settings { line_format: string; off: number[]; limits: Limit[]; roughness: number; grid: number; hidden: string[]; user_attrs: UserAttr[]; ds_layout: DsLayout; standard: Standard; title_block: TitleBlock; components: string[] }
 /** A drawing standard: a library, and for each of our symbols the library symbol that draws it. */
 export interface Standard { library: string; map: Record<string, string> }
 /** A connection point of a library symbol (dir: 0 right, 1 down, 2 left, 3 up). */
@@ -58,7 +61,7 @@ export interface ItemView { id: number; obj: number; sym: string; cat: Cat; x: n
 export interface LineView { id: number; obj: number; kind: Kind; path: Pt[]; segs: Pt[][]; marks: Prim[]; number: string; badge: number | null; run: number | null; layer: string }
 export interface NoteView { id: number; kind: NoteKind; prims: Prim[]; bbox: [number, number, number, number] }
 export interface LegendRow { sym: string | null; kind: Kind | null; x: number; y: number; name: string }
-export interface SheetView { id: number; number: string; title: string; w: number; h: number; legend: boolean; frame: Prim[]; items: ItemView[]; lines: LineView[]; notes: NoteView[]; legend_rows: LegendRow[]; underlay: Underlay | null; clouds: Prim[] }
+export interface SheetView { id: number; number: string; title: string; w: number; h: number; legend: boolean; frame: Prim[]; items: ItemView[]; lines: LineView[]; notes: NoteView[]; legend_rows: LegendRow[]; underlay: Underlay | null; clouds: Prim[]; logo: [number, number, number, number] | null }
 export interface Issue { rule: number; level: "error" | "warning" | "note"; msg: string; ids: number[]; sheet: number; at: Pt }
 export interface Hyd { id: number; v: number; re: number; f: number; dp100: number; dp: number; length: number; service: string; service_name: string; vmin: number; vmax: number; dpmax: number; status: number; reason: string }
 export interface Derived { view: SheetView | null; issues: Issue[]; hyd: (Hyd | null)[]; runs: number[][]; numbers: Record<string, string>; attrs: Record<string, Field[]> }

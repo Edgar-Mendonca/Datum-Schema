@@ -32,7 +32,7 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Real symbols**: about 80 of our own drawings following ISO 10628-2 (equipment, valves, lines) and ISA-5.1 (instrument bubbles and letters), with their connection points.
 - **Lines that know their ends**: drawn port to port, routed at right angles around symbols, with flow arrows and hops; a valve dropped on a line goes into it; off-page connectors carry a line to another sheet.
 - **Data on everything**: tags, services, design and operating conditions, sizes, line numbers built from size, fluid, sequence and class, in SI or US units.
-- **Sheets**: A3, A1, ANSI B and ANSI D with border, grid zones, title block and revision table; a legend sheet.
+- **Sheets**: A3, A1, ANSI B and ANSI D with border, grid zones, title block and revision table; a legend sheet; your company's own title block (cells, fields, logo), shared as a file.
 - **Live checks**: twenty rules on every change (duplicate tags, open ends, size changes without a reducer, class changes without a spec break, pumps without check valves, vessels without relief, control loops, hydraulic limits, heat, mass and component balances, instrument ranges, fail positions, loop wiring and more), each a click away from the problem.
 - **Line hydraulics**: inside diameter from size and schedule, velocity, Reynolds number, Colebrook friction factor, pressure drop per 100 m and over the line, with a ✓ ! ✗ badge against the limits for its service.
 - **Plant objects**: every equipment item, valve, instrument and line number is an object in a plant › unit › area hierarchy (the Plant panel); symbols are views of it, so one object can be drawn on several sheets. Every change is recorded with who made it and when.

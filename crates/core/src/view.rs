@@ -94,6 +94,8 @@ pub struct SheetView {
     pub underlay: Option<crate::model::Underlay>,
     /// Revision clouds round the changes since the issued revision the sheet clouds against.
     pub clouds: Vec<Prim>,
+    /// Where the company logo goes in the title block (x, y, w, h).
+    pub logo: Option<[f64; 4]>,
 }
 
 /// The layer a line type is drawn on.
@@ -412,7 +414,7 @@ pub fn sheet(p: &Project, s: &Sheet, net: &Net, hyd: &[Option<Hyd>]) -> SheetVie
         })
         .collect();
     let notes = p.notes.iter().filter(|n| n.sheet == s.id).map(note_view).collect();
-    SheetView { id: s.id, number: s.number.clone(), title: s.title.clone(), w, h, legend: s.legend, frame: { let mut f = frame::frame(p, s); f.extend(crate::pfd::table(p, s)); f }, items, lines, notes, legend_rows: if s.legend { legend(p, s) } else { vec![] }, underlay: s.underlay.clone().filter(|u| u.show), clouds: crate::revs::clouds(p, s) }
+    SheetView { id: s.id, number: s.number.clone(), title: s.title.clone(), w, h, legend: s.legend, frame: { let mut f = frame::frame(p, s); f.extend(crate::pfd::table(p, s)); f }, items, lines, notes, legend_rows: if s.legend { legend(p, s) } else { vec![] }, underlay: s.underlay.clone().filter(|u| u.show), clouds: crate::revs::clouds(p, s), logo: frame::logo(p, s) }
 }
 
 /// Text lines of a note, and their box.
@@ -467,7 +469,7 @@ pub fn legend(p: &Project, s: &Sheet) -> Vec<LegendRow> {
         by_cat.entry(sym.cat).or_default().push(sym);
     }
     let (x0, y0, _, _) = frame::inner(s);
-    let (rx, ry) = frame::reserved(s);
+    let (rx, ry) = frame::reserved(p, s);
     let col_w = 95.0;
     let (mut x, mut y) = (x0 + 8.0, y0 + 14.0);
     let mut out = vec![LegendRow { sym: None, kind: None, x, y: y0 + 8.0, name: "LEGEND".into() }];
