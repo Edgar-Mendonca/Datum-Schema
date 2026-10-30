@@ -3,8 +3,10 @@
 //! I/O apart from reading and writing files the shell names.
 
 pub mod api;
+pub mod cause;
 pub mod checks;
 pub mod classes;
+pub mod dexpi;
 pub mod datasheets;
 pub mod doc;
 pub mod dxf;

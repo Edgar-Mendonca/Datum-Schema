@@ -30,13 +30,14 @@
     "A class library you can extend with your company's attributes",
     "Instrument datasheets with process conditions from the P&ID; revisions with what changed (Δ); your company's form; import from Excel; print and Excel",
     "Loop diagrams drawn from the P&ID, with junction box, cable and I/O wiring",
+    "Cause-and-effect matrix read from the interlocks on the P&ID",
     "Lines route themselves at right angles, hop over each other and carry flow arrows",
     "A valve dropped on a line splits it and joins both halves",
     "Off-page connectors pair across sheets; click one to jump to its partner",
     "Live line list, equipment list, instrument index, valve list and datasheet index",
     "Thirteen drawing checks, each with a click to the problem",
     "Line hydraulics: velocity, Reynolds number, Colebrook friction factor and pressure drop against limits",
-    "SI and US units; DXF, SVG, PDF, Excel and CSV",
+    "SI and US units; DXF, SVG, PDF, Excel, CSV and the DEXPI P&ID exchange format",
     "Automatic tags and loop numbers, renumbering, a legend sheet"
   ],
   "screenshots": [
@@ -51,7 +52,7 @@
       "title": "Exchange and links",
       "when": "Next",
       "items": [
-        "Open P&ID data exchange (the DEXPI XML format) import and export",
+        "Open P&ID data exchange: import of DEXPI files (export is in)",
         "Send a line to Datum Pipe as a stress model",
         "Send a loop to Datum Sim (pump, valve, tank, controller) as a dynamic model",
         "DXF import of an old drawing as a background"
@@ -72,7 +73,7 @@
       "title": "Instrument documents",
       "when": "Later",
       "items": [
-        "Cause-and-effect matrix from interlocks"
+        "Instrument index reports and loop checks"
       ]
     },
     {

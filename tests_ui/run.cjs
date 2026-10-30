@@ -60,6 +60,30 @@ const shots = process.env.SHOTS;
   const l0 = pr.lines[0];
   check("dragging port to port draws a line", pr.lines.length === 1 && l0.a.at === "port" && l0.a.item === pr.items[0].id && l0.b.at === "port" && l0.b.item === pr.items[1].id, JSON.stringify(pr.lines));
   check("the new line gets the sheet's next sequence number", pr.objects.find(o => o.id === l0?.obj)?.data.seq === "1001");
+  // 4a. While dragging from a port, the line is drawn under the mouse.
+  await p.keyboard.press("Control+z"); await p.waitForTimeout(300);
+  { const [x0, y0] = await scr(90, 108); await p.mouse.move(x0, y0); await p.mouse.down(); await p.mouse.move(x0 + 80, y0 + 50, { steps: 5 }); await p.waitForTimeout(100);
+    const r = await p.$eval(".dsvg .wiring path.temp", e => { const b = e.getBoundingClientRect(); return [b.right, b.bottom]; }).catch(() => null);
+    check("dragging from a port draws the line under the mouse", !!r && Math.abs(r[0] - (x0 + 80)) < 3 && Math.abs(r[1] - (y0 + 50)) < 3, JSON.stringify([r, x0 + 80, y0 + 50]));
+    await p.keyboard.press("Escape"); await p.mouse.up(); await p.waitForTimeout(200); }
+  await p.keyboard.press("Control+y"); await p.waitForTimeout(300);
+  check("redo brings the line back", (await project()).lines.length === 1);
+  // 4b. The same line by clicks: click the start port, the line follows the mouse, click the end port.
+  await p.keyboard.press("Control+z"); await p.waitForTimeout(300);
+  check("undo takes the line away", (await project()).lines.length === 0);
+  { const [x0, y0] = await scr(90, 108), [x1, y1] = await scr(250, 108);
+    await p.mouse.click(x0, y0); await p.waitForTimeout(150);
+    await p.mouse.move((x0 + x1) / 2, y0 + 40, { steps: 5 }); await p.waitForTimeout(150);
+    await shot("line-follows");
+    const wb = await p.$eval(".dsvg .wiring path.temp", e => { const r = e.getBoundingClientRect(); return [r.right, r.bottom]; });
+    check("after a click on a port the line follows the mouse", Math.abs(wb[0] - (x0 + x1) / 2) < 3 && Math.abs(wb[1] - (y0 + 40)) < 3 && (await project()).lines.length === 0, JSON.stringify([wb, (x0 + x1) / 2, y0 + 40]));
+    await p.mouse.move(x1, y1, { steps: 5 }); await p.waitForTimeout(150);
+    check("the line snaps to the port under the mouse", (await p.$$(".dsvg .wiring .wsnap")).length === 1);
+    await p.mouse.click(x1, y1); await p.waitForTimeout(400); }
+  pr = await project();
+  check("the second click ends the line on the port", pr.lines.length === 1 && pr.lines[0].a.at === "port" && pr.lines[0].b.at === "port" && pr.lines[0].b.item === pr.items[1].id && !(await p.$(".dsvg .wiring")), JSON.stringify(pr.lines));
+  { const [x0, y0] = await scr(90, 108); await p.mouse.click(x0, y0); await p.mouse.move(x0 + 60, y0 + 60, { steps: 3 }); await p.keyboard.press("Escape"); await p.waitForTimeout(200); }
+  check("Escape drops a line being drawn", !(await p.$(".dsvg .wiring")) && (await project()).lines.length === 1);
 
   // 5. Drop a gate valve on the line: it goes in, the line splits in two, both keep the data.
   await place("Gate valve", 170, 108.5);
@@ -328,6 +352,49 @@ const shots = process.env.SHOTS;
   const lpages = await p.$$eval(".pprev .pwrap", els => els.map(e => e.textContent));
   check("one loop diagram prints on one page", lpages.length === 1 && lpages[0].includes("JB-101"), JSON.stringify(lpages.map(t => t.slice(0, 50))));
   await p.click(".printpage button:has-text('Back to the drawing')"); await p.waitForTimeout(200);
+
+  // 28. The symbol search opens beside the double-clicked point and leaves the drawing in view.
+  const n28 = (await project()).items.length;
+  // An empty spot in the upper part of the sheet (clear of symbols and lines, above the bottom panel).
+  const q27 = await project();
+  const pts = q27.lines.flatMap(l => l.pts).concat(q27.items.map(i => [i.x, i.y]));
+  const cv = await p.$eval(".dsvg", e => { const r = e.getBoundingClientRect(); return [r.left + 30, r.top + 30, r.right - 30, r.bottom - 30]; });
+  let spot = null;
+  for (let y = 20; y <= 280 && !spot; y += 10) for (let x = 20; x <= 400; x += 10) {
+    const [sx, sy] = await scr(x, y);
+    if (sx > cv[0] && sx < cv[2] && sy > cv[1] && sy < cv[3] && q27.items.every(i => Math.hypot(i.x - x, i.y - y) > 25) && pts.every(q => Math.hypot(q[0] - x, q[1] - y) > 20)) { spot = [x, y]; break; }
+  }
+  { const [qx, qy] = await scr(spot[0], spot[1]); await p.mouse.dblclick(qx, qy); await p.waitForSelector(".qpop input");
+    const box = await p.$eval(".qpop", e => { const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; });
+    const bg = await p.$eval(".ov.pop", e => getComputedStyle(e).backgroundColor);
+    await p.fill(".qpop input", "valve"); await p.waitForTimeout(100); await shot("quick-search"); await p.fill(".qpop input", "");
+    check("the symbol search is a small popover beside the point", Math.abs(box[0] - qx) < 40 && box[2] < 360 && box[3] < 340 && (bg === "rgba(0, 0, 0, 0)" || bg === "transparent"), JSON.stringify([box, qx, qy, bg]));
+    await p.fill(".qpop input", "ball"); await p.keyboard.press("Enter"); await p.waitForTimeout(400); }
+  const q28 = await project();
+  check("Enter places the symbol at the point", q28.items.length === n28 + 1 && q28.items.some(i => i.sym === "ball" && Math.abs(i.x - spot[0]) < 3 && Math.abs(i.y - spot[1]) < 3), JSON.stringify(spot));
+  await p.keyboard.press("Control+z"); await p.waitForTimeout(300);
+
+  // 29. Cause and effect, DEXPI and loop DXF on the compressor package.
+  await openEx("Compressor package");
+  await shot("compressor");
+  await p.click(".tabs button:text-is('Lists')"); await p.click(".ribbon button:has-text('Cause & Effect')"); await p.waitForSelector(".dlg .cem");
+  await shot("cause-effect");
+  const cemRows = await p.$$eval(".dlg .cem tbody tr", els => els.map(e => [...e.querySelectorAll("td")].map(td => td.textContent)));
+  const cemHead = await p.$$eval(".dlg .cem th.eff b", els => els.map(e => e.textContent));
+  check("the cause-and-effect matrix is read from the interlock", JSON.stringify(cemRows.map(r => r[0])) === '["LSHH-202","TSHH-203"]' && JSON.stringify(cemHead) === '["M-201","UV-201"]' && cemRows.every(r => r.slice(3).every(c => c === "UY-202")), JSON.stringify([cemRows, cemHead]));
+  check("each effect says what it does", JSON.stringify(await p.$$eval(".dlg .cem th.act", els => els.map(e => e.textContent))) === '["Stop","Open"]');
+  await p.click(".dlg footer button:has-text('Print')"); await p.waitForSelector(".pprev .pwrap");
+  const cpages = await p.$$eval(".pprev .pwrap", els => els.map(e => e.textContent));
+  check("the matrix prints on one page", cpages.length === 1 && cpages[0].includes("LSHH-202") && cpages[0].includes("UY-202"), JSON.stringify(cpages.map(t => t.slice(0, 60))));
+  await p.click(".printpage button:has-text('Back to the drawing')"); await p.waitForTimeout(200);
+  await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button:has-text('DEXPI')"); await p.waitForTimeout(400);
+  { const ex = await inv("exports"); const dx = ex.filter(e => e.kind === "dexpi").pop();
+    check("the sheet exports in the DEXPI exchange format", !!dx && dx.text.includes("<PlantModel") && dx.text.includes('ComponentClass="CentrifugalCompressor"') && dx.text.trimEnd().endsWith("</PlantModel>")); }
+  await p.click(".tabs button:text-is('Lists')"); await p.click(".ribbon button:has-text('Loop Diagrams')"); await p.waitForSelector(".dlg .loopsvg svg");
+  await p.click(".dlg footer button:text-is('DXF')"); await p.waitForTimeout(400);
+  { const ex = await inv("exports"); const dx = ex.filter(e => e.kind === "loopdxf").pop();
+    check("a loop diagram exports to DXF", !!dx && dx.text.includes("LD-") && dx.text.trimEnd().endsWith("EOF")); }
+  await p.keyboard.press("Escape"); await p.waitForTimeout(200);
 
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();

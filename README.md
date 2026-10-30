@@ -38,9 +38,10 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Plant objects**: every equipment item, valve, instrument and line number is an object in a plant › unit › area hierarchy (the Plant panel); symbols are views of it, so one object can be drawn on several sheets. Every change is recorded with who made it and when.
 - **Classes you can extend**: a class library (named after the open DEXPI data standard) defines what data each kind of object has; add your company's attributes in Options and mark them required.
 - **Instrument datasheets**: one per instrument, control valve and relief device, with the process conditions taken from its line or vessel; type on it, issue it with a revision and status, see every value changed since the last issue (Δ), print it, export every datasheet to Excel; a datasheet index tracks them all; import datasheet values from Excel (matched by tag, with a preview first, never overwriting values that come from the P&ID); set your company's datasheet form (form number, logo, rows and section order).
-- **Loop diagrams**: every instrument loop drawn from the P&ID on an A3 sheet, with each device wired through its junction box and cable to its I/O channel and controller; type the wiring, print one or all.
+- **Cause and effect**: the matrix of the interlocks, read from the P&ID (causes, effects with their actions, the interlock in each cell); print or Excel.
+- **Loop diagrams**: every instrument loop drawn from the P&ID on an A3 sheet, with each device wired through its junction box and cable to its I/O channel and controller; type the wiring, print one or all, or save as DXF.
 - **Lists**: line list, equipment list, instrument index, valve list and datasheet index, always in step with the drawing; edit them, export to Excel or CSV, print them.
-- **Print and export**: PDF (sheets at their size or fitted to A3, lists, legend), SVG, and DXF (R12) that opens in any CAD program.
+- **Print and export**: PDF (sheets at their size or fitted to A3, lists, legend), SVG, DXF (R12) that opens in any CAD program, and the DEXPI P&ID exchange format (XML).
 - **Examples**: a pump transfer, a compressor package, a steam heater loop, and "Find the faults".
 - **Safe files**: `.dschema` projects (a single SQLite database with the history), atomic saves, recovery of unsaved work, undo and redo for everything.
 

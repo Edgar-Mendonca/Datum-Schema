@@ -133,7 +133,9 @@ const selNumber = createMemo(() => { const s = sel(); return s.length === 1 ? de
 // ---------- the canvas ----------
 type Drag =
   | { k: "move"; ids: number[]; a: Pt; dx: number; dy: number }
-  | { k: "wire"; from: End; a: Pt; b: Pt; kind: Kind }
+  // A line being drawn: pressed and dragged, or clicked at its start and following the mouse
+  // (`sticky`) until the click at its end.
+  | { k: "wire"; from: End; a: Pt; b: Pt; kind: Kind; sticky?: boolean }
   | { k: "box"; a: Pt; b: Pt; add: boolean }
   | { k: "pan"; cx: number; cy: number; p0: Pt }
   | { k: "bend"; id: number; a: Pt; b: Pt; seg: number }
@@ -190,6 +192,8 @@ export const Canvas = () => {
     const p = toSheet(e.clientX, e.clientY);
     if (e.button === 1 || space()) { e.preventDefault(); setDrag({ k: "pan", cx: e.clientX, cy: e.clientY, p0: pan() }); return; }
     if (e.button !== 0) return;
+    const d0 = drag();
+    if (d0?.k === "wire" && d0.sticky) { finishWire(d0, p); return; }
     const t = tool();
     const add = e.shiftKey || e.ctrlKey || e.metaKey;
     if (t.k === "place") { placeAt(t.sym, p, t.tag, t.obj); if (!e.shiftKey || t.obj) setTool({ k: "select" }); return; }
@@ -241,17 +245,26 @@ export const Canvas = () => {
     else if (d.k === "wire" || d.k === "box" || d.k === "bend" || d.k === "end") setDrag({ ...d, b: p } as Drag);
   };
 
+  /** Ends a line being drawn at p: on a port, on a line (a branch) or open. */
+  const finishWire = async (d: Extract<Drag, { k: "wire" }>, p: Pt) => {
+    setDrag(null);
+    if (Math.hypot(p[0] - d.a[0], p[1] - d.a[1]) < 1.5) return;
+    const to = endAt(p);
+    if (JSON.stringify(to) === JSON.stringify(d.from)) return;
+    const s = sheet(); if (!s) return;
+    const o = await act({ AddLine: { line: { id: 0, sheet: s.id, kind: d.kind, a: d.from, b: to, pts: [], flip: false, obj: 0 } as Line } });
+    if (o?.created.length) setSel([o.created[0]]);
+  };
+
   const up = async (e: MouseEvent) => {
-    const d = drag(); setDrag(null); if (!d) return;
+    const d = drag(); if (d?.k === "wire" && d.sticky) return;
+    setDrag(null); if (!d) return;
     const p = svgEl ? toSheet(e.clientX, e.clientY) : [0, 0] as Pt;
     if (d.k === "move" && (d.dx || d.dy)) act({ Move: { ids: d.ids, dx: d.dx, dy: d.dy } });
     else if (d.k === "wire") {
-      if (Math.hypot(p[0] - d.a[0], p[1] - d.a[1]) < 1.5) return;
-      const to = endAt(p);
-      if (JSON.stringify(to) === JSON.stringify(d.from)) return;
-      const s = sheet(); if (!s) return;
-      const o = await act({ AddLine: { line: { id: 0, sheet: s.id, kind: d.kind, a: d.from, b: to, pts: [], flip: false, obj: 0 } as Line } });
-      if (o?.created.length) setSel([o.created[0]]);
+      // A click (no drag) at the start: the line follows the mouse until the next click.
+      if (Math.hypot(p[0] - d.a[0], p[1] - d.a[1]) < 1.5) { setDrag({ ...d, b: p, sticky: true }); return; }
+      finishWire(d, p);
     } else if (d.k === "bend") {
       if (Math.hypot(d.b[0] - d.a[0], d.b[1] - d.a[1]) > 4 / zoom()) {
         const lv = v()?.lines.find(x => x.id === d.id); if (!lv) return;
@@ -308,6 +321,7 @@ export const Canvas = () => {
     else if (!ctrl && k === "r") { e.preventDefault(); C.rotate(); }
     else if (!ctrl && k === "m") { e.preventDefault(); C.flip(); }
     else if (!ctrl && k === "l") { e.preventDefault(); setTool({ k: "line", kind: "major" }); }
+    else if (e.key === "Escape" && drag()?.k === "wire") setDrag(null);
     else if (e.key === "Escape") { if (tool().k !== "select") setTool({ k: "select" }); else setSel([]); }
     else if (e.key.startsWith("Arrow") && sel().length) {
       e.preventDefault();
@@ -327,6 +341,7 @@ export const Canvas = () => {
 
   const ctx = (e: MouseEvent) => {
     e.preventDefault();
+    if (drag()?.k === "wire") { setDrag(null); return; }
     const p = toSheet(e.clientX, e.clientY);
     const it = itemAt(p), ln = it ? null : lineAt(p, lines(), tol());
     if (it && !selSet().has(it.id)) setSel([it.id]);
@@ -406,9 +421,19 @@ export const Canvas = () => {
               <For each={nt.prims}>{p => <PrimEl p={p} />}</For>
             </g>;
           }}</For></g>
-          <Show when={drag()}>{d => {
-            const x = d();
-            if (x.k === "wire") return <path d={`M${x.a[0]} ${x.a[1]}H${(x.a[0] + x.b[0]) / 2}V${x.b[1]}H${x.b[0]}`} class="temp" />;
+          {/* Keyed: drawn again on every change of the drag (the line under the mouse, the box). */}
+          <Show when={drag()} keyed>{x => {
+            if (x.k === "wire") {
+              // Snaps to the port under the mouse, which is ringed.
+              const po = portAt(x.b);
+              const b = po ? po.it.ports[po.k].p : x.b;
+              const signal = !["major", "minor", "utility"].includes(x.kind);
+              return <g class="wiring">
+                <path d={`M${x.a[0]} ${x.a[1]}H${(x.a[0] + b[0]) / 2}V${b[1]}H${b[0]}`} class={`temp ${signal ? "sig" : "proc"}`} />
+                <circle cx={x.a[0]} cy={x.a[1]} r={1.1} class="wstart" />
+                <circle cx={b[0]} cy={b[1]} r={po ? 1.8 : 0.9} class={po ? "wsnap" : "wend"} />
+              </g>;
+            }
             if (x.k === "box") return <rect x={Math.min(x.a[0], x.b[0])} y={Math.min(x.a[1], x.b[1])} width={Math.abs(x.b[0] - x.a[0])} height={Math.abs(x.b[1] - x.a[1])} class="marquee" />;
             if (x.k === "bend" || x.k === "end") return <circle cx={x.b[0]} cy={x.b[1]} r={1} class="bendpt" />;
             return null;

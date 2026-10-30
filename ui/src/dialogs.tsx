@@ -6,6 +6,7 @@ import { openDialog, closeDialog, call, out, setOut, lib, proj, itemOf, act } fr
 import { C } from "./cmds";
 import { Dialog } from "./ui";
 import { PRESETS, SymPic } from "./palette";
+import { toScreen } from "./canvas";
 
 export const keepChanges = (then: () => unknown) => {
   if (!out()?.dirty) { then(); return; }
@@ -36,24 +37,36 @@ export const confirm = (text: string, okText: string, run: () => void) => openDi
   <Dialog title="Are you sure?" okText={okText} ok={() => { run(); }}><p>{text}</p></Dialog>
 ));
 
-/** Double-click on the sheet: type to find a symbol (or an instrument by its letters) and add it there. */
+/** Double-click on the sheet: type to find a symbol (or an instrument by its letters) and add it
+ *  there. A small popover beside the point, so the drawing stays in view; a click elsewhere or
+ *  Escape closes it. */
 export const quickInsert = (at: Pt) => openDialog(() => {
   const [q, setQ] = createSignal(""), [k, setK] = createSignal(0);
   const list = createMemo(() => {
     const s = q().trim().toLowerCase();
     const syms = (lib()?.symbols ?? []).filter(x => x.key !== "unknown" && (!s || x.name.toLowerCase().includes(s) || x.cat_name.toLowerCase().includes(s))).map(x => ({ sym: x.key, tag: undefined as string | undefined, name: x.name, cat: x.cat_name }));
     const pre = PRESETS.filter(p => s && (p[0].toLowerCase() === s || p[2].toLowerCase().includes(s))).map(p => ({ sym: p[1], tag: p[0], name: `${p[2]} (${p[0]})`, cat: "Instruments" }));
-    return [...pre, ...syms].slice(0, 14);
+    return [...pre, ...syms].slice(0, 30);
   });
   const go = (i: number) => { const d = list()[i]; if (!d) return; closeDialog(); const g = proj()?.settings.grid || 2.5; C.place(d.sym, [Math.round(at[0] / g) * g, Math.round(at[1] / g) * g], null, d.tag); };
-  let input!: HTMLInputElement;
+  // Beside the point, kept inside the window.
+  const W = 330, H = 300;
+  const sp = toScreen(at[0], at[1]);
+  const left = Math.max(8, Math.min(innerWidth - W - 8, sp[0] + 14));
+  const top = Math.max(8, sp[1] + 14 + H > innerHeight - 8 ? sp[1] - H - 14 : sp[1] + 14);
+  let input!: HTMLInputElement, listEl!: HTMLDivElement;
   onMount(() => input.focus());
+  const pick = (i: number) => { setK(i); listEl?.children[i]?.scrollIntoView({ block: "nearest" }); };
   return (
-    <div class="ov top" onMouseDown={e => e.target === e.currentTarget && closeDialog()}>
-      <div class="pal">
-        <input ref={input} placeholder="Add a symbol: type its name (ball valve, pump, LIC…)" value={q()} onInput={e => { setQ(e.currentTarget.value); setK(0); }}
-          onKeyDown={e => { if (e.key === "ArrowDown") { e.preventDefault(); setK(Math.min(list().length - 1, k() + 1)); } else if (e.key === "ArrowUp") { e.preventDefault(); setK(Math.max(0, k() - 1)); } else if (e.key === "Enter") { e.preventDefault(); go(k()); } else if (e.key === "Escape") closeDialog(); }} />
-        <div class="pl"><For each={list()}>{(d, i) => <button classList={{ on: i() === k() }} onMouseEnter={() => setK(i())} onClick={() => go(i())}><Show when={lib()?.symbols.find(s => s.key === d.sym)}>{s => <SymPic s={s()} size={22} letters={d.tag} />}</Show><span>{d.name}</span><kbd>{d.cat}</kbd></button>}</For></div>
+    <div class="ov pop" onMouseDown={e => e.target === e.currentTarget && closeDialog()} onContextMenu={e => { e.preventDefault(); closeDialog(); }}>
+      <div class="qmark" style={{ left: `${sp[0]}px`, top: `${sp[1]}px` }} />
+      <div class="qpop" style={{ left: `${left}px`, top: `${top}px`, width: `${W}px` }}>
+        <input ref={input} placeholder="Symbol name or letters (gate, pump, LIC)" value={q()} onInput={e => { setQ(e.currentTarget.value); setK(0); listEl.scrollTop = 0; }}
+          onKeyDown={e => { if (e.key === "ArrowDown") { e.preventDefault(); pick(Math.min(list().length - 1, k() + 1)); } else if (e.key === "ArrowUp") { e.preventDefault(); pick(Math.max(0, k() - 1)); } else if (e.key === "Enter") { e.preventDefault(); go(k()); } else if (e.key === "Escape") closeDialog(); }} />
+        <div class="ql" ref={listEl}>
+          <For each={list()} fallback={<p class="muted small">No symbol called “{q()}”.</p>}>{(d, i) => <button classList={{ on: i() === k() }} onMouseEnter={() => setK(i())} onClick={() => go(i())}><Show when={lib()?.symbols.find(s => s.key === d.sym)}>{s => <SymPic s={s()} size={18} letters={d.tag} />}</Show><span>{d.name}</span><small>{d.cat}</small></button>}</For>
+        </div>
+        <p class="qhint">↑ ↓ to choose · Enter to place · Esc to close</p>
       </div>
     </div>
   );

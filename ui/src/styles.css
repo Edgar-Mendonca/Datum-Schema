@@ -856,7 +856,11 @@ tr.behind td { background: var(--err-bg); }
 .legend .sym { color: var(--text); }
 .legend .pt { fill: var(--text); }
 .legend .ln .lstroke { stroke: var(--text); }
-.temp { fill: none; stroke: var(--blue); stroke-width: .5; stroke-dasharray: 1.2 .8; }
+.temp { fill: none; stroke: var(--blue); stroke-width: .6; }
+.temp.sig { stroke-width: .35; stroke-dasharray: 1.2 .8; }
+.wiring { pointer-events: none; }
+.wiring .wstart, .wiring .wend { fill: var(--blue); stroke: none; }
+.wiring .wsnap { fill: none; stroke: var(--blue); stroke-width: .45; }
 .marquee { fill: color-mix(in srgb, var(--blue) 8%, transparent); stroke: var(--blue); stroke-width: .25; stroke-dasharray: 1 .6; }
 .bendpt { fill: var(--blue); }
 .ghost { opacity: .45; color: var(--blue); fill: none; stroke: currentColor; stroke-width: .3; pointer-events: none; }
@@ -1021,3 +1025,30 @@ tr.behind td { background: var(--err-bg); }
 .loopw input { width: 100%; box-sizing: border-box; }
 .loopsvg svg { width: 100%; height: auto; display: block; }
 .loopw td.mono { white-space: nowrap; }
+/* The symbol search: a popover beside the point, the drawing stays in view. */
+.ov.pop { background: transparent; display: block; }
+.qpop { position: fixed; background: var(--bg2); border: 1px solid var(--line3); box-shadow: 0 8px 24px rgba(0,0,0,.18); display: flex; flex-direction: column; }
+.qpop input { border: 0 !important; border-bottom: 1px solid var(--line) !important; padding: 8px 10px !important; font-size: 13px; outline: none !important; border-radius: 0 !important; width: 100%; box-sizing: border-box; }
+.ql { max-height: 236px; overflow: auto; padding: 3px; }
+.ql button { display: flex; align-items: center; width: 100%; padding: 3px 7px; gap: 9px; text-align: left; font-size: 12.5px; }
+.ql button span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ql button small { color: var(--muted); font-size: 10.5px; white-space: nowrap; }
+.ql button.on { background: var(--pale); color: var(--blue); }
+.ql p { padding: 6px 8px; margin: 0; }
+.qhint { margin: 0; padding: 4px 10px; font-size: 10.5px; color: var(--muted); border-top: 1px solid var(--line2); }
+.qmark { position: fixed; width: 9px; height: 9px; margin: -5px 0 0 -5px; border: 1.5px solid var(--blue); border-radius: 50%; pointer-events: none; }
+/* The cause-and-effect matrix. */
+.cemwrap { overflow: auto; max-height: 62vh; }
+.cem { border-collapse: collapse; font-size: 12px; }
+.cem th, .cem td { border: 1px solid var(--line3); padding: 3px 6px; }
+.cem th { background: var(--panel2); color: var(--navy); font-weight: 600; text-align: left; }
+.cem th.eff { vertical-align: bottom; height: 130px; padding: 4px 2px; width: 38px; }
+.cem th.eff div { writing-mode: vertical-rl; transform: rotate(180deg); display: flex; gap: 6px; white-space: nowrap; margin: 0 auto; }
+.cem th.eff span { font-weight: 400; color: var(--muted); }
+.cem th.act { text-align: center; font-size: 11px; }
+.cem td.x { text-align: center; min-width: 46px; font-size: 11px; white-space: nowrap; }
+.cem td.x.on { background: var(--sel); color: var(--blue2); font-weight: 600; }
+.cem b { cursor: pointer; }
+.pcem .cem { font-size: 8pt; margin-bottom: 4mm; }
+.pcem .cem th, .pcem .cem td { border-color: #888; color: #000; background: #fff; }
+.pcem .cem td.x.on { background: #eee; }

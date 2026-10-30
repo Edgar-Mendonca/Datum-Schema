@@ -317,6 +317,20 @@ fn compressor() -> Project {
     }
     x.ln(E::P(uic, "left"), E::P(uv, "signal"), Kind::Electric);
     x.ln(E::P(m, "power"), E::L(dis, 215.0, 114.0), Kind::Data);
+    // The trip: high-high drum level or high-high gas temperature stops the motor and opens the
+    // recycle valve, through interlock UY-202 (the cause-and-effect matrix).
+    let lshh = x.it("inst_field", 118.0, 158.0, 0, "LSHH-202");
+    x.data(&[lshh], &[("function", t("Drum level high-high")), ("setpoints", t("HH 80 %"))]);
+    x.ln(E::P(ko, "right lower"), E::P(lshh, "left"), Kind::Minor);
+    let tshh = x.it("inst_field", 360.0, 75.0, 0, "TSHH-203");
+    x.data(&[tshh], &[("function", t("Gas temperature high-high")), ("setpoints", t("HH 60 °C"))]);
+    x.ln(E::P(tshh, "bottom"), E::L(after[2], 360.0, 100.0), Kind::Minor);
+    let uy = x.it("inst_interlock", 250.0, 205.0, 0, "UY-202");
+    x.data(&[uy], &[("function", t("Compressor trip")), ("location", t("DCS"))]);
+    x.ln(E::P(lshh, "right"), E::P(uy, "left"), Kind::Electric);
+    x.ln(E::P(tshh, "right"), E::P(uy, "right"), Kind::Electric);
+    x.ln(E::P(uy, "bottom"), E::P(m, "power"), Kind::Electric);
+    x.ln(E::P(uy, "top"), E::P(uv, "signal"), Kind::Electric);
     x.done()
 }
 

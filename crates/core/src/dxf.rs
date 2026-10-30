@@ -141,65 +141,7 @@ pub fn write(p: &Project, s: &Sheet) -> String {
     let mut layers: Vec<String> = vec!["FRAME".into(), "TEXT".into(), "NOTES".into(), "MARKS".into()];
     layers.extend(Kind::ALL.iter().map(|k| line_layer(*k)));
     layers.extend(Cat::ALL.iter().map(|c| sym_layer(*c)));
-    // Header.
-    w.g(0, "SECTION");
-    w.g(2, "HEADER");
-    w.g(9, "$ACADVER");
-    w.g(1, "AC1009");
-    w.g(9, "$INSUNITS");
-    w.g(70, 4);
-    w.g(9, "$EXTMIN");
-    w.f(10, 0.0);
-    w.f(20, 0.0);
-    w.g(9, "$EXTMAX");
-    w.f(10, v.w);
-    w.f(20, v.h);
-    w.g(0, "ENDSEC");
-    // Tables: line types, layers, a text style.
-    w.g(0, "SECTION");
-    w.g(2, "TABLES");
-    w.g(0, "TABLE");
-    w.g(2, "LTYPE");
-    w.g(70, 2);
-    for (name, desc, pat) in [("CONTINUOUS", "Solid line", &[][..]), ("DASHED", "Dashed __ __ __", &[1.5, -1.0][..])] {
-        w.g(0, "LTYPE");
-        w.g(2, name);
-        w.g(70, 0);
-        w.g(3, desc);
-        w.g(72, 65);
-        w.g(73, pat.len());
-        w.f(40, pat.iter().map(|x: &f64| x.abs()).sum());
-        for x in pat {
-            w.f(49, *x);
-        }
-    }
-    w.g(0, "ENDTAB");
-    w.g(0, "TABLE");
-    w.g(2, "LAYER");
-    w.g(70, layers.len());
-    for l in &layers {
-        w.g(0, "LAYER");
-        w.g(2, l);
-        w.g(70, 0);
-        w.g(62, if l == "LINE-ELECTRIC" || l.starts_with("SYM-INSTRUMENT") { 5 } else if l == "NOTES" { 1 } else { 7 });
-        w.g(6, if l == "LINE-ELECTRIC" { "DASHED" } else { "CONTINUOUS" });
-    }
-    w.g(0, "ENDTAB");
-    w.g(0, "TABLE");
-    w.g(2, "STYLE");
-    w.g(70, 1);
-    w.g(0, "STYLE");
-    w.g(2, "STANDARD");
-    w.g(70, 0);
-    w.f(40, 0.0);
-    w.f(41, 1.0);
-    w.f(50, 0.0);
-    w.g(71, 0);
-    w.f(42, 2.5);
-    w.g(3, "txt");
-    w.g(4, "");
-    w.g(0, "ENDTAB");
-    w.g(0, "ENDSEC");
+    head(&mut w, &layers, v.w, v.h);
     // Blocks: one per symbol used, drawn round its centre, with a TAG attribute definition.
     w.g(0, "SECTION");
     w.g(2, "BLOCKS");
@@ -277,6 +219,93 @@ pub fn write(p: &Project, s: &Sheet) -> String {
         for pr in view::legend_prims(r) {
             w.prim(&pr, "TEXT", true, false);
         }
+    }
+    w.g(0, "ENDSEC");
+    w.g(0, "EOF");
+    w.s
+}
+
+/// The header (units, extents) and the tables (line types, layers, a text style).
+fn head(w: &mut W, layers: &[String], vw: f64, vh: f64) {
+    // Header.
+    w.g(0, "SECTION");
+    w.g(2, "HEADER");
+    w.g(9, "$ACADVER");
+    w.g(1, "AC1009");
+    w.g(9, "$INSUNITS");
+    w.g(70, 4);
+    w.g(9, "$EXTMIN");
+    w.f(10, 0.0);
+    w.f(20, 0.0);
+    w.g(9, "$EXTMAX");
+    w.f(10, vw);
+    w.f(20, vh);
+    w.g(0, "ENDSEC");
+    // Tables: line types, layers, a text style.
+    w.g(0, "SECTION");
+    w.g(2, "TABLES");
+    w.g(0, "TABLE");
+    w.g(2, "LTYPE");
+    w.g(70, 2);
+    for (name, desc, pat) in [("CONTINUOUS", "Solid line", &[][..]), ("DASHED", "Dashed __ __ __", &[1.5, -1.0][..])] {
+        w.g(0, "LTYPE");
+        w.g(2, name);
+        w.g(70, 0);
+        w.g(3, desc);
+        w.g(72, 65);
+        w.g(73, pat.len());
+        w.f(40, pat.iter().map(|x: &f64| x.abs()).sum());
+        for x in pat {
+            w.f(49, *x);
+        }
+    }
+    w.g(0, "ENDTAB");
+    w.g(0, "TABLE");
+    w.g(2, "LAYER");
+    w.g(70, layers.len());
+    for l in layers {
+        w.g(0, "LAYER");
+        w.g(2, l);
+        w.g(70, 0);
+        w.g(62, if l == "LINE-ELECTRIC" || l.starts_with("SYM-INSTRUMENT") { 5 } else if l == "NOTES" { 1 } else { 7 });
+        w.g(6, if l == "LINE-ELECTRIC" { "DASHED" } else { "CONTINUOUS" });
+    }
+    w.g(0, "ENDTAB");
+    w.g(0, "TABLE");
+    w.g(2, "STYLE");
+    w.g(70, 1);
+    w.g(0, "STYLE");
+    w.g(2, "STANDARD");
+    w.g(70, 0);
+    w.f(40, 0.0);
+    w.f(41, 1.0);
+    w.f(50, 0.0);
+    w.g(71, 0);
+    w.f(42, 2.5);
+    w.g(3, "txt");
+    w.g(4, "");
+    w.g(0, "ENDTAB");
+    w.g(0, "ENDSEC");
+}
+
+/// Drawing primitives on a sheet of their own (a loop diagram) as a DXF R12 file: the frame and
+/// texts on FRAME and TEXT, the drawing on DRAWING (dashed where the drawing is dashed).
+pub fn write_prims(prims: &[Prim], vw: f64, vh: f64) -> String {
+    let mut w = W { s: String::with_capacity(1 << 15), h: vh };
+    let layers: Vec<String> = vec!["FRAME".into(), "TEXT".into(), "DRAWING".into()];
+    head(&mut w, &layers, vw, vh);
+    w.g(0, "SECTION");
+    w.g(2, "BLOCKS");
+    w.g(0, "ENDSEC");
+    w.g(0, "SECTION");
+    w.g(2, "ENTITIES");
+    for pr in prims {
+        let layer = match pr {
+            Prim::Text { .. } => "TEXT",
+            Prim::Poly { w: lw, .. } if *lw >= 0.35 => "FRAME",
+            _ => "DRAWING",
+        };
+        w.prim(pr, layer, true, false);
     }
     w.g(0, "ENDSEC");
     w.g(0, "EOF");

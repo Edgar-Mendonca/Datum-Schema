@@ -98,3 +98,7 @@ export interface LoopView { key: string; number: string; title: string; w: numbe
 export const LOOP_WIRING: [string, string][] = [["jb", "Junction box"], ["jb_terminals", "JB terminals"], ["cable", "Cable"], ["system", "Control system"], ["io", "I/O channel"]];
 /** The statuses a datasheet is issued with, in order (model::STATUSES). */
 export const STATUSES = ["Preliminary", "Issued for Enquiry", "Issued for Purchase", "As-built"];
+/** The cause-and-effect matrix: causes down, effects across; cells name the interlock linking them. */
+export interface CauseRow { obj: number; item: number; sheet: number; tag: string; what: string; setting: string }
+export interface EffectCol { obj: number; item: number; sheet: number; tag: string; what: string; action: string }
+export interface CauseMatrix { causes: CauseRow[]; effects: EffectCol[]; cells: string[][]; open: string[] }

@@ -119,6 +119,8 @@ export const C = {
   // ---------- export ----------
   exportList: async (kind: string, format: "csv" | "xlsx") => { const f = await call<string | null>("export", { kind: format, what: kind, sheet: sid() }); if (f) toast(`Saved ${f}.`, true); },
   exportDatasheets: async () => { const f = await call<string | null>("export", { kind: "datasheets", what: "", sheet: sid() }); if (f) toast(`Saved ${f}.`, true); },
+  exportCause: async () => { const f = await call<string | null>("export", { kind: "cause", what: "", sheet: 0 }); if (f) toast(`Saved ${f}.`, true); },
+  exportDexpi: async () => { const f = await call<string | null>("export", { kind: "dexpi", what: "", sheet: sid() }); if (f) toast(`Saved ${f}: this sheet in the DEXPI P&ID exchange format.`, true); },
   exportDxf: async () => { const f = await call<string | null>("export", { kind: "dxf", what: "", sheet: sid() }); if (f) toast(`Saved ${f}. It opens in any CAD program.`, true); },
   exportSvg: async () => { const s = sheet(); if (!s) return; const svg = await sheetSvg(s.id); const f = await call<string | null>("save_file", { name: `${s.number}.svg`, data: svg }); if (f) toast(`Saved ${f}.`, true); },
   planned: (what: string, v: string) => toast(`${what} arrives in ${v}. File › Roadmap shows what comes when.`),
@@ -140,7 +142,7 @@ export const ALL_CMDS: [string, () => void, string?][] = [
   ["Off-page connector", () => C.placeTool("offpage")], ["Renumber every tag", C.renumber],
   ["New sheet", () => C.addSheet()], ["Legend sheet", () => C.addSheet(true)], ["Delete this sheet", C.deleteSheet],
   ["SI units", () => C.units("SI")], ["US units", () => C.units("US")], ["Fit the sheet", C.fit, "F"],
-  ["Checks panel", () => C.panel("checks")], ["Line list", () => C.panel("lines")], ["Equipment list", () => C.panel("equipment")], ["Instrument index", () => C.panel("instruments")], ["Valve list", () => C.panel("valves")], ["Datasheet index", () => C.panel("datasheets")], ["Loop diagrams", () => import("./loops").then(m => m.openLoops())], ["Import datasheets from Excel", () => import("./datasheet").then(m => m.importDatasheets())],
+  ["Checks panel", () => C.panel("checks")], ["Line list", () => C.panel("lines")], ["Equipment list", () => C.panel("equipment")], ["Instrument index", () => C.panel("instruments")], ["Valve list", () => C.panel("valves")], ["Datasheet index", () => C.panel("datasheets")], ["Loop diagrams", () => import("./loops").then(m => m.openLoops())], ["Cause and effect matrix", () => import("./cause").then(m => m.openCause())], ["Export DEXPI (P&ID exchange)", () => C.exportDexpi()], ["Import datasheets from Excel", () => import("./datasheet").then(m => m.importDatasheets())],
   ["Export DXF", C.exportDxf], ["Save the sheet as SVG", C.exportSvg],
   ["Options", () => setBackstage("options")], ["Check for updates", () => setBackstage("about")], ["Roadmap", () => setBackstage("roadmap")],
   ["Keyboard shortcuts", () => D.shortcuts(), "F1"], ["Getting started", () => D.gettingStarted()], ["Glossary", () => D.glossary()],

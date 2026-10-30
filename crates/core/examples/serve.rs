@@ -82,6 +82,16 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             let text = match kind.as_str() {
                 "csv" => lists::csv(&lists::build(&s.doc.p, &what)?),
                 "xlsx" => format!("{} bytes", lists::xlsx(&s.doc.p, &what)?.len()),
+                "cause" => format!("{} bytes", datum_core::cause::xlsx(&s.doc.p)?.len()),
+                "loopdxf" => {
+                    let d = datum_core::loops::diagram(&s.doc.p, &what)?;
+                    dxf::write_prims(&d.prims, d.w, d.h)
+                }
+                "dexpi" => {
+                    let sh = a["sheet"].as_u64().unwrap_or(0) as u32;
+                    let sheet = s.doc.p.sheet(sh).or(s.doc.p.sheets.first()).ok_or("There is no sheet.")?.clone();
+                    datum_core::dexpi::write(&s.doc.p, &sheet)
+                }
                 "datasheets" => {
                     // Kept as the file the next datasheet import reads (the test cannot pick one).
                     let bytes = datum_core::datasheets::xlsx(&s.doc.p)?;
@@ -101,6 +111,7 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             let bytes = std::fs::read(import_file()).map_err(|_| "Export the datasheets first: the test imports the last export.".to_string())?;
             serde_json::to_value(datum_core::import::plan(&s.doc.p, &bytes)?).unwrap()
         }
+        "cause_effect" => serde_json::to_value(datum_core::cause::matrix(&s.doc.p)).unwrap(),
         "loops" => serde_json::to_value(datum_core::loops::all(&s.doc.p)).unwrap(),
         "loop_diagram" => serde_json::to_value(datum_core::loops::diagram(&s.doc.p, &str_("key"))?).unwrap(),
         "layout_rows" => serde_json::to_value(datum_core::datasheets::layout_rows(&s.doc.p)).unwrap(),

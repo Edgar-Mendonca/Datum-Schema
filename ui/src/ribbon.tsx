@@ -11,6 +11,7 @@ import { PRESETS } from "./palette";
 import { Cat, Kind } from "./api";
 import { importDatasheets } from "./datasheet";
 import { openLoops } from "./loops";
+import { openCause } from "./cause";
 
 const GH = "https://github.com/Edgar-Mendonca/Datum-Schema";
 
@@ -144,13 +145,13 @@ export const Ribbon = () => {
         <G l="Tags" h="tags"><B big i="renum" l="Renumber" run={C.renumber} /></G>
       </Show>
       <Show when={tab() === "lists"}>
-        <G l="Lists" h="lists"><B big i="list" l="Line List" run={() => C.panel("lines")} /><B big i="list" l="Equipment" run={() => C.panel("equipment")} /><B big i="list" l="Instruments" run={() => C.panel("instruments")} /><B big i="list" l="Valves" run={() => C.panel("valves")} /><B big i="list" l="Datasheets" run={() => C.panel("datasheets")} /><B big i="sig" l="Loop Diagrams" run={() => openLoops()} /><B big i="import" l="Import Excel" title="Import datasheet values from an Excel workbook, with a preview first" run={importDatasheets} /></G>
-        <G l="Export" h="export"><B big i="xlsx" l="Excel" dd={e => openMenu(e, [...[["lines", "Line list"], ["equipment", "Equipment list"], ["instruments", "Instrument index"], ["valves", "Valve list"], ["datasheets", "Datasheet index"]].map(([k, l]) => ({ label: l, run: () => C.exportList(k, "xlsx") })), "-", { label: "Datasheets (one worksheet each)", run: C.exportDatasheets }])} /><B big i="csv" l="CSV" dd={e => openMenu(e, [["lines", "Line list"], ["equipment", "Equipment list"], ["instruments", "Instrument index"], ["valves", "Valve list"], ["datasheets", "Datasheet index"]].map(([k, l]) => ({ label: l, run: () => C.exportList(k, "csv") })))} /><B big i="print" l="Print" run={C.print} /></G>
+        <G l="Lists" h="lists"><B big i="list" l="Line List" run={() => C.panel("lines")} /><B big i="list" l="Equipment" run={() => C.panel("equipment")} /><B big i="list" l="Instruments" run={() => C.panel("instruments")} /><B big i="list" l="Valves" run={() => C.panel("valves")} /><B big i="list" l="Datasheets" run={() => C.panel("datasheets")} /><B big i="sig" l="Loop Diagrams" run={() => openLoops()} /><B big i="table" l="Cause & Effect" title="The cause-and-effect matrix of the interlocks" run={openCause} /><B big i="import" l="Import Excel" title="Import datasheet values from an Excel workbook, with a preview first" run={importDatasheets} /></G>
+        <G l="Export" h="export"><B big i="xlsx" l="Excel" dd={e => openMenu(e, [...[["lines", "Line list"], ["equipment", "Equipment list"], ["instruments", "Instrument index"], ["valves", "Valve list"], ["datasheets", "Datasheet index"]].map(([k, l]) => ({ label: l, run: () => C.exportList(k, "xlsx") })), "-", { label: "Datasheets (one worksheet each)", run: C.exportDatasheets }, { label: "Cause-and-effect matrix", run: C.exportCause }])} /><B big i="csv" l="CSV" dd={e => openMenu(e, [["lines", "Line list"], ["equipment", "Equipment list"], ["instruments", "Instrument index"], ["valves", "Valve list"], ["datasheets", "Datasheet index"]].map(([k, l]) => ({ label: l, run: () => C.exportList(k, "csv") })))} /><B big i="print" l="Print" run={C.print} /></G>
       </Show>
       <Show when={tab() === "sheets"}>
         <G l="Sheets" h="sheets"><B big i="sheet" l="New Sheet" run={() => C.addSheet()} /><B big i="legend" l="Legend Sheet" run={() => C.addSheet(true)} title="A sheet that shows every symbol the project uses" /><S><B i="left" l="Move Left" run={() => C.moveSheet(-1)} /><B i="right" l="Move Right" run={() => C.moveSheet(1)} /><B i="del" l="Delete Sheet" run={C.deleteSheet} /></S></G>
         <G l="Size" h="sheets"><S><For each={["A3", "A1"]}>{z => <B i="sheet" l={z} on={sheet()?.size === z} run={() => sheet() && act({ SetSheet: { sheet: { ...sheet()!, size: z } } })} />}</For></S><S><For each={["ANSI B", "ANSI D"]}>{z => <B i="sheet" l={z} on={sheet()?.size === z} run={() => sheet() && act({ SetSheet: { sheet: { ...sheet()!, size: z } } })} />}</For></S></G>
-        <G l="Output" h="export"><B big i="print" l="Print / PDF" run={C.print} /><B big i="dxf" l="DXF" run={C.exportDxf} /><B big i="svg" l="SVG" run={C.exportSvg} /></G>
+        <G l="Output" h="export"><B big i="print" l="Print / PDF" run={C.print} /><B big i="dxf" l="DXF" run={C.exportDxf} /><B big i="svg" l="SVG" run={C.exportSvg} /><B big i="export" l="DEXPI" title="This sheet in the DEXPI P&ID exchange format (XML)" run={C.exportDexpi} /></G>
       </Show>
       <Show when={tab() === "view"}>
         <G l="Zoom" h="view"><B big i="fit" l="Fit Drawing" run={C.fit} /><B big i="sheet" l="Whole Sheet" run={() => import("./canvas").then(c => c.fitSheet())} /></G>

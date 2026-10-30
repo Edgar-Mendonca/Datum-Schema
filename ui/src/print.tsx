@@ -4,11 +4,12 @@
 // and footer on every page; the legend comes last. The same SVG writer saves a sheet as SVG.
 import { For, Show, JSX, createSignal, createMemo, createResource, onMount, onCleanup } from "solid-js";
 import { Portal } from "solid-js/web";
-import { SheetView, Prim, List, Datasheet, LoopInfo, LoopView } from "./api";
+import { SheetView, Prim, List, Datasheet, LoopInfo, LoopView, CauseMatrix } from "./api";
 import { call, proj, lib, sheet, setBackstage, symOf } from "./store";
 import { Help } from "./help";
 import { Check, Pick } from "./ui";
 import { DatasheetTable, RevBlock, revLine } from "./datasheet";
+import { MatrixTable } from "./cause";
 
 export const MM = 96 / 25.4;
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -77,6 +78,8 @@ const LISTS: [string, string][] = [["lines", "Line list"], ["equipment", "Equipm
 const [printing, setPrinting] = createSignal(false);
 /** Set by a datasheet's Print button: print only that object's datasheet. */
 export const [printOnly, setPrintOnly] = createSignal<number | null>(null);
+/** Set by the cause-and-effect matrix's Print button: print only the matrix. */
+export const [printCause, setPrintCause] = createSignal(false);
 /** Set by a loop diagram's Print button: print only that loop. */
 export const [printLoop, setPrintLoop] = createSignal<string | null>(null);
 
@@ -84,13 +87,14 @@ export const PrintPage = () => {
   const [views] = createResource(() => call<SheetView[]>("views"));
   const [which, setWhich] = createSignal<"all" | "this">("all");
   const [fitA3, setFitA3] = createSignal(false);
-  const [want, setWant] = createSignal<Record<string, boolean>>({ lines: true, equipment: true, instruments: true, valves: true, datasheets: false, legend: true, sheets_ds: false, loops: false });
+  const [want, setWant] = createSignal<Record<string, boolean>>({ lines: true, equipment: true, instruments: true, valves: true, datasheets: false, legend: true, sheets_ds: false, loops: false, cause: false });
   const [datasheets] = createResource(() => call<Datasheet[]>("datasheets_all"));
   const [loops] = createResource(async () => {
     const ls = (await call<LoopInfo[]>("loops")) ?? [];
     return (await Promise.all(ls.map(l => call<LoopView>("loop_diagram", { key: l.key })))).filter(Boolean) as LoopView[];
   });
-  onCleanup(() => { setPrintOnly(null); setPrintLoop(null); });
+  const [cause] = createResource(() => call<CauseMatrix>("cause_effect"));
+  onCleanup(() => { setPrintOnly(null); setPrintLoop(null); setPrintCause(false); });
   const [lists] = createResource(async () => Promise.all(LISTS.map(([k]) => call<List>("list", { kind: k }).then(l => l ?? null).catch(() => null))));
   const [zoomP, setZoomP] = createSignal(0.4);
   const sheets = createMemo(() => (views() ?? []).filter(v => which() === "all" || v.id === sheet()?.id));
@@ -116,6 +120,18 @@ export const PrintPage = () => {
     const only = printOnly();
     if (only !== null) return (datasheets() ?? []).filter(d => d.obj === only || d.item === only).map(dsPage);
     const loopPage = (l: LoopView): Page => ({ w: l.w, h: l.h, label: l.title, body: () => <div innerHTML={primsSvg(l.prims, l.w, l.h)} /> });
+    const p0 = proj();
+    const causePage = (m: CauseMatrix): Page => ({ w: 420, h: 297, label: "Cause and effect", body: () => (
+      <div class="plist pcem">
+        <header><b>Cause and effect</b><span>{p0?.title.project || p0?.name}</span><span>{p0?.title.company}</span></header>
+        <MatrixTable m={m} />
+        <table class="ptb"><tbody><tr>
+          <td><small>COMPANY</small>{p0?.title.company || "—"}</td><td><small>PROJECT</small>{p0?.title.project || p0?.name}</td><td><small>DOCUMENT</small>Cause and effect</td>
+          <td><small>BY</small>{p0?.title.by || "—"}</td><td><small>CHECKED</small>{p0?.title.checked || "—"}</td><td><small>DATE</small>{new Date().toLocaleDateString()}</td>
+        </tr></tbody></table>
+      </div>) });
+    const hasCause = () => !!cause() && cause()!.causes.length > 0 && cause()!.effects.length > 0;
+    if (printCause()) return hasCause() ? [causePage(cause()!)] : [];
     const lk = printLoop();
     if (lk !== null) return (loops() ?? []).filter(l => l.key === lk).map(loopPage);
     for (const v of sheets()) {
@@ -139,6 +155,7 @@ export const PrintPage = () => {
     });
     if (want().sheets_ds) for (const d of datasheets() ?? []) out.push(dsPage(d));
     if (want().loops) for (const l of loops() ?? []) out.push(loopPage(l));
+    if (want().cause && hasCause()) out.push(causePage(cause()!));
     if (want().legend && !(views() ?? []).some(v => v.legend)) {
       const used = [...new Set((p?.items ?? []).map(i => i.sym))].map(k => symOf(k)).filter(Boolean);
       if (used.length) out.push({ w: 420, h: 297, label: "Legend", body: () => (
@@ -165,8 +182,8 @@ export const PrintPage = () => {
         <h1>Print <Help k="export" /></h1>
         <div class="pbtns"><button class="btn pri big" onClick={doPrint}><svg class="ic"><use href="#i-print" /></svg> Print / Save as PDF</button></div>
         <p class="muted">In the print window choose your printer, or <b>Save as PDF</b>. {pages().length} {pages().length === 1 ? "page" : "pages"}.</p>
-        <Show when={printOnly() !== null || printLoop() !== null}><p class="small">Printing one {printLoop() !== null ? "loop diagram" : "datasheet"}. <button class="btn sm" onClick={() => { setPrintOnly(null); setPrintLoop(null); }}>Choose what to print</button></p></Show>
-        <Show when={printOnly() === null && printLoop() === null}>
+        <Show when={printOnly() !== null || printLoop() !== null || printCause()}><p class="small">Printing {printCause() ? "the cause-and-effect matrix" : printLoop() !== null ? "one loop diagram" : "one datasheet"}. <button class="btn sm" onClick={() => { setPrintOnly(null); setPrintLoop(null); setPrintCause(false); }}>Choose what to print</button></p></Show>
+        <Show when={printOnly() === null && printLoop() === null && !printCause()}>
         <h4>Sheets</h4>
         <Pick value={which()} set={v => setWhich(v as any)} options={[["all", "Every sheet"], ["this", "This sheet only"]]} />
         <Check label="Fit every sheet to A3" value={fitA3()} set={setFitA3} />
@@ -175,6 +192,7 @@ export const PrintPage = () => {
         <Check label="Legend (when there is no legend sheet)" value={!!want().legend} set={v => setWant({ ...want(), legend: v })} />
         <Check label={`Datasheets (${datasheets()?.length ?? 0}, one A4 page each)`} value={!!want().sheets_ds} set={v => setWant({ ...want(), sheets_ds: v })} />
         <Check label={`Loop diagrams (${loops()?.length ?? 0}, one A3 page each)`} value={!!want().loops} set={v => setWant({ ...want(), loops: v })} />
+        <Check label="Cause-and-effect matrix" value={!!want().cause} set={v => setWant({ ...want(), cause: v })} />
         </Show>
         <p class="muted small">Sheets print at their own size (A3, A1, ANSI B, ANSI D) unless fitted to A3; the lists print on A3 landscape with a header and page numbers; datasheets on A4 portrait; loop diagrams on A3 with the title block.</p>
         <p><button class="btn sm" onClick={() => setBackstage(null)}>Back to the drawing</button></p>

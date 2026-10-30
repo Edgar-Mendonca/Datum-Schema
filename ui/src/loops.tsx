@@ -3,7 +3,7 @@
 // channel) is typed here, or in the Inspector; the diagram follows. Print one loop or all.
 import { For, Show, createResource, createSignal } from "solid-js";
 import { LoopInfo, LoopView, LOOP_WIRING } from "./api";
-import { call, act, proj, openDialog, closeDialog, setBackstage } from "./store";
+import { call, act, proj, openDialog, closeDialog, setBackstage, toast } from "./store";
 import { Dialog } from "./ui";
 import { C } from "./cmds";
 import { primsSvg, setPrintLoop } from "./print";
@@ -18,6 +18,7 @@ export const openLoops = (start?: string) => openDialog(() => {
     <Dialog title={view() ? `${view()!.title}` : "Loop diagrams"} wide help="loops"
       extra={<>
         <button class="btn" disabled={!view()} onClick={() => { setPrintLoop(view()!.key); closeDialog(); setBackstage("print"); }}>Print…</button>
+        <button class="btn" disabled={!view()} title="Save this loop diagram as a DXF drawing" onClick={async () => { const f = await call<string | null>("export", { kind: "loopdxf", what: view()!.key, sheet: 0 }); if (f) toast(`Saved ${f}.`, true); }}>DXF</button>
       </>}>
       <Show when={(list() ?? []).length} fallback={<p class="muted">{list() ? "There are no loops yet: a loop is two or more instruments sharing a first letter and a loop number (LT-101, LIC-101, LV-101)." : "…"}</p>}>
         <div class="loops">

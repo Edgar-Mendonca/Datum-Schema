@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.11 — 2026-10-30
+
+Drawing fixes, the cause-and-effect matrix, the DEXPI exchange format, and loop diagrams in DXF.
+
+**Drawing lines.** The line you are drawing is now shown under the mouse all the way: press on a port and drag, or click a port and move. A click on a port starts a line that follows the mouse, snaps to the port under it (ringed), and ends at the next click: on a port, on a line (a branch) or anywhere (an open end). Escape or a right-click drops it. (Before, the line only appeared once it was finished. The box you drag to select several things is shown again too.)
+
+**Adding a symbol by name.** A double-click on the sheet (or Add Symbol) opens a small search box beside the point instead of a window over the drawing, so you can see where the symbol will go. Type a name or instrument letters, choose with the arrow keys, Enter places it; Escape or a click elsewhere closes it.
+
+**Cause and effect.** Lists › Cause & Effect reads the interlocks on the P&ID into a matrix: causes down (the switches and transmitters that trip, with their trip settings), effects across (the valves and drives they act on, and what each does: a valve goes to its fail position, a drive stops), and in each cell the interlock that links them. A switch wired straight to a valve counts too. Click a tag to find it; print the matrix on A3 or export it to Excel. The Compressor package example now has a trip to show it: high-high drum level or high-high gas temperature stops the motor and opens the recycle valve.
+
+**DEXPI export.** Sheets › DEXPI saves the sheet in the DEXPI P&ID exchange format (Proteus XML): equipment with its nozzles, each line number with its segments, centre lines, valves and connections, the instrument functions with their letters and loop numbers, the signal and impulse lines, and the attributes (DEXPI names in SI units). It is a first mapping, checked for well-formed XML and consistent references, not yet with other programs.
+
+**Loop diagrams in DXF.** The loop diagram window has a DXF button: the frame, the drawing and the texts on their own layers.
+
 ## 0.1.10 — 2026-10-30
 
 Datasheets from Excel, your company's datasheet form, and loop diagrams.

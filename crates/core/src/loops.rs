@@ -331,4 +331,15 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn a_loop_diagram_exports_to_dxf() {
+        let p = crate::examples::get("pump").unwrap();
+        let d = diagram(&p, "L-101").unwrap();
+        let text = crate::dxf::write_prims(&d.prims, d.w, d.h);
+        let (layers, _, counts) = crate::dxf::read_back(&text).unwrap();
+        assert!(["FRAME", "TEXT", "DRAWING"].iter().all(|l| layers.iter().any(|x| x == l)), "{layers:?}");
+        assert!(counts.get("TEXT").copied().unwrap_or(0) > 20 && counts.get("POLYLINE").copied().unwrap_or(0) > 10, "{counts:?}");
+        assert!(text.contains("LD-L-101"));
+    }
 }

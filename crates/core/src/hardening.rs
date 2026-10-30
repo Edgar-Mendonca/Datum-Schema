@@ -97,7 +97,17 @@ fn exercise(p: &Project) {
     let _ = crate::datasheets::xlsx(p);
     let _ = crate::datasheets::layout_rows(p);
     for l in crate::loops::all(p) {
-        crate::loops::diagram(p, &l.key).expect("every loop draws");
+        let d = crate::loops::diagram(p, &l.key).expect("every loop draws");
+        crate::dxf::read_back(&crate::dxf::write_prims(&d.prims, d.w, d.h)).expect("a loop diagram's DXF reads back");
+    }
+    let m = crate::cause::matrix(p);
+    assert_eq!(m.cells.len(), m.causes.len());
+    let _ = crate::cause::xlsx(p);
+    for s in &p.sheets {
+        let (_, ids, refs) = crate::dexpi::tests::parse(&crate::dexpi::write(p, s));
+        let set: std::collections::HashSet<&String> = ids.iter().collect();
+        assert_eq!(set.len(), ids.len(), "DEXPI IDs are unique");
+        assert!(refs.iter().all(|r| set.contains(r)), "DEXPI references resolve: {:?}", refs.iter().filter(|r| !set.contains(r)).collect::<Vec<_>>());
     }
     if let Ok(book) = crate::datasheets::xlsx(p) {
         crate::import::plan(p, &book).expect("an exported workbook reads back");

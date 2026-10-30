@@ -149,6 +149,12 @@ async fn import_datasheets(app: AppHandle, st: State<'_, St>) -> R<Option<datum_
     guard(|| datum_core::import::plan(&st.lock().doc.p, &bytes)).map(Some)
 }
 
+/// The cause-and-effect matrix of the project's interlocks.
+#[tauri::command]
+fn cause_effect(st: State<St>) -> R<datum_core::cause::Matrix> {
+    guard(|| Ok(datum_core::cause::matrix(&st.lock().doc.p)))
+}
+
 /// Every instrument loop with two or more members.
 #[tauri::command]
 fn loops(st: State<St>) -> R<Vec<datum_core::loops::LoopInfo>> {
@@ -296,11 +302,13 @@ async fn export(app: AppHandle, st: State<'_, St>, kind: String, what: String, s
     let name = st.lock().doc.p.name.clone();
     let (label, ext) = match kind.as_str() {
         "csv" => ("CSV", "csv"),
-        "xlsx" | "datasheets" => ("Excel workbook", "xlsx"),
+        "xlsx" | "datasheets" | "cause" => ("Excel workbook", "xlsx"),
+        "dexpi" => ("DEXPI P&ID exchange file", "xml"),
+        "loopdxf" => ("DXF drawing", "dxf"),
         "dxf" => ("DXF drawing", "dxf"),
         k => return Err(format!("Unknown export type {k}.")),
     };
-    let file = if kind == "dxf" { format!("{name}.dxf") } else if kind == "datasheets" { format!("{name} datasheets.xlsx") } else { format!("{name} {what}.{ext}") };
+    let file = if kind == "dxf" { format!("{name}.dxf") } else if kind == "datasheets" { format!("{name} datasheets.xlsx") } else if kind == "cause" { format!("{name} cause and effect.xlsx") } else if kind == "loopdxf" { format!("{name} loop {what}.dxf") } else if kind == "dexpi" { format!("{name}.xml") } else { format!("{name} {what}.{ext}") };
     let Some(path) = app.dialog().file().add_filter(label, &[ext]).set_file_name(file).blocking_save_file().and_then(|f| f.into_path().ok()) else { return Ok(None) };
     let bytes = guard(|| {
         let a = st.lock();
@@ -309,6 +317,12 @@ async fn export(app: AppHandle, st: State<'_, St>, kind: String, what: String, s
             "csv" => Ok(lists::csv(&lists::build(p, &what)?).into_bytes()),
             "xlsx" => lists::xlsx(p, &what),
             "datasheets" => datasheets::xlsx(p),
+            "cause" => datum_core::cause::xlsx(p),
+            "loopdxf" => datum_core::loops::diagram(p, &what).map(|d| dxf::write_prims(&d.prims, d.w, d.h).into_bytes()),
+            "dexpi" => {
+                let s = p.sheet(sheet).or(p.sheets.first()).ok_or("There is no sheet.")?;
+                Ok(datum_core::dexpi::write(p, s).into_bytes())
+            }
             _ => {
                 let s = p.sheet(sheet).or(p.sheets.first()).ok_or("There is no sheet.")?;
                 Ok(dxf::write(p, s).into_bytes())
@@ -532,7 +546,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
+            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
             options, set_options, autosave, recovery, recover, recent, startup_file, open_url, version, quit, check_update, install_update
         ])
         .run(tauri::generate_context!())
