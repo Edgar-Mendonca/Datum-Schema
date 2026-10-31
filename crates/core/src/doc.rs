@@ -91,6 +91,15 @@ pub enum Op {
     /// Issue a sheet at a revision: a row in its revision table, and the sheet as it is now kept
     /// to compare and cloud later changes against.
     IssueRevision { sheet: u32, rev: model::Rev },
+    /// Review comments: pin one to a sheet (about the things in `on`), reply, resolve or reopen,
+    /// edit or move one's text, delete one, or take in those of another copy of the project.
+    Comment { sheet: u32, x: f64, y: f64, text: String, #[serde(default)] on: Vec<u32>, #[serde(default)] by: String },
+    Reply { uid: String, text: String, #[serde(default)] by: String },
+    Resolve { uid: String, resolved: bool, #[serde(default)] by: String },
+    EditComment { uid: String, text: String },
+    MoveComment { uid: String, x: f64, y: f64 },
+    DeleteComment { uid: String },
+    MergeComments { comments: Vec<crate::review::Comment> },
     DeleteSheet { id: u32 },
     MoveSheet { id: u32, to: usize },
     SetTitle { title: Title },
@@ -197,6 +206,9 @@ impl Doc {
         let mut created = vec![];
         let op = match op {
             Op::IssueDatasheet { ids, rev, status, date, note, by } if by.trim().is_empty() => Op::IssueDatasheet { ids, rev, status, date, note, by: self.user.clone() },
+            Op::Comment { sheet, x, y, text, on, by } if by.trim().is_empty() => Op::Comment { sheet, x, y, text, on, by: self.user.clone() },
+            Op::Reply { uid, text, by } if by.trim().is_empty() => Op::Reply { uid, text, by: self.user.clone() },
+            Op::Resolve { uid, resolved, by } if by.trim().is_empty() => Op::Resolve { uid, resolved, by: self.user.clone() },
             op => op,
         };
         exec(&mut q, op, &mut created)?;
@@ -637,6 +649,7 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
             s.snaps.retain(|x| x.rev != r);
             s.snaps.push(model::Snap { rev: r, date: rev.date, body: Some(body) });
         }
+        Op::Comment { .. } | Op::Reply { .. } | Op::Resolve { .. } | Op::EditComment { .. } | Op::MoveComment { .. } | Op::DeleteComment { .. } | Op::MergeComments { .. } => crate::review::exec(p, op)?,
         Op::DeleteSheet { id } => {
             if p.sheets.len() < 2 {
                 return Err("A project keeps at least one sheet.".into());

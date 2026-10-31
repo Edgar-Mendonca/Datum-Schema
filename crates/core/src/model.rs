@@ -551,6 +551,8 @@ pub struct Project {
     pub issues: Vec<Issue>,
     /// Copies of the library symbols this project uses (so it opens without the library).
     pub custom_syms: Vec<crate::symlib::CustomSym>,
+    /// Review comments pinned to the sheets, oldest first.
+    pub comments: Vec<crate::review::Comment>,
     pub settings: Settings,
     /// The next id for anything (sheets, items, lines and notes share one sequence).
     pub next: u32,
@@ -565,7 +567,7 @@ impl Default for Project {
 impl Project {
     /// A new project with one blank A3 sheet.
     pub fn new() -> Self {
-        let mut p = Self { format: FORMAT, name: "Project1".into(), units: "SI".into(), title: Title::default(), nodes: vec![], objects: vec![], sheets: vec![], items: vec![], lines: vec![], notes: vec![], issues: vec![], custom_syms: vec![], settings: Settings::default(), next: 1 };
+        let mut p = Self { format: FORMAT, name: "Project1".into(), units: "SI".into(), title: Title::default(), nodes: vec![], objects: vec![], sheets: vec![], items: vec![], lines: vec![], notes: vec![], issues: vec![], custom_syms: vec![], comments: vec![], settings: Settings::default(), next: 1 };
         let id = p.id();
         p.sheets.push(Sheet { id, ..Sheet::default() });
         p.default_nodes();
@@ -1014,6 +1016,7 @@ impl Project {
             }
         }
         self.streams();
+        crate::review::normalize(self);
         // Issued revisions belong to their object and go with it.
         self.issues.retain(|i| objs.contains(&i.obj));
         for i in &mut self.issues {
@@ -1155,6 +1158,7 @@ pub fn from_json(text: &str) -> Result<(Project, Vec<String>), String> {
     p.notes = list(part("notes", &mut w), "notes", &mut w);
     p.issues = list(o.get("issues").cloned(), "datasheet revisions", &mut w);
     p.custom_syms = list(o.get("custom_syms").cloned(), "library symbols", &mut w);
+    p.comments = list(o.get("comments").cloned(), "review comments", &mut w);
     if format < 2 {
         migrate_1(&mut p, raw_items, raw_lines);
         w.push("This file was made by Datum Schema 0.1.4 or earlier; it now keeps its symbols' and lines' data in plant objects (save it to keep the new form).".into());

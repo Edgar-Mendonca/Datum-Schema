@@ -5,8 +5,9 @@
 // draws it and sends edits.
 import { For, Show, JSX, createSignal, createMemo, createEffect, onMount, onCleanup, batch, on } from "solid-js";
 import { Pt, Prim, ItemView, LineView, End, Kind, Item, Line, Note } from "./api";
-import { derived, sel, setSel, act, proj, sheet, opts, tool, setTool, symOf, lib, openMenu, MenuItem, hiNumber, hidden, setSheetId, lineOf, onFit, bgs, loadBg } from "./store";
+import { derived, sel, setSel, act, proj, sheet, opts, tool, setTool, symOf, lib, openMenu, MenuItem, hiNumber, hidden, setSheetId, lineOf, onFit, bgs, loadBg, setPanel, setPanelOpen } from "./store";
 import { C } from "./cmds";
+import { focus, setFocus, newComment } from "./review";
 import { helpCard } from "./help";
 
 export const [zoom, setZoom] = createSignal(2);
@@ -198,6 +199,8 @@ export const Canvas = () => {
     const add = e.shiftKey || e.ctrlKey || e.metaKey;
     if (t.k === "place") { placeAt(t.sym, p, t.tag, t.obj); if (!e.shiftKey || t.obj) setTool({ k: "select" }); return; }
     if (t.k === "note") { C.addNote(t.kind, [snap(p[0]), snap(p[1])]); setTool({ k: "select" }); return; }
+    // Opened once the click is over, so its mouse-up does not land on the dialog's backdrop.
+    if (t.k === "comment") { addEventListener("mouseup", () => setTimeout(() => newComment(p)), { once: true }); setTool({ k: "select" }); return; }
     // Ports start lines (the line tool also starts them anywhere).
     const po = portAt(p);
     if (po && (t.k === "line" || !selSet().has(po.it.id) || e.altKey || hover() === po.it.id)) {
@@ -419,6 +422,9 @@ export const Canvas = () => {
             </g>;
           }}</For></g>
           <Show when={sv().clouds.length}><g class="revclouds"><For each={sv().clouds}>{p => <PrimEl p={p} />}</For></g></Show>
+          <g class="pins"><For each={sv().pins}>{pn => <g class="pin" classList={{ resolved: pn.resolved, on: focus() === pn.uid }} transform={`translate(${pn.x} ${pn.y})`} onMouseDown={e => { e.stopPropagation(); setFocus(pn.uid); setPanel("comments"); setPanelOpen(true); }}>
+            <title>{proj()?.comments.find(c => c.uid === pn.uid)?.text ?? ""}</title>
+            <path d="M0 0 L-1.6 -3.2 A4 4 0 1 1 1.6 -3.2 Z" /><text x="0" y="-6.6" font-size="3.2" text-anchor="middle" dominant-baseline="central">{pn.n}</text></g>}</For></g>
           <g class="notes"><For each={notes()}>{nt => {
             const o = () => off(nt.id);
             return <g class={`note ${nt.kind}`} classList={cls(nt.id)} transform={`translate(${o()[0]} ${o()[1]})`}>
@@ -461,6 +467,7 @@ const toolText = () => {
   const t = tool();
   if (t.k === "line") return `Drawing ${lib()?.kinds.find(k => k[0] === t.kind)?.[1].toLowerCase() ?? "lines"}: drag from a port, a line or anywhere`;
   if (t.k === "place") return `Placing ${symOf(t.sym)?.name.toLowerCase() ?? "a symbol"}${t.tag ? ` (${t.tag})` : ""}: click the sheet (Shift keeps placing)`;
+  if (t.k === "comment") return "Click where the comment applies (select what it is about first)";
   if (t.k === "note") return t.kind === "hold" ? "Click where the Hold cloud goes" : "Click where the note goes";
   return "";
 };

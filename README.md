@@ -43,6 +43,7 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Process flow diagrams**: PFD sheets whose lines are streams (mass and volume flow, temperature, pressure, vapour fraction, density, enthalpy flow), numbered in diamonds, with their compositions, a stream table on the sheet, a stream list, and heat and mass balance checks round every item; P&ID lines can name the stream they carry and are checked against it.
 - **A client's symbols**: read a client's legend sheet (DXF) into a symbol library, with suggested meanings and connection points to review; draw a whole project to that standard and back, with the objects, data and checks unchanged; share libraries as files.
 - **Old drawings**: a DXF shown faintly behind a sheet, to redraw an old P&ID as a live one.
+- **Review comments**: pinned to the drawing, with replies and resolve or reopen; reviewers work on their own copies and their comments are taken back in without doubles.
 - **Revisions**: issue a sheet at a revision, compare it later with what changed, and cloud the changes with the revision triangle.
 - **The Datum family**: send a line to Datum Pipe as a stress model, and a control loop to Datum Sim as a model to tune.
 - **I/O summary**: inputs and outputs per control system (AI, AO, DI, DO, fieldbus) with 20% spare, from the instruments' wiring and signals.

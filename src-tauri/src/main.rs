@@ -312,6 +312,19 @@ async fn underlay_import(app: AppHandle, st: State<'_, St>, sheet: u32) -> R<Opt
     })
 }
 
+/// Takes in the review comments of another copy of the project (a reviewer's).
+#[tauri::command]
+async fn comments_import(app: AppHandle, st: State<'_, St>) -> R<Option<(Out, datum_core::review::Merged)>> {
+    let Some(path) = pick(&app, "Datum Schema project (a reviewer's copy)", &["dschema"]) else { return Ok(None) };
+    let (theirs, _, _) = datum_core::file::read(&path)?;
+    guard(|| {
+        let mut a = st.lock();
+        let m = datum_core::review::merge(&mut a.doc.p.clone(), theirs.comments.clone());
+        a.doc.apply(Op::MergeComments { comments: theirs.comments })?;
+        Ok(Some((out(&a), m)))
+    })
+}
+
 /// A title block on its own, drawn for the editor (with the open sheet's values).
 #[tauri::command]
 fn title_preview(st: State<St>, block: model::TitleBlock, sheet: u32) -> R<datum_core::frame::Preview> {
@@ -702,7 +715,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, title_preview, title_standard, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
+            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, title_preview, title_standard, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
             options, set_options, autosave, recovery, recover, recent, startup_file, open_url, version, quit, check_update, install_update
         ])
         .run(tauri::generate_context!())

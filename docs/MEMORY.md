@@ -6,7 +6,7 @@
 | | |
 | --- | --- |
 | **Product** | Datum Schema: intelligent P&IDs and process flow diagrams: draw, check and list (symbols and lines that carry their data and connections; live line list, equipment list, instrument index and valve list; drawing checks; line hydraulics; print, SVG and DXF) |
-| **Current version** | 0.3.2 (2026-10-30) |
+| **Current version** | 0.3.3 (2026-10-31) |
 | **Repo** | `Edgar-Mendonca/Datum-Schema` · branch `claude/vigilant-hamilton-ku7r0w` (the first branch pushed, so the default branch) |
 | **Stack** | Rust engine (`crates/core`: model, symbols, graph, tags, checks, hydraulics, lists, frame, routing, DXF), Tauri 2, SolidJS + strict TypeScript; no Python |
 | **Identifier** | `com.edgarmendonca.datumschema` · files `.dschema` (SQLite, `format` 4 from 0.2.0 (items.base, `underlays` and `snapshots` tables, meta "symbols"); 3 from 0.1.9; 2 before: no `issues` table; JSON `format` 1 from 0.1.0–0.1.4 converts) · symbol libraries `.dschemalib` (JSON, in app data › libraries) · installer `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` · publisher "Datum" |
@@ -40,6 +40,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | `crates/core/src/links.rs` | Datum Pipe (`to_pipe`: a run as a `.dpipe` straight model between two anchors with its valves as rigid elements, size, schedule, design T/P, density, length) and Datum Sim (`to_sim`: a loop as a `.dsim` with Step, Sum, PID, valve, process (integrating for level, with an outflow), transmitter and Scope; dynamics as model variables) |
 | `crates/core/src/pfd.rs` | Process flow diagrams: the stream table on the sheet (`table`, bands left of the title block), checks 14 (mass) and 15 (heat, duty or shaft power) round each item, and 16 (a P&ID line's `stream` against the stream's mass flow) |
 | `crates/core/src/instruments.rs` | `parse_range` (text ranges in their units, or the project's), checks 18 (range covers the line's operating value via `datasheets::process_source`), 19 (control valve fail position), 20 (loop wiring finished once started); `io_of` and `io_summary` (AI/AO/DI/DO/fieldbus per control system) |
+| `crates/core/src/review.rs` | Review comments (`Comment`, `Reply` with uids; ops Comment, Reply, Resolve, EditComment, MoveComment, DeleteComment, MergeComments; `merge` by uid with the newest status winning; `normalize`; `pins` for the view; `when` dates) |
+| `ui/src/review.tsx` | The Comment tool's dialog, the Comments panel, Import Review |
 | `crates/core/src/revs.rs` | Sheet revisions: `snapshot` (items, lines with routes, notes, objects' tag and data), `compare` (added, removed, changed: moved, rerouted, symbol, tag, data; gathered into areas), `cloud` (scallops and the triangle), `clouds` for the view, `next_rev` |
 | `crates/core/src/units.rs` | Calc's unit table (NIST SP 811) with unit expressions and Schema's display table |
 | `crates/core/src/pipes.rs` | Pipe's sizes ½"–24" and schedules (ASME B36.10M/B36.19M dimensions); inside diameters |
@@ -98,6 +100,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 
 | Version | Decision | Why |
 | --- | --- | --- |
+| 0.3.3 | Review without a server: each reviewer works on a copy of the file and the comments are merged back by uid (comments and replies added, the newest resolved/reopened status wins, a missing sheet or target falls back). Comments live in `Project.comments` (meta "comments"); author from the Options name (`Doc::apply` fills `by`); pins are window overlays, never printed on sheets | Several people review one project with no shared database; a review must not reach an issued drawing |
 | 0.3.2 | The standard title block is data (`frame::standard()`); a company block is the same cells in `settings.title_block`, with own fields in `title.extra` ("f:<name>") and fixed text ("text:…"). The logo is the datasheet logo, drawn by the window and print at the engine's `logo` place and left out of DXF (R12 has no images) | One drawing path for both; a company has one logo |
 | 0.3.1 | The user asked to step the 0.4 roadmap as 0.3.1, 0.3.2, … (one item per release) | The user's call |
 | 0.3.1 | Take-off groups by (category, type, size, line pipe class, own rating), one count per object, P&ID sheets only; size is the item's own, else its lines' (largest first, joined with ×) | A requisition counts components, not drawings; a reducer or relief valve spans two sizes |
@@ -182,7 +185,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.3.0 | Stream compositions and check 17 (component balance, fractions add up); I/O summary (list, print, Excel); checks 18 (range covers the operating value), 19 (fail position), 20 (loop wiring) | ✅ |
 | 0.3.1 | Valve and fitting take-off (list, print, Excel, CSV; Tell Me entries for the newer lists) | ✅ |
 | 0.3.2 | Company title blocks (cells, fields, own fields, logo; editor with the engine's preview; save, load, use for new projects) | ✅ |
-| 0.3.3 | Review comments | 🔜 |
+| 0.3.3 | Review comments (pins, replies, resolve/reopen, edit, delete; import a reviewer's copy; list, print, Excel) | ✅ |
+| 0.3.4 | User guide (in the app, printable) | 🔜 |
 | 0.5 | Company templates; project reports (valve and fitting take-off); review comments | ⬜ |
 | 1.0 | User guide, a validation note for the hydraulics, signed installer | ⬜ |
 
@@ -271,4 +275,9 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 ### 2026-10-30: Session 1, 0.3.2 (company title blocks)
 - The title block is now drawn from cells; the standard block is the default list and draws exactly as before. Company blocks have their own size (60–400 × 15–150 mm, sound after `normalize`), fields of their own filled in the Inspector, fixed text and the logo; files to share (`*.dstitle.json`), and a default for new projects (applied in `fresh`).
 - Tests: engine 105 (a company block with logo, own field, fixed text and an absurd cell clamped inside; reserved space; preview; JSON round trip; fallback to standard); UI checks for turning it on, adding a cell and filling the field from the Inspector.
+
+### 2026-10-31: Session 1, 0.3.3 (review comments)
+- The user asked for 0.3.3 and then 0.3.4. Review comments: `review.rs` (model, ops, merge, normalize, pins), a Comments panel and pins in the window, Check › Comment and Import Review, the Review comments list for print and Excel.
+- The comment dialog opens after the click is over (on mouse-up), so the click cannot land on the dialog. A first UI test failed only because it clicked the tool hint bar at the top of the canvas; it now clicks the sheet.
+- Tests: engine 107 (dates; comment, reply, resolve, merge both ways with no doubles, undo, pins, list, a deleted target, save and reopen, hostile input); UI checks for pinning, replying, importing a reviewer's copy and resolving.
 

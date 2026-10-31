@@ -79,7 +79,7 @@ export const [tab, setTab] = createSignal("home");
 // ---------- selection and tools ----------
 /** Selected items, lines and notes (ids are unique across all three). */
 export const [sel, setSel] = createSignal<number[]>([]);
-export type Tool = { k: "select" } | { k: "line"; kind: Kind } | { k: "place"; sym: string; tag?: string; obj?: number } | { k: "note"; kind: NoteKind };
+export type Tool = { k: "select" } | { k: "line"; kind: Kind } | { k: "place"; sym: string; tag?: string; obj?: number } | { k: "note"; kind: NoteKind } | { k: "comment" };
 export const [tool, setTool] = createSignal<Tool>({ k: "select" });
 /** The line number highlighted on every sheet (Select › By line number). */
 export const [hiNumber, setHiNumber] = createSignal("");

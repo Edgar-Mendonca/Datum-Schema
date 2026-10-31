@@ -24,6 +24,7 @@ pub mod loops;
 pub mod model;
 pub mod pfd;
 pub mod pipes;
+pub mod review;
 pub mod revs;
 pub mod route;
 pub mod symbols;

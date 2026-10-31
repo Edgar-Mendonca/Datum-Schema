@@ -46,7 +46,11 @@ export interface SymLibrary { format: number; name: string; source: string; symb
 export interface LibView { file: string; library: SymLibrary; svgs: string[]; warnings: string[] }
 /** The company's datasheet layout: form number, logo (data URL), footer, rows left out ("Section › Label"), section order. */
 export interface DsLayout { form: string; logo: string; footer: string; hidden: string[]; order: string[] }
-export interface Project { format: number; name: string; units: "SI" | "US"; title: Title; nodes: PlantNode[]; objects: Obj[]; sheets: Sheet[]; items: Item[]; lines: Line[]; notes: Note[]; settings: Settings; next: number }
+export interface Project { format: number; name: string; units: "SI" | "US"; title: Title; nodes: PlantNode[]; objects: Obj[]; sheets: Sheet[]; items: Item[]; lines: Line[]; notes: Note[]; comments: Comment[]; settings: Settings; next: number }
+/** A review comment pinned to a sheet (times in seconds since 1970). */
+export interface Reply { uid: string; by: string; time: number; text: string }
+export interface Comment { uid: string; sheet: number; x: number; y: number; by: string; time: number; text: string; on: number[]; replies: Reply[]; resolved: boolean; resolved_by: string; status_time: number }
+export interface Pin { uid: string; n: number; x: number; y: number; resolved: boolean }
 export interface Out { p: Project; path: string | null; dirty: boolean; undo: boolean; redo: boolean; created: number[]; warnings: string[] }
 
 // ---------- what the engine draws (view.rs) ----------
@@ -61,7 +65,7 @@ export interface ItemView { id: number; obj: number; sym: string; cat: Cat; x: n
 export interface LineView { id: number; obj: number; kind: Kind; path: Pt[]; segs: Pt[][]; marks: Prim[]; number: string; badge: number | null; run: number | null; layer: string }
 export interface NoteView { id: number; kind: NoteKind; prims: Prim[]; bbox: [number, number, number, number] }
 export interface LegendRow { sym: string | null; kind: Kind | null; x: number; y: number; name: string }
-export interface SheetView { id: number; number: string; title: string; w: number; h: number; legend: boolean; frame: Prim[]; items: ItemView[]; lines: LineView[]; notes: NoteView[]; legend_rows: LegendRow[]; underlay: Underlay | null; clouds: Prim[]; logo: [number, number, number, number] | null }
+export interface SheetView { id: number; number: string; title: string; w: number; h: number; legend: boolean; frame: Prim[]; items: ItemView[]; lines: LineView[]; notes: NoteView[]; legend_rows: LegendRow[]; underlay: Underlay | null; clouds: Prim[]; logo: [number, number, number, number] | null; pins: Pin[] }
 export interface Issue { rule: number; level: "error" | "warning" | "note"; msg: string; ids: number[]; sheet: number; at: Pt }
 export interface Hyd { id: number; v: number; re: number; f: number; dp100: number; dp: number; length: number; service: string; service_name: string; vmin: number; vmax: number; dpmax: number; status: number; reason: string }
 export interface Derived { view: SheetView | null; issues: Issue[]; hyd: (Hyd | null)[]; runs: number[][]; numbers: Record<string, string>; attrs: Record<string, Field[]> }

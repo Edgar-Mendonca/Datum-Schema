@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.3 — 2026-10-31
+
+Review comments.
+
+**Comments on the drawing.** Select what a comment is about (or nothing), then Check › **Comment** and click the sheet where it applies. A numbered pin marks it; the **Comments** tab under the drawing lists them, open ones first, with replies: Reply, Resolve or Reopen, Edit, delete, or click one to go to it and select what it is about. Comments are signed with your name from File › Options and dated. The status bar counts the open ones.
+
+**Several reviewers.** Send each reviewer a copy of the project file. When it comes back, Check › **Import Review…** takes in their new comments, replies and resolutions without doubles (every comment and reply has its own id; the newest resolution wins), and Undo takes the import back.
+
+**Print and export.** File › Print can include the review comments as a list; the Comments list exports to Excel or CSV. Pins are never printed on the sheets, so a review does not end up on an issued drawing.
+
 ## 0.3.2 — 2026-10-30
 
 Your company's title block.

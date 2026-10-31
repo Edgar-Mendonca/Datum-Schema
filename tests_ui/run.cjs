@@ -580,6 +580,21 @@ const shots = process.env.SHOTS;
   { const inp = p.locator(".insp .iprow:has-text('Contract') input"); await inp.fill("C-2026-17"); await inp.press("Tab"); await p.waitForTimeout(400); }
   check("the field of our own is drawn in the title block", (await p.$$eval(".dsvg .frame text", els => els.map(e => e.textContent))).includes("C-2026-17"));
 
+  // 41. Review comments: pin one, reply, take in a reviewer's copy (their reply resolves it).
+  await openEx("Pump transfer");
+  await p.click(".tabs button:text-is('Check')"); await p.click(".ribbon button:has-text('Comment')");
+  { const [cx, cy] = await scr(200, 150); await p.mouse.click(cx, cy); }
+  await p.waitForSelector(".dlg textarea"); await p.fill(".dlg textarea", "Check the receiver nozzle size"); await p.click(".dlg footer button:has-text('Add comment')"); await p.waitForTimeout(400);
+  { const q = await project(); check("a comment is pinned to the sheet", q.comments.length === 1 && q.comments[0].text === "Check the receiver nozzle size" && (await p.$$(".dsvg .pins .pin")).length === 1); }
+  check("the status bar counts open comments", (await p.textContent(".status")).includes("1 open comments"));
+  await p.fill(".cmcard .cmrow input", "Will do"); await p.press(".cmcard .cmrow input", "Enter"); await p.waitForTimeout(400);
+  check("a reply is added", (await project()).comments[0].replies.length === 1);
+  await p.click(".cmpanel button:has-text('Import a reviewer')"); await p.waitForTimeout(500);
+  { const q = await project(); check("a reviewer's copy comes in: a new comment, a reply and the resolution", q.comments.length === 2 && q.comments[0].resolved && q.comments[0].replies.length === 2 && q.comments[0].resolved_by === "Reviewer", JSON.stringify(q.comments.map(c => [c.text, c.resolved, c.replies.length]))); }
+  check("the open list shows only the reviewer's new comment", (await p.$$(".cmcard")).length === 1);
+  await p.click(".cmcard button:has-text('Resolve')"); await p.waitForTimeout(300);
+  check("resolved: nothing open", (await p.$$(".cmcard")).length === 0 && !(await p.textContent(".status")).includes("open comments"));
+
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();
   await fetch(`${url}quit`).catch(() => {});

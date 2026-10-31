@@ -34,6 +34,7 @@
     "Stream compositions with a component balance; an I/O summary per control system with spare",
     "A valve and fitting take-off by type, size, pipe class and rating",
     "Your company's title block: its cells, fields and logo, shared as a file",
+    "Review comments pinned to the drawing, with replies; reviewers' copies merged back in",
     "Plant objects in a plant › unit › area hierarchy; symbols are views, every change is recorded",
     "A class library you can extend with your company's attributes",
     "Instrument datasheets with process conditions from the P&ID; revisions with what changed (Δ); your company's form; import from Excel; print and Excel",
@@ -57,22 +58,23 @@
   "roadmap": [
     {
       "v": "0.3",
-      "title": "Instrument documents, compositions and company templates",
+      "title": "Instrument documents, compositions, company templates and review",
       "when": "Now",
       "items": [
         "Stream compositions and the component balance",
         "I/O summary per control system, with spare",
         "Checks: instrument ranges, control valve fail positions, loop wiring",
         "0.3.1: valve and fitting take-off",
-        "0.3.2: company title blocks"
+        "0.3.2: company title blocks",
+        "0.3.3: review comments"
       ]
     },
     {
-      "v": "0.3.3",
-      "title": "Review",
+      "v": "0.3.4",
+      "title": "User guide",
       "when": "Next",
       "items": [
-        "Review comments from several people, pinned to the drawing"
+        "A user guide in the app, printable: every feature, step by step"
       ]
     },
     {
@@ -80,7 +82,6 @@
       "title": "Version 1",
       "when": "Goal",
       "items": [
-        "User guide",
         "A validation note for the hydraulics",
         "Signed installer"
       ]

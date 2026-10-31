@@ -166,6 +166,21 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             s.exports.push(json!({ "kind": str_("kind"), "what": what, "text": sent.text }));
             json!({ "path": sent.file, "notes": sent.notes })
         }
+        "comments_import" => {
+            // The test cannot pick a file: a reviewer's copy made here, with a new comment and a
+            // reply to (and the resolving of) the first one.
+            let mut theirs = datum_core::doc::Doc::new(s.doc.p.clone());
+            theirs.user = "Reviewer".into();
+            let sh = s.doc.p.sheets[0].id;
+            theirs.apply(Op::Comment { sheet: sh, x: 120.0, y: 60.0, text: "Reviewer: add a drain here".into(), on: vec![], by: String::new() })?;
+            if let Some(first) = s.doc.p.comments.first().map(|c| c.uid.clone()) {
+                theirs.apply(Op::Reply { uid: first.clone(), text: "Agreed".into(), by: String::new() })?;
+                theirs.apply(Op::Resolve { uid: first, resolved: true, by: String::new() })?;
+            }
+            let m = datum_core::review::merge(&mut s.doc.p.clone(), theirs.p.comments.clone());
+            s.doc.apply(Op::MergeComments { comments: theirs.p.comments })?;
+            json!([out(s, vec![], vec![]), m])
+        }
         "title_preview" => {
             let b: datum_core::model::TitleBlock = serde_json::from_value(a["block"].clone()).map_err(|e| e.to_string())?;
             let id = a["sheet"].as_u64().unwrap_or(0) as u32;

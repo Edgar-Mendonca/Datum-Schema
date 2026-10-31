@@ -43,7 +43,7 @@ pub fn write(path: &Path, p: &Project, history: &[Change]) -> Result<(), String>
         c.execute_batch(SCHEMA).map_err(sql)?;
         let t = c.transaction().map_err(sql)?;
         let js = |v: &dyn erased::Ser| v.json();
-        for (k, v) in [("format", model::FORMAT.to_string()), ("app", format!("Datum Schema {}", env!("CARGO_PKG_VERSION"))), ("name", p.name.clone()), ("units", p.units.clone()), ("next", p.next.to_string()), ("title", js(&p.title)), ("settings", js(&p.settings)), ("symbols", js(&p.custom_syms))] {
+        for (k, v) in [("format", model::FORMAT.to_string()), ("app", format!("Datum Schema {}", env!("CARGO_PKG_VERSION"))), ("name", p.name.clone()), ("units", p.units.clone()), ("next", p.next.to_string()), ("title", js(&p.title)), ("settings", js(&p.settings)), ("symbols", js(&p.custom_syms)), ("comments", js(&p.comments))] {
             t.execute("INSERT INTO meta VALUES (?1, ?2)", params![k, v]).map_err(sql)?;
         }
         for n in &p.nodes {
@@ -141,6 +141,7 @@ fn read_sqlite(path: &Path) -> Result<(Project, Vec<Change>, Vec<String>), Strin
     p.title = meta("title").and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default();
     p.settings = meta("settings").and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default();
     p.custom_syms = meta("symbols").and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default();
+    p.comments = meta("comments").and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default();
     // Each table on its own; rows that cannot be read are counted and left out.
     fn table<T>(c: &Connection, q: &str, what: &str, w: &mut Vec<String>, f: impl Fn(&rusqlite::Row) -> rusqlite::Result<Option<T>>) -> Vec<T> {
         let mut out = vec![];

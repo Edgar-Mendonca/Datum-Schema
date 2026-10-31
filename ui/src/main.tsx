@@ -47,6 +47,7 @@ const Status = () => {
       <span class="muted">{proj() ? `${proj()!.sheets.length} sheets · ${proj()!.items.length} symbols · ${proj()!.lines.length} lines` : ""}</span>
       <Show when={sel().length}><span class="muted">{sel().length} selected</span></Show>
       <Show when={hidden().length}><span class="muted">Hidden: {hidden().join(", ")}</span></Show>
+      <Show when={(proj()?.comments ?? []).some(c => !c.resolved)}><button class="sbtn" onClick={() => C.panel("comments")} title="Open the Comments panel">{(proj()?.comments ?? []).filter(c => !c.resolved).length} open comments</button></Show>
       <span class="grow" />
       <span class="muted">{proj()?.units === "US" ? "US units" : "SI units"}</span>
     </footer>

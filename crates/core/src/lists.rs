@@ -37,7 +37,7 @@ pub struct List {
     pub rows: Vec<Row>,
 }
 
-pub const KINDS: [(&str, &str); 8] = [("lines", "Line list"), ("streams", "Stream list"), ("io", "I/O summary"), ("takeoff", "Valve and fitting take-off"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list"), ("datasheets", "Datasheet index")];
+pub const KINDS: [(&str, &str); 9] = [("lines", "Line list"), ("streams", "Stream list"), ("io", "I/O summary"), ("takeoff", "Valve and fitting take-off"), ("comments", "Review comments"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list"), ("datasheets", "Datasheet index")];
 
 /// (key, label, quantity, editable)
 type Spec = (&'static str, &'static str, &'static str, bool);
@@ -287,6 +287,23 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
                 .collect();
             let mut cs = cols(&specs, us);
             cs[4].num = true;
+            (cs, rows)
+        }
+        "comments" => {
+            let specs: Vec<Spec> = vec![("n", "No.", "", false), ("sheet", "Sheet", "", false), ("by", "By", "", false), ("date", "Date", "", false), ("text", "Comment", "", false), ("replies", "Replies", "", false), ("status", "Status", "", false)];
+            let rows = p
+                .comments
+                .iter()
+                .enumerate()
+                .map(|(i, c)| {
+                    let replies = c.replies.iter().map(|r| format!("{}: {}", if r.by.is_empty() { "?" } else { &r.by }, r.text)).collect::<Vec<_>>().join(" | ");
+                    let status = if c.resolved { if c.resolved_by.is_empty() { "Resolved".to_string() } else { format!("Resolved ({})", c.resolved_by) } } else { "Open".into() };
+                    let cells = vec![(i + 1).to_string(), sheet_no(p, c.sheet), c.by.clone(), crate::review::when(c.time), c.text.clone(), replies, status];
+                    Row { ids: c.on.clone(), sheet: c.sheet, cells, status: Some(if c.resolved { 0 } else { 1 }) }
+                })
+                .collect();
+            let mut cs = cols(&specs, us);
+            cs[0].num = true;
             (cs, rows)
         }
         "datasheets" => {
