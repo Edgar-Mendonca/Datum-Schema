@@ -50,6 +50,7 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Valve and fitting take-off**: every piping component counted by type, size, pipe class and rating, with its tags, for a material requisition.
 - **Lists**: line list, stream list, I/O summary, take-off, equipment list, instrument index, valve list and datasheet index, always in step with the drawing; edit them, export to Excel or CSV, print them.
 - **Print and export**: PDF (sheets at their size or fitted to A3, lists, legend), SVG, DXF (R12) that opens in any CAD program, and the DEXPI P&ID exchange format (XML), which it also opens.
+- **User guide**: in the app (Help › User Guide), searchable and printable, with every feature step by step.
 - **Examples**: a pump transfer, a compressor package, a steam heater loop, a crude preheat process flow diagram, and "Find the faults".
 - **Safe files**: `.dschema` projects (a single SQLite database with the history), atomic saves, recovery of unsaved work, undo and redo for everything.
 

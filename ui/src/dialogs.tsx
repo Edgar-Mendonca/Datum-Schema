@@ -88,72 +88,81 @@ export const pairDialog = (id: number) => openDialog(() => {
   </Dialog>;
 });
 
-export const shortcuts = () => openDialog(() => (
-  <Dialog title="Keyboard shortcuts">
-    <table class="tbl keys"><tbody><For each={[
+/** The keyboard shortcuts (the shortcuts card and the user guide). */
+export const SHORTCUTS: [string, string][] = [
       ["Save / Save As", "Ctrl+S / Ctrl+Shift+S"], ["Open", "Ctrl+O"], ["New", "Ctrl+N"], ["Print", "Ctrl+P"], ["Tell me what you want to do", "Ctrl+K"],
       ["Undo / Redo", "Ctrl+Z / Ctrl+Y"], ["Delete the selection", "Del"], ["Copy / Paste / Duplicate", "Ctrl+C / Ctrl+V / Ctrl+D"], ["Select everything on the sheet", "Ctrl+A"],
       ["Rotate / Mirror the selected symbols", "R / M"], ["Nudge the selection (Shift: further)", "Arrow keys"], ["Draw lines", "L (Esc stops)"],
       ["Add a symbol by name", "Double-click the sheet"], ["Draw a line", "Drag from a port (the small circles)"], ["Move a line's segment", "Drag it"], ["Remove a bend point", "Double-click it"],
       ["Jump to an off-page partner", "Double-click the connector"], ["Fit the sheet", "F"], ["Pan / zoom", "Wheel or middle drag / Ctrl+wheel"], ["This list", "F1"],
-    ] as [string, string][]}>{([a, b]) => <tr><td>{a}</td><td><kbd>{b}</kbd></td></tr>}</For></tbody></table>
+    ];
+
+export const shortcuts = () => openDialog(() => (
+  <Dialog title="Keyboard shortcuts">
+    <table class="tbl keys"><tbody><For each={SHORTCUTS}>{([a, b]) => <tr><td>{a}</td><td><kbd>{b}</kbd></td></tr>}</For></tbody></table>
   </Dialog>
 ));
+
+/** Getting started (its card and the user guide's first chapter). */
+export const GettingStarted = () => (
+  <div class="helpcard">
+    <p>Datum Schema draws P&IDs and process flow diagrams where every symbol and line carries its data and knows what it is connected to. From the drawing it writes the line list, the equipment list, the instrument index and the valve list, checks the drawing as you work, and sizes every line.</p>
+    <h4>Draw the plant</h4>
+    <ol>
+      <li>Drag symbols from the <b>palette</b> on the left onto the sheet, or double-click the sheet and type a name (“ball valve”, “LIC”). Equipment gets the next free tag (P-101, V-101); instruments get their letters and the next loop number.</li>
+      <li>Draw a <b>line</b> by dragging from a port (the small circles on a symbol) to another port. Drop it on a line to branch off it, or anywhere to leave an open end. Lines route themselves around symbols; drag a segment to move it.</li>
+      <li>Drop an in-line symbol (a valve, a reducer, a strainer, a flowmeter) <b>onto a line</b>: it goes into the line, and both halves keep the line's data.</li>
+      <li>Carry a line to another sheet with a pair of <b>off-page connectors</b>; double-click one to jump to its partner.</li>
+    </ol>
+    <h4>Give it its data</h4>
+    <ol>
+      <li>Select anything and fill its data in the <b>Inspector</b> on the right: the tag, the service, design and operating conditions, sizes. Values show in SI or US units (Home › Units); the file keeps SI.</li>
+      <li>A line's number is built from its size, fluid code, sequence and pipe class (3"-P-1001-A1A). Give it a flow, a density and a viscosity and Datum Schema works out its velocity and pressure drop.</li>
+    </ol>
+    <h4>Check it and list it</h4>
+    <ol>
+      <li>The <b>Checks</b> panel below lists what needs attention: duplicate tags, open ends, size changes without a reducer, a pump discharge without a check valve, and more. Click one to go to it.</li>
+      <li>The <b>line list</b>, <b>equipment list</b>, <b>instrument index</b>, <b>valve list</b>, <b>I/O summary</b> and <b>take-off</b> (and the <b>stream list</b> of a process flow diagram) are always in step with the drawing; export them to CSV or Excel, or print them.</li>
+      <li>Print the sheets to PDF, save a sheet as SVG, or export DXF for any CAD program.</li>
+    </ol>
+    <p class="muted">Every tool has a small ? beside it. Hydraulic results are a sizing aid, checked by the engineer.</p>
+  </div>
+);
 
 export const gettingStarted = () => openDialog(() => (
   <Dialog title="Getting started" wide>
-    <div class="helpcard">
-      <p>Datum Schema draws P&IDs and process flow diagrams where every symbol and line carries its data and knows what it is connected to. From the drawing it writes the line list, the equipment list, the instrument index and the valve list, checks the drawing as you work, and sizes every line.</p>
-      <h4>Draw the plant</h4>
-      <ol>
-        <li>Drag symbols from the <b>palette</b> on the left onto the sheet, or double-click the sheet and type a name (“ball valve”, “LIC”). Equipment gets the next free tag (P-101, V-101); instruments get their letters and the next loop number.</li>
-        <li>Draw a <b>line</b> by dragging from a port (the small circles on a symbol) to another port. Drop it on a line to branch off it, or anywhere to leave an open end. Lines route themselves around symbols; drag a segment to move it.</li>
-        <li>Drop an in-line symbol (a valve, a reducer, a strainer, a flowmeter) <b>onto a line</b>: it goes into the line, and both halves keep the line's data.</li>
-        <li>Carry a line to another sheet with a pair of <b>off-page connectors</b>; double-click one to jump to its partner.</li>
-      </ol>
-      <h4>Give it its data</h4>
-      <ol>
-        <li>Select anything and fill its data in the <b>Inspector</b> on the right: the tag, the service, design and operating conditions, sizes. Values show in SI or US units (Home › Units); the file keeps SI.</li>
-        <li>A line's number is built from its size, fluid code, sequence and pipe class (3"-P-1001-A1A). Give it a flow, a density and a viscosity and Datum Schema works out its velocity and pressure drop.</li>
-      </ol>
-      <h4>Check it and list it</h4>
-      <ol>
-        <li>The <b>Checks</b> panel below lists what needs attention: duplicate tags, open ends, size changes without a reducer, a pump discharge without a check valve, and more. Click one to go to it.</li>
-        <li>The <b>line list</b>, <b>equipment list</b>, <b>instrument index</b> and <b>valve list</b> are always in step with the drawing; export them to CSV or Excel, or print them.</li>
-        <li>Print the sheets to PDF, save a sheet as SVG, or export DXF for any CAD program.</li>
-      </ol>
-      <p class="muted">Every tool has a small ? beside it. Hydraulic results are a sizing aid, checked by the engineer.</p>
-    </div>
+    <GettingStarted />
   </Dialog>
 ));
 
+export const GLOSSARY: [string, string][] = [
+  ["P&ID", "Piping and instrument diagram: the plant's equipment, piping, valves and instruments, with how they connect and are controlled."],
+  ["PFD", "Process flow diagram: the main equipment and streams of a process, without every valve and instrument."],
+  ["Tag", "The name of an item: P-101A for a pump, V-101 for a vessel, LIC-101 for a level controller."],
+  ["Line number", "The name of a pipeline, built from its size, fluid code, sequence number and pipe class, such as 3\"-P-1001-A1A."],
+  ["Pipe class (spec)", "The piping specification a line is built to: materials, pressure rating, wall thickness."],
+  ["Spec break", "The mark where the pipe class changes along a line."],
+  ["Battery limit", "The edge of the plant area the drawing covers; a line may end there."],
+  ["Off-page connector", "The arrow that carries a line to another sheet. It names the sheet where the line continues."],
+  ["In-line item", "A symbol that sits in a line: valves, reducers, strainers, flowmeters. Dropped on a line, it splits it."],
+  ["Loop", "The instruments that work together on one variable, sharing a loop number: LT-101, LIC-101, LV-101."],
+  ["Instrument letters (ISA-5.1)", "The first letter is the measured variable (F flow, L level, P pressure, T temperature…); the next ones are what the instrument does (I indicate, T transmit, C control, V valve, A alarm, S switch, H high, L low)."],
+  ["Bubble", "The circle of an instrument. A plain circle is in the field; a line through it means a control-room panel; a circle in a square is a shared display (DCS); a diamond in a square is programmable logic (PLC)."],
+  ["Fail position", "What a control valve does when it loses its air or power: fail open (FO), fail closed (FC) or fail last (FL)."],
+  ["Normal position", "How a manual valve is normally left: normally open (NO), normally closed (NC), locked open (LO), locked closed (LC)."],
+  ["Velocity", "The mean speed of the fluid in the pipe: the volume flow divided by the inside area."],
+  ["Reynolds number", "ρ v D / μ: below about 2000 the flow is laminar, above about 4000 turbulent."],
+  ["Friction factor", "The Darcy friction factor f, from the Colebrook equation for turbulent flow (64/Re for laminar)."],
+  ["Pressure drop", "Δp = f (L/D) ρ v²/2 (Darcy–Weisbach), shown per 100 m (or 100 ft) and over the line's length plus its fittings allowance."],
+  ["Fittings allowance", "Extra length for bends, tees and valves, as a percentage of the straight length."],
+  ["Hold", "A cloud round an area of the drawing that is not final yet."],
+  ["DXF", "A drawing exchange format that CAD programs open. Datum Schema writes the R12 kind, the most widely read."],
+];
+
 export const glossary = () => openDialog(() => {
   const [q, setQ] = createSignal("");
-  const G: [string, string][] = [
-    ["P&ID", "Piping and instrument diagram: the plant's equipment, piping, valves and instruments, with how they connect and are controlled."],
-    ["PFD", "Process flow diagram: the main equipment and streams of a process, without every valve and instrument."],
-    ["Tag", "The name of an item: P-101A for a pump, V-101 for a vessel, LIC-101 for a level controller."],
-    ["Line number", "The name of a pipeline, built from its size, fluid code, sequence number and pipe class, such as 3\"-P-1001-A1A."],
-    ["Pipe class (spec)", "The piping specification a line is built to: materials, pressure rating, wall thickness."],
-    ["Spec break", "The mark where the pipe class changes along a line."],
-    ["Battery limit", "The edge of the plant area the drawing covers; a line may end there."],
-    ["Off-page connector", "The arrow that carries a line to another sheet. It names the sheet where the line continues."],
-    ["In-line item", "A symbol that sits in a line: valves, reducers, strainers, flowmeters. Dropped on a line, it splits it."],
-    ["Loop", "The instruments that work together on one variable, sharing a loop number: LT-101, LIC-101, LV-101."],
-    ["Instrument letters (ISA-5.1)", "The first letter is the measured variable (F flow, L level, P pressure, T temperature…); the next ones are what the instrument does (I indicate, T transmit, C control, V valve, A alarm, S switch, H high, L low)."],
-    ["Bubble", "The circle of an instrument. A plain circle is in the field; a line through it means a control-room panel; a circle in a square is a shared display (DCS); a diamond in a square is programmable logic (PLC)."],
-    ["Fail position", "What a control valve does when it loses its air or power: fail open (FO), fail closed (FC) or fail last (FL)."],
-    ["Normal position", "How a manual valve is normally left: normally open (NO), normally closed (NC), locked open (LO), locked closed (LC)."],
-    ["Velocity", "The mean speed of the fluid in the pipe: the volume flow divided by the inside area."],
-    ["Reynolds number", "ρ v D / μ: below about 2000 the flow is laminar, above about 4000 turbulent."],
-    ["Friction factor", "The Darcy friction factor f, from the Colebrook equation for turbulent flow (64/Re for laminar)."],
-    ["Pressure drop", "Δp = f (L/D) ρ v²/2 (Darcy–Weisbach), shown per 100 m (or 100 ft) and over the line's length plus its fittings allowance."],
-    ["Fittings allowance", "Extra length for bends, tees and valves, as a percentage of the straight length."],
-    ["Hold", "A cloud round an area of the drawing that is not final yet."],
-    ["DXF", "A drawing exchange format that CAD programs open. Datum Schema writes the R12 kind, the most widely read."],
-  ];
   return <Dialog title="Glossary"><input placeholder="Search" value={q()} onInput={e => setQ(e.currentTarget.value)} style={{ width: "100%", "margin-bottom": "8px" }} />
-    <dl class="gloss"><For each={G.filter(g => (g[0] + g[1]).toLowerCase().includes(q().toLowerCase()))}>{([t, d]) => <><dt>{t}</dt><dd>{d}</dd></>}</For></dl></Dialog>;
+    <dl class="gloss"><For each={GLOSSARY.filter(g => (g[0] + g[1]).toLowerCase().includes(q().toLowerCase()))}>{([t, d]) => <><dt>{t}</dt><dd>{d}</dd></>}</For></dl></Dialog>;
 });
 
 /** Recover unsaved work after a crash. */

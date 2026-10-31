@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.4 — 2026-10-31
+
+The user guide.
+
+**User guide.** Help › **User Guide** (or File › User guide, or Tell Me) opens the guide: getting started, then every feature in chapters (drawing the plant; data and objects; checks and hydraulics with every check rule; lists and reports; instruments; process flow diagrams; symbols, standards and title blocks; revisions and review; working with other programs; examples), the keyboard shortcuts and the glossary. Search it, jump to a chapter from the contents, or **Print / Save as PDF** on A4. It is written from the same help as the ? buttons, so the two always agree, and any tool without a chapter of its own is still listed.
+
+Getting started now names all the lists, the I/O summary, the take-off and the stream list.
+
 ## 0.3.3 — 2026-10-31
 
 Review comments.

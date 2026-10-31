@@ -595,6 +595,22 @@ const shots = process.env.SHOTS;
   await p.click(".cmcard button:has-text('Resolve')"); await p.waitForTimeout(300);
   check("resolved: nothing open", (await p.$$(".cmcard")).length === 0 && !(await p.textContent(".status")).includes("open comments"));
 
+  // 42. The user guide: every help topic in chapters, searchable, printable.
+  await p.click(".tabs button:text-is('Help')"); await p.click(".ribbon button:has-text('User Guide')"); await p.waitForSelector(".guide .gtopic");
+  if (process.env.SHOT) await p.screenshot({ path: `${process.env.SHOT}/guide.png` });
+  { const n = await p.$$eval(".guide .gmain .gtopic", els => els.length);
+    const helpBtns = await p.$$eval(".gtoc a", els => els.map(e => e.textContent));
+    check("the guide has every chapter and many topics", n >= 40 && helpBtns.includes("Glossary") && helpBtns.some(t => t.includes("Process flow diagrams")), `${n} topics; ${helpBtns.join(" / ")}`);
+    check("the guide lists every check rule", (await p.$$eval(".guide .grules tr", els => els.length)) === 20);
+    await p.fill(".gsearch", "revision cloud"); await p.waitForTimeout(200);
+    const found = await p.$$eval(".guide .gmain .gtopic h3", els => els.map(e => e.textContent));
+    check("search narrows the guide", found.length >= 1 && found.length < 6 && found.some(t => t.includes("Revisions")), JSON.stringify(found));
+    await p.fill(".gsearch", ""); }
+  await p.evaluate(() => { window.print = () => { window.__printed = document.querySelectorAll("#printroot .gtopic").length; }; });
+  await p.click(".gtoc button:has-text('Print')"); await p.waitForTimeout(600);
+  check("the guide prints whole", (await p.evaluate(() => window.__printed)) >= 40);
+  await p.click(".bs .back"); await p.waitForTimeout(200);
+
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();
   await fetch(`${url}quit`).catch(() => {});

@@ -4,7 +4,7 @@ import { For, Show } from "solid-js";
 import { openDialog } from "./store";
 import { Dialog } from "./ui";
 
-type Topic = { t: string; what: string; how?: string[]; tip?: string };
+export type Topic = { t: string; what: string; how?: string[]; tip?: string };
 
 /** The check rules (brief §2.4): number, what it finds, level. Keep in step with checks.rs. */
 export const RULES: [number, string, string][] = [

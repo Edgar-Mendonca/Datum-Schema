@@ -47,7 +47,8 @@
     "Twenty checks, including heat, mass and component balances and instrument ranges, each with a click to the problem",
     "Line hydraulics: velocity, Reynolds number, Colebrook friction factor and pressure drop against limits",
     "SI and US units; DXF, SVG, PDF, Excel, CSV and the DEXPI P&ID exchange format (export and import)",
-    "Automatic tags and loop numbers, renumbering, a legend sheet"
+    "Automatic tags and loop numbers, renumbering, a legend sheet",
+    "A user guide in the app: every feature step by step, searchable and printable"
   ],
   "screenshots": [
     "docs/images/compressor.png",
@@ -58,7 +59,7 @@
   "roadmap": [
     {
       "v": "0.3",
-      "title": "Instrument documents, compositions, company templates and review",
+      "title": "Instrument documents, compositions, company templates, review and the guide",
       "when": "Now",
       "items": [
         "Stream compositions and the component balance",
@@ -66,21 +67,14 @@
         "Checks: instrument ranges, control valve fail positions, loop wiring",
         "0.3.1: valve and fitting take-off",
         "0.3.2: company title blocks",
-        "0.3.3: review comments"
-      ]
-    },
-    {
-      "v": "0.3.4",
-      "title": "User guide",
-      "when": "Next",
-      "items": [
-        "A user guide in the app, printable: every feature, step by step"
+        "0.3.3: review comments",
+        "0.3.4: the user guide"
       ]
     },
     {
       "v": "1.0",
       "title": "Version 1",
-      "when": "Goal",
+      "when": "Next",
       "items": [
         "A validation note for the hydraulics",
         "Signed installer"
