@@ -28,6 +28,9 @@ export const RULES: [number, string, string][] = [
   [18, "An instrument's range does not cover the operating value of its line", "warning"],
   [19, "Control valve without a fail position (FO, FC or FL)", "warning"],
   [20, "A loop whose wiring has been started has devices with wiring still missing", "note"],
+  [21, "A line's pipe class is not one of the project's pipe specs", "warning"],
+  [22, "A valve or fitting its line's pipe class does not allow at that size", "warning"],
+  [23, "A line outside its pipe class's sizes, design pressure or design temperature", "warning"],
 ];
 
 export const HELP: Record<string, Topic> = {
@@ -104,6 +107,9 @@ export const HELP: Record<string, Topic> = {
   review: { t: "Review comments", what: "Comments pinned to the drawing by whoever checks it, with replies, and resolved when they are dealt with. Each person reviews their own copy of the project; their comments are taken back into yours without doubles.",
     how: ["Select what the comment is about (or nothing), then Check › Comment and click the sheet where it applies. Type the comment; it is signed with your name from File › Options.", "The Comments tab under the drawing lists them, open ones first: reply, Resolve or Reopen, Edit (or double-click the text), delete, or click one to go to it. A numbered pin on the sheet marks each; resolved pins are grey.", "To review on several computers, send each reviewer a copy of the project file. When they send it back, Check › Import Review… takes in their new comments, replies and resolutions; the newest resolution wins.", "Print the comments with File › Print (Review comments), or export the list to Excel or CSV."],
     tip: "Pins are not printed on the sheets, so a review never ends up on an issued drawing. Undo takes back an import." },
+  specs: { t: "Pipe specs", what: "The pipe classes (A1A, B2A…) lines are built to: each with its rating, material, sizes, design limits and schedule, and the valves and fittings it allows by size, each with a description and commodity code.",
+    how: ["File › Options › Pipe specs: add a typical carbon steel class to start from, add an empty one, read your specs from a CSV table (Class, Component, From, To, Description, Code), or load a spec file.", "A line's Pipe class field offers the project's classes. Check 21 finds a class that is not one of them; check 22 a valve or fitting its class does not allow at that size; check 23 a line outside its class's sizes, design pressure or temperature.", "The take-off names each component from its class: its description and commodity code, ready for a requisition.", "Save a copy to use the same specs in another project."],
+    tip: "The limits are a single pressure and temperature, not the full pressure–temperature table: check a class against its specification. With no specs, checks 21–23 stay quiet." },
   history: { t: "History", what: "Every change to an object is recorded with who made it, when, and the old and new value. The history is saved in the project file, so it survives closing and reopening; undo and redo are recorded too." },
   inspector: { t: "Inspector", what: "The selected item's data, with units: tag, service, design and operating conditions, sizes, connections, and for lines the hydraulics. With nothing selected, the sheet, its revisions and the title block." },
   "cat:vessel": { t: "Vessels", what: "Vertical vessels, horizontal drums, tanks, columns (trays or packing), a separator with a boot, a filter vessel, a knock-out drum and a silo. Their nozzles are ports; each carries design and operating conditions, material, volume and a relief note." },

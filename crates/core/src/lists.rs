@@ -217,7 +217,7 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
             (cols(&specs, us), rows)
         }
         "takeoff" => {
-            let specs: Vec<Spec> = vec![("kind", "Item", "", false), ("size", "Size", "", false), ("pclass", "Pipe class", "", false), ("rating", "Rating", "", false), ("qty", "Quantity", "", false), ("tags", "Tags", "", false), ("sheet", "Sheets", "", false)];
+            let specs: Vec<Spec> = vec![("kind", "Item", "", false), ("size", "Size", "", false), ("pclass", "Pipe class", "", false), ("rating", "Rating", "", false), ("qty", "Quantity", "", false), ("tags", "Tags", "", false), ("sheet", "Sheets", "", false), ("desc", "Description (pipe spec)", "", false), ("code", "Commodity code", "", false)];
             let pfd: std::collections::HashSet<u32> = p.sheets.iter().filter(|s| s.pfd).map(|s| s.id).collect();
             // Every piping component on the P&IDs once (an object drawn twice counts once), by
             // what it is, its size, its line's pipe class and its own rating.
@@ -281,7 +281,11 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
                     }
                     let mut sh: Vec<u32> = sheets;
                     sh.sort_by_key(|x| p.sheet_no(*x));
-                    let cells = vec![name, size, class, rating, ids.len().to_string(), tags.join(", "), sh.iter().map(|x| sheet_no(p, *x)).collect::<Vec<_>>().join(", ")];
+                    // From the pipe spec, when its class lists the component at this size.
+                    let kind = ids.first().and_then(|i| p.item(*i)).map(|i| i.base_key()).unwrap_or_default();
+                    let e = crate::specs::find(p, &class).and_then(|s| crate::specs::entry(s, &kind, size.split(' ').next().unwrap_or("").trim_end_matches('"')));
+                    let (desc, code) = e.map(|e| (e.desc.clone(), e.code.clone())).unwrap_or_default();
+                    let cells = vec![name, size, class, rating, ids.len().to_string(), tags.join(", "), sh.iter().map(|x| sheet_no(p, *x)).collect::<Vec<_>>().join(", "), desc, code];
                     Row { sheet: ids.first().and_then(|i| p.item(*i)).map_or(0, |i| i.sheet), ids, cells, status: None }
                 })
                 .collect();
@@ -426,6 +430,8 @@ mod tests {
         assert_eq!(g3[2], "A1A");
         assert_eq!(g3[4], "4");
         assert!(g3[5].contains("HV-104") && g3[5].contains("HV-108"));
+        // Named from the project's pipe spec.
+        assert_eq!((g3[7].as_str(), g3[8].as_str()), ("Gate valve, flanged RF, A216 WCB, trim 8", "VGA150-01"));
         assert_eq!(row("Control valve, pneumatic", "3\"").unwrap()[3], "300#");
         assert!(row("Vent", "3\"").unwrap()[5].contains("1 untagged"));
         // Every piping component once: the quantities add up to the piping objects drawn.

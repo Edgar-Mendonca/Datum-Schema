@@ -252,6 +252,10 @@ fn pump() -> (Project, Faults) {
     x.data(&[pi], &[("function", t("Discharge pressure gauge")), ("range", t("0–10 bar"))]);
     x.ln(E::P(pi, "bottom"), E::L(dis_a[2], 225.0, 134.0), Kind::Minor);
     let faults = Faults { pb, ckb, dis_a, lv, psv, ri, ro, vent, out };
+    // The project's pipe spec: the starter carbon steel class, with the tank's breather valve.
+    let mut a1a = crate::specs::starter("A1A");
+    a1a.items.push(crate::specs::SpecItem { kind: "breather".into(), min: "1".into(), max: "8".into(), desc: "Pressure-vacuum breather valve, flanged RF, aluminium".into(), code: "PVSV-SEE-DS".into() });
+    x.d.p.settings.specs = vec![a1a];
     (x.done(), faults)
 }
 

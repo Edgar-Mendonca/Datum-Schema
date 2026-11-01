@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.0 — 2026-11-01
+
+Pipe specs: the first of the piping rules.
+
+**Pipe specs.** File › Options › **Pipe specs** holds the project's pipe classes (A1A, B2A…): each with its description, rating, material, sizes, schedule, design pressure and temperature limits and corrosion allowance, and the valves and fittings it allows, by size, each with a description and commodity code. Start from a typical carbon steel class (ASME B16.5 class 150, ½"–24", the usual valves and fittings), add an empty one, **read your specs from a CSV table** (Class, Component, From, To, Description, Code), or load a spec file; save a copy to use them in another project.
+
+**Three new checks**, only when the project has specs: **21** a line's pipe class is not one of the specs; **22** a valve or fitting its line's class does not allow at that size (vents, drains and sample points by their own size); **23** a line outside its class's sizes, design pressure or design temperature.
+
+**Take-off from the spec.** The valve and fitting take-off names each component from its class: its description and commodity code, ready for a requisition.
+
+**Pipe class field.** A line's Pipe class in the Inspector offers the project's classes.
+
+The Pump transfer example now carries its A1A spec.
+
 ## 0.3.4 — 2026-10-31
 
 The user guide.

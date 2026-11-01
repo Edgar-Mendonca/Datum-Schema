@@ -4,6 +4,7 @@ import { LibrariesPage, StandardSec } from "./libraries";
 import { LayoutSec } from "./datasheet";
 import { TitleBlockSec } from "./titleblock";
 import { GuidePage } from "./guide";
+import { SpecsSec } from "./specs";
 import { For, Show, createSignal, createResource, onMount, JSX } from "solid-js";
 import { PrintPage } from "./print";
 import { RoadmapPage } from "./roadmap";
@@ -164,6 +165,9 @@ const ProjectSettings = () => {
       <Opt l="Snap grid" hint="Symbols, bends and ends snap to it."><span class="inline"><input type="number" step="0.5" style={{ width: "90px" }} value={s().grid} onChange={e => set({ grid: Math.max(0.5, +e.currentTarget.value || 2.5) })} /> mm</span></Opt>
     </Sec>
     <ClassesSec />
+    <Sec t="Pipe specs" about="The pipe classes lines are built to: their sizes and limits, and the valves and fittings each allows, by size, with a description and commodity code. Checks 21–23 hold the drawing to them; the take-off names each component from its class.">
+      <SpecsSec />
+    </Sec>
     <Sec t="Title block" about="The block in the bottom right corner of every sheet: the standard one, or your company's (its own cells, fields and logo). Save it as a file to use in other projects or share it.">
       <TitleBlockSec />
     </Sec>

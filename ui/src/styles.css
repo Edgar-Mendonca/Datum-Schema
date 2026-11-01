@@ -1152,3 +1152,17 @@ tr.behind td { background: var(--err-bg); }
 .guide .gmain h1 { display: block; margin: 0 0 8px; }
 .guide nav.gtoc { background: none; width: auto; }
 .guide .gtoc .btn { justify-content: center; }
+/* Options › Pipe specs. */
+.spectabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+.spectabs button { padding: 3px 10px; border: 1px solid var(--line); background: var(--bg2); }
+.spectabs button.on { background: var(--sel); border-color: var(--blue); }
+.specform .inline { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.specitems input:not(.num) { width: 100%; }
+.specitems input.num { width: 64px; }
+.specitems select { min-width: 170px; }
+.specbtns { display: flex; gap: 6px; flex-wrap: wrap; }
+.specitems { width: 100%; }
+.specitems th:nth-child(2), .specitems th:nth-child(3) { width: 74px; }
+.specitems th:nth-child(4) { width: 46%; }
+.specitems th:nth-child(5) { width: 130px; }
+.specitems input.num { width: 64px !important; }

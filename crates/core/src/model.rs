@@ -492,6 +492,8 @@ pub struct Settings {
     pub standard: Standard,
     /// The title block: standard, or the company's template.
     pub title_block: TitleBlock,
+    /// The pipe specs (pipe classes) lines are built to.
+    pub specs: Vec<crate::specs::PipeSpec>,
     /// The components of the process flow diagrams' streams (each stream's mass fractions are
     /// its data "x:<component>").
     pub components: Vec<String>,
@@ -528,7 +530,7 @@ pub const MAX_LOGO: usize = 280_000;
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), components: vec![] }
+        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), specs: vec![], components: vec![] }
     }
 }
 
@@ -870,6 +872,7 @@ impl Project {
         l.order.truncate(50);
         l.order.retain(|h| h.len() <= 100);
         s.title_block.normalize();
+        crate::specs::normalize(&mut s.specs);
         let t = &mut self.title;
         t.extra = std::mem::take(&mut t.extra).into_iter().filter(|(k, _)| !k.trim().is_empty()).take(40).map(|(k, v)| (crate::clip(k.trim(), 40), crate::clip(&v, 200))).collect();
         let s = &mut self.settings;

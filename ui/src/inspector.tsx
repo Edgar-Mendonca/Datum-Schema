@@ -33,7 +33,7 @@ const FieldInput = (p: { f: Field; v: Val | undefined; ids: number[]; placeholde
   };
   return (
     <Row label={p.f.required ? `${p.f.label} *` : p.f.label} unit={p.f.q ? unit(p.f.q) : undefined}>
-      <Show when={p.f.choices.length} fallback={<input value={shown()} placeholder={p.placeholder} class={p.f.q ? "mono" : undefined} onChange={e => set(e.currentTarget.value)} />}>
+      <Show when={p.f.choices.length} fallback={<input value={shown()} placeholder={p.placeholder} class={p.f.q ? "mono" : undefined} list={p.f.key === "class" && proj()?.settings.specs.length ? "specnames" : undefined} onChange={e => set(e.currentTarget.value)} />}>
         <Pick value={shown()} set={set} options={[["", "—"], ...p.f.choices.filter(c => c).map(c => [c, c] as [string, string])]} />
       </Show>
     </Row>
@@ -211,6 +211,9 @@ const SheetPanel = () => {
   </>;
 };
 
+/** The project's pipe classes, offered on a line's Pipe class field. */
+const SpecNames = () => <datalist id="specnames"><For each={proj()?.settings.specs ?? []}>{s => <option value={s.name}>{s.desc}</option>}</For></datalist>;
+
 export const Inspector = () => {
   const one = createMemo(() => (sel().length === 1 ? sel()[0] : null));
   const it = () => (one() !== null ? itemOf(one()!) : undefined);
@@ -218,6 +221,7 @@ export const Inspector = () => {
   const nt = () => (one() !== null ? proj()?.notes.find(n => n.id === one()) : undefined);
   return (
     <aside class="insp">
+      <SpecNames />
       <header>Inspector<Help k="inspector" /></header>
       <div class="ibody">
         <Show when={proj() && sheet()}>

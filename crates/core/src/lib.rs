@@ -26,6 +26,7 @@ pub mod pfd;
 pub mod pipes;
 pub mod review;
 pub mod revs;
+pub mod specs;
 pub mod route;
 pub mod symbols;
 pub mod symlib;

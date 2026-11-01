@@ -601,7 +601,7 @@ const shots = process.env.SHOTS;
   { const n = await p.$$eval(".guide .gmain .gtopic", els => els.length);
     const helpBtns = await p.$$eval(".gtoc a", els => els.map(e => e.textContent));
     check("the guide has every chapter and many topics", n >= 40 && helpBtns.includes("Glossary") && helpBtns.some(t => t.includes("Process flow diagrams")), `${n} topics; ${helpBtns.join(" / ")}`);
-    check("the guide lists every check rule", (await p.$$eval(".guide .grules tr", els => els.length)) === 20);
+    check("the guide lists every check rule", (await p.$$eval(".guide .grules tr", els => els.length)) === 23);
     await p.fill(".gsearch", "revision cloud"); await p.waitForTimeout(200);
     const found = await p.$$eval(".guide .gmain .gtopic h3", els => els.map(e => e.textContent));
     check("search narrows the guide", found.length >= 1 && found.length < 6 && found.some(t => t.includes("Revisions")), JSON.stringify(found));
@@ -610,6 +610,23 @@ const shots = process.env.SHOTS;
   await p.click(".gtoc button:has-text('Print')"); await p.waitForTimeout(600);
   check("the guide prints whole", (await p.evaluate(() => window.__printed)) >= 40);
   await p.click(".bs .back"); await p.waitForTimeout(200);
+
+  // 43. Pipe specs: the example's class in Options, a CSV table read in, a component outside its
+  // class found by check 22, the take-off named from the spec.
+  await openEx("Pump transfer");
+  await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Options')"); await p.waitForTimeout(300);
+  if (process.env.SHOT) { await p.locator(".specsec").scrollIntoViewIfNeeded(); await p.locator(".specsec").screenshot({ path: `${process.env.SHOT}/specs.png` }); }
+  check("the example has its pipe spec", (await p.$$eval(".specsec .spectabs button", els => els.map(e => e.textContent))).join() === "A1A" && (await p.$$(".specsec .specitems tbody tr")).length >= 20);
+  await p.setInputFiles(".specsec label:has-text('Read from CSV') input", { name: "specs.csv", mimeType: "text/csv", buffer: Buffer.from("Class,Component,From,To,Description,Code\nA1A,Gate valve,6,24,Gate valve RF,VG-6\nB3A,Ball valve,1/2,2,Ball valve SW,VB-1\n") });
+  await p.waitForTimeout(500);
+  { const sp = (await project()).settings.specs; check("a CSV table is read into the specs", sp.length === 2 && sp[0].items.length === 1 && sp[1].name === "B3A", JSON.stringify(sp.map(s => [s.name, s.items.length]))); }
+  await p.click(".bs .back"); await p.waitForTimeout(300);
+  await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
+  { const t = await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent));
+    check("check 22 finds valves the class no longer allows", t.some(x => x.includes("HV-104") && x.includes("outside pipe class A1A")) && t.some(x => x.includes("is not in pipe class A1A"))); }
+  await p.keyboard.press("Control+z"); await p.waitForTimeout(400);
+  await p.click(".btabs button:has-text('Take-off')"); await p.waitForTimeout(400);
+  check("the take-off gives each component its commodity code", (await p.$$eval(".lists tbody tr.f", els => els.map(e => e.textContent))).some(t => t.includes("VGA150-01")));
 
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();

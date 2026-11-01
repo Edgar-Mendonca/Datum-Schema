@@ -334,6 +334,18 @@ fn title_preview(st: State<St>, block: model::TitleBlock, sheet: u32) -> R<datum
     Ok(datum_core::frame::preview(p, s, &block))
 }
 
+/// A typical carbon steel pipe class to start a spec from.
+#[tauri::command]
+fn spec_starter(name: String) -> datum_core::specs::PipeSpec {
+    datum_core::specs::starter(&name)
+}
+
+/// Spec items read from a CSV table into the project's specs (the result is set by the window).
+#[tauri::command]
+fn specs_csv(specs: Vec<datum_core::specs::PipeSpec>, text: String) -> R<(Vec<datum_core::specs::PipeSpec>, Vec<String>)> {
+    guard(|| datum_core::specs::import_csv(specs, &text))
+}
+
 /// The standard title block, to start a company template from.
 #[tauri::command]
 fn title_standard() -> model::TitleBlock {
@@ -715,7 +727,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, title_preview, title_standard, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
+            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, title_preview, title_standard, spec_starter, specs_csv, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
             options, set_options, autosave, recovery, recover, recent, startup_file, open_url, version, quit, check_update, install_update
         ])
         .run(tauri::generate_context!())

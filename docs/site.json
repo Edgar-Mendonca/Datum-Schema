@@ -18,7 +18,7 @@
     },
     {
       "title": "Check it as you go",
-      "text": "Twenty rules run on every change: duplicate tags, open ends, size and class changes, check valves, relief paths, control loops, velocities and pressure drops, heat, mass and component balances on process flow diagrams, instrument ranges and loop wiring. Click an issue to go to it."
+      "text": "Twenty-three rules run on every change: duplicate tags, open ends, size and class changes, check valves, relief paths, control loops, velocities and pressure drops, heat, mass and component balances on process flow diagrams, instrument ranges, loop wiring and pipe specs. Click an issue to go to it."
     },
     {
       "title": "Print the drawings and lists",
@@ -34,6 +34,7 @@
     "Stream compositions with a component balance; an I/O summary per control system with spare",
     "A valve and fitting take-off by type, size, pipe class and rating",
     "Your company's title block: its cells, fields and logo, shared as a file",
+    "Pipe specs: classes with the components they allow, read from CSV; checks and a take-off with commodity codes",
     "Review comments pinned to the drawing, with replies; reviewers' copies merged back in",
     "Plant objects in a plant › unit › area hierarchy; symbols are views, every change is recorded",
     "A class library you can extend with your company's attributes",
@@ -44,7 +45,7 @@
     "A valve dropped on a line splits it and joins both halves",
     "Off-page connectors pair across sheets; click one to jump to its partner",
     "Live line list, equipment list, instrument index, valve list and datasheet index",
-    "Twenty checks, including heat, mass and component balances and instrument ranges, each with a click to the problem",
+    "Twenty-three checks, including balances, instrument ranges and pipe specs, each with a click to the problem",
     "Line hydraulics: velocity, Reynolds number, Colebrook friction factor and pressure drop against limits",
     "SI and US units; DXF, SVG, PDF, Excel, CSV and the DEXPI P&ID exchange format (export and import)",
     "Automatic tags and loop numbers, renumbering, a legend sheet",
@@ -58,25 +59,46 @@
   ],
   "roadmap": [
     {
-      "v": "0.3",
-      "title": "Instrument documents, compositions, company templates, review and the guide",
+      "v": "0.4",
+      "title": "Piping rules",
       "when": "Now",
       "items": [
-        "Stream compositions and the component balance",
-        "I/O summary per control system, with spare",
-        "Checks: instrument ranges, control valve fail positions, loop wiring",
-        "0.3.1: valve and fitting take-off",
-        "0.3.2: company title blocks",
-        "0.3.3: review comments",
-        "0.3.4: the user guide"
+        "0.4.0: pipe specs: each pipe class lists the components it allows, by size and rating; spec checks (done)",
+        "0.4.1: values passed along a line (size and class to its valves and reducers) and a to-do list after changes",
+        "0.4.2: implied items (flanges, gaskets, bolts) in the take-off",
+        "0.4.3: assemblies (a group placed as one) and data labels you choose on the drawing",
+        "0.4.4: rules and tag formats of your own; speed on large projects"
+      ]
+    },
+    {
+      "v": "0.5",
+      "title": "Instruments and calculations",
+      "when": "Next",
+      "items": [
+        "0.5.0: instrument wiring: cables, junction boxes, terminals, I/O cards, cable schedule; loop diagrams from them",
+        "0.5.1: calculation sheets in Datum Calc from an object's data (pump power and NPSH, line pressure drop, exchanger, vessel wall)",
+        "0.5.2: sizing of control valves, orifices and relief valves",
+        "0.5.3: equipment datasheets; stream tables imported from simulator results (Excel, CSV)"
+      ]
+    },
+    {
+      "v": "0.6",
+      "title": "Teams",
+      "when": "Later",
+      "items": [
+        "0.6.0: document status (for review, approval, construction) and transmittals",
+        "0.6.1: shared projects: several people, items claimed, work merged",
+        "0.6.2: scripting, report templates, DWG"
       ]
     },
     {
       "v": "1.0",
       "title": "Version 1",
-      "when": "Next",
+      "when": "Goal",
       "items": [
+        "DEXPI tested with files from other programs",
         "A validation note for the hydraulics",
+        "Tested on large projects (100+ sheets)",
         "Signed installer"
       ]
     }
