@@ -193,6 +193,7 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             serde_json::to_value(datum_core::frame::preview(p, sh, &b)).unwrap()
         }
         "calc_sheets" => serde_json::to_value(datum_core::calc::sheets_for(&s.doc.p, a["obj"].as_u64().unwrap_or(0) as u32)).unwrap(),
+        "sizing" => serde_json::to_value(datum_core::sizing::shown(&s.doc.p, a["item"].as_u64().unwrap_or(0) as u32)).unwrap(),
         "todo" => serde_json::to_value(datum_core::propagate::todo(&s.doc.p)).unwrap(),
         "spec_starter" => serde_json::to_value(datum_core::specs::starter(&str_("name"))).unwrap(),
         "specs_csv" => {

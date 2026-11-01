@@ -708,6 +708,8 @@ tr.behind td { background: var(--err-bg); }
 .vmini { width: 100%; border-collapse: collapse; font-size: 11.5px; }
 .vmini td { padding: 2px 4px; border-bottom: 1px solid var(--line2); }
 .vmini td.r, .tbl td.r, .tbl th.r { text-align: right; font-family: var(--mono); }
+.vmini tr.res td { border-top: 1px solid var(--line); }
+.sizing p { margin: 4px 0; }
 .ti { display: flex; align-items: baseline; gap: 8px; width: 100%; padding: 3px 6px; text-align: left; border-left: 3px solid transparent; }
 .ti small { color: var(--muted); font-size: 10.5px; margin-left: auto; }
 .ti:hover { background: var(--pale); }

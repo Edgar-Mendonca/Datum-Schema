@@ -29,6 +29,7 @@ pub mod review;
 pub mod propagate;
 pub mod revs;
 pub mod rules;
+pub mod sizing;
 pub mod specs;
 pub mod route;
 pub mod symbols;

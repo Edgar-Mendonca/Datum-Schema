@@ -346,6 +346,38 @@
      "group": "Specification"
     },
     {
+     "key": "dp_design",
+     "label": "Pressure drop at design flow",
+     "q": "dp",
+     "type": "number",
+     "group": "Sizing"
+    },
+    {
+     "key": "fl",
+     "label": "Liquid recovery factor FL",
+     "type": "number",
+     "group": "Sizing"
+    },
+    {
+     "key": "xt",
+     "label": "Pressure drop ratio factor xT",
+     "type": "number",
+     "group": "Sizing"
+    },
+    {
+     "key": "vapour_p",
+     "label": "Vapour pressure",
+     "q": "press",
+     "type": "number",
+     "group": "Sizing"
+    },
+    {
+     "key": "k_ratio",
+     "label": "Ratio of specific heats k",
+     "type": "number",
+     "group": "Sizing"
+    },
+    {
      "key": "characteristic",
      "label": "Characteristic",
      "type": "choice",
@@ -458,6 +490,51 @@
      "label": "Orifice designation",
      "type": "text",
      "group": "Specification"
+    },
+    {
+     "key": "relieving_rate",
+     "label": "Relieving rate",
+     "q": "mflow",
+     "type": "number",
+     "group": "Sizing"
+    },
+    {
+     "key": "relieving_t",
+     "label": "Relieving temperature",
+     "q": "temp",
+     "type": "number",
+     "group": "Sizing"
+    },
+    {
+     "key": "mw",
+     "label": "Molar mass",
+     "type": "number",
+     "group": "Sizing"
+    },
+    {
+     "key": "k_ratio",
+     "label": "Ratio of specific heats k",
+     "type": "number",
+     "group": "Sizing"
+    },
+    {
+     "key": "z",
+     "label": "Compressibility Z",
+     "type": "number",
+     "group": "Sizing"
+    },
+    {
+     "key": "overpressure",
+     "label": "Overpressure (%)",
+     "type": "number",
+     "group": "Sizing"
+    },
+    {
+     "key": "back_p",
+     "label": "Back pressure",
+     "q": "press",
+     "type": "number",
+     "group": "Sizing"
     },
     {
      "key": "relieving_case",
@@ -670,6 +747,20 @@
      "label": "Beta ratio",
      "type": "text",
      "group": "Specification"
+    },
+    {
+     "key": "dp_design",
+     "label": "Differential pressure at full scale",
+     "q": "dp",
+     "type": "number",
+     "group": "Sizing"
+    },
+    {
+     "key": "bore",
+     "label": "Bore",
+     "q": "thk",
+     "type": "number",
+     "group": "Sizing"
     }
    ]
   },

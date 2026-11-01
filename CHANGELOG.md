@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.2 — 2026-11-01
+
+Sizing of control valves, orifice plates and relief valves.
+
+**Sizing in the Inspector.** Select a control valve, an orifice plate or a relief valve: the Inspector's new **Sizing** group sizes it from its own data and its lines, and sizes it again after every change.
+- A control valve's required Cv and Kv (IEC 60534-2-1, also ISA-75.01.01): liquid, with choked flow when a vapour pressure is given; gas, with the expansion factor and choked flow. The drop is the one typed (Sizing › Pressure drop at design flow) or the difference between its lines' operating pressures. With a rated Cv, it shows how much of it is used.
+- An orifice plate's beta ratio and bore (ISO 5167-2, Reader-Harris/Gallagher, corner taps), from its line's flow, density, viscosity and inside diameter at the differential pressure typed.
+- A relief valve's required area and its API 526 orifice letter (API 520 Part I): gas or vapour at critical flow, or liquid.
+
+**What it needs and what it assumed.** A missing value is named (a flow on its line, a set pressure, a molar mass); a value assumed (FL 0.90, xT 0.70, k 1.3, 25 kPa across an orifice) is listed under the result. **Write to the datasheet** puts the result in the object's data, so it shows on its datasheet and in the lists. New Sizing data on control valves, relief devices and flow elements hold the inputs.
+
+The examples' level and relief valves size out of the box. A sizing aid, checked by the engineer.
+
 ## 0.5.1 — 2026-11-01
 
 Calculation sheets in Datum Calc.

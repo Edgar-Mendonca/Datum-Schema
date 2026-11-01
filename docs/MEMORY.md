@@ -6,7 +6,7 @@
 | | |
 | --- | --- |
 | **Product** | Datum Schema: intelligent P&IDs and process flow diagrams: draw, check and list (symbols and lines that carry their data and connections; live line list, equipment list, instrument index and valve list; drawing checks; line hydraulics; print, SVG and DXF) |
-| **Current version** | 0.5.1 (2026-11-01) |
+| **Current version** | 0.5.2 (2026-11-01) |
 | **Repo** | `Edgar-Mendonca/Datum-Schema` · branch `claude/vigilant-hamilton-ku7r0w` (the first branch pushed, so the default branch) |
 | **Stack** | Rust engine (`crates/core`: model, symbols, graph, tags, checks, hydraulics, lists, frame, routing, DXF), Tauri 2, SolidJS + strict TypeScript; no Python |
 | **Identifier** | `com.edgarmendonca.datumschema` · files `.dschema` (SQLite, `format` 4 from 0.2.0 (items.base, `underlays` and `snapshots` tables, meta "symbols"); 3 from 0.1.9; 2 before: no `issues` table; JSON `format` 1 from 0.1.0–0.1.4 converts) · symbol libraries `.dschemalib` (JSON, in app data › libraries) · installer `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` · publisher "Datum" |
@@ -50,6 +50,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | `ui/src/rules.tsx` | Options › Company rules and Options › Tags |
 | `crates/core/src/wiring.rs` | Instrument wiring: JunctionBox, Cable and IOCard objects (classes under WiringItem, added by `Op::AddObject`); devices name them in "jb", "jb_terminals", "cable", "io" ("<card>/<channel>", `channel`); `cables`, `allocation` (lists cables, ioalloc, jbs) and check 25 |
 | `ui/src/wiring.tsx` | Adding junction boxes, cables and cards; the wiring tabs |
+| `crates/core/src/sizing.rs` | Sizing: `cv_liquid`, `cv_gas` (IEC 60534-2-1), `orifice_c/flow/beta` (ISO 5167-2 corner taps), `api_c`, `psv_gas`, `psv_liquid`, `api526`; `size(p,item)` reads the device and its lines, names what is missing, lists what is assumed, and rejects non-physical results; `shown` for the Inspector (command `sizing`) |
 | `crates/core/src/calc.rs`, `crates/core/calcpacks/*.dcalc` | Datum Calc sheets: `sheets_for` (by class chain), `to_calc` (inputs filled with their source, kept ones listed, `NEEDS` refuses a sheet without its essential inputs) |
 | `crates/core/src/specs.rs` | Pipe specs (`PipeSpec`, `SpecItem` in `settings.specs`): `normalize`, `find` (case-insensitive), `item_class_size` (terminals by their own size), `entry`, checks 21–23, `import_csv`, `starter` (CS 150#) |
 | `ui/src/specs.tsx` | Options › Pipe specs: classes, limits, component table, CSV, files |
@@ -112,6 +113,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | Version | Decision | Why |
 | --- | --- | --- |
 | 0.5.1 | Calculation sheets reuse Datum Calc's own packs (copied as data into `calcpacks/`, with their references), filled by replacing the input lines' values; a filled value gets its own words (the pack's comment describes its sample) and its source; a sheet whose essential inputs are missing is refused rather than mixing sample values with the object's (the first run made three "failed" pressure-drop sheets that way) | The user asked to use the Datum family as the suites use their own tools; never link another app |
+| 0.5.2 | Sizing runs live in the Inspector (the engine sizes on every change) and is written to the data only by the user ("Write to the datasheet"), never automatically: a datasheet value must be the engineer's choice. Results that are not positive and finite are refused, not shown | The window never calculates; a sizing aid checked by the engineer |
 | 0.5.0 | Wiring objects are ordinary plant objects (classes JunctionBox, Cable, IOCard), not drawn; devices keep naming them in the existing text attributes, so loop diagrams and old projects keep working; the I/O channel is "<card>/<channel>" when it names a card. Check 25 speaks only once the project has wiring objects. A card channel tells nothing about the device's own kind (`io_of` ignores "AI-01/3"), so a valve on an AI card is found | No migration; free-text wiring is left alone; the check compares the device with the card |
 | 0.4.4 | Tag formats (`settings.tag_format`: separator, digit-only unit code before the number, per-sheet or project numbering, digits) always keep the prefix letters first and the number last, so `tags::split`/`loop_of` and every check keep working; "<unit>-<prefix>" forms were left out for that reason | Loops group by number; a format that put digits first would break them |
 | 0.4.4 | `Project::obj` is a binary search over objects kept in id order (sorted in `normalize` only when out of order), with a linear fallback; check 20 builds only loops with wiring typed; To do builds only issued datasheets | The open sheet took 1.9 s on 120 sheets; 39 ms after |
@@ -218,7 +220,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | — | Brainstorm again after 0.4.4 (or after 0.5.0, as the user asked to continue to it): compare with the commercial suites, re-plan | 🔜 |
 | 0.5.0 | Instrument wiring database (JunctionBox, Cable, IOCard objects; cable schedule; I/O allocation; check 25; loop diagrams) | ✅ |
 | 0.5.1 | Calculation sheets in Datum Calc (8 packs copied into `calcpacks/`), filled from the object, its lines, size, spec and limits; refused when essential inputs are missing | ✅ |
-| 0.5.2 | Sizing: control valves (ISA-75.01), orifices (ISO 5167), relief valves (API 520) | ⬜ |
+| 0.5.2 | Sizing: control valves (ISA-75.01), orifices (ISO 5167), relief valves (API 520) | ✅ |
 | 0.5.3 | Equipment datasheets; simulator stream tables imported (Excel, CSV) | ⬜ |
 | 0.5.4 | Report templates (columns, filters, grouping saved and exported) | ⬜ |
 | 0.6.0 | Document status (IFR, IFA, IFC) and transmittals | ⬜ |
@@ -356,3 +358,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 - After a second comparison with the commercial suites (in chat), the user asked for 0.5.1 to 0.5.4. `calc.rs` and eight packs copied from Datum Calc (NOTICE). Every sheet the three examples can make (35) was opened and computed with Datum Calc's real engine from the local clone (scratch program, deleted): 0 errors, 0 failed checks; 38 others are refused for missing data.
 - Tests: engine 119 (sheets by class, values and their sources, the pack's sample words replaced, unique ids, refusal without a flow, the line's velocity limit); UI checks for the Calculations buttons and the saved sheet.
 
+### 2026-11-01: Session 1, 0.5.2 (sizing)
+- `sizing.rs`: control valve Cv/Kv (liquid with choked flow, gas with Y), orifice beta by bisection on ISO 5167-2 C (corner taps), relief area per API 520 Part I with the API 526 letter. Sizing attributes added to ControlValve, ReliefDevice and PrimaryElement in classes.json. Inspector Sizing group (`ui/src/inspector.tsx`), help "sizing", command `sizing` (main.rs, serve.rs).
+- Pump example: LV-101 has a 0.8 bar design drop (Kv 33.5 = 30 √(0.998/0.8)), PSV-101 is a steam relief (7 200 kg/h, 458 K, M 18, k 1.33: 1 168 mm², orifice K). The compressor's FE-201 sizes with the assumed 25 kPa (β 0.377).
+- Tests: engine 121 (hand calculations for each formula, choked liquid and gas, C(1.4) = 0.02703, orifice round trip, devices on the drawing, hostile values never giving a result); UI check 49 (sized in the Inspector, Cv written).

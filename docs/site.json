@@ -31,6 +31,7 @@
     "A client's legend (DXF) becomes a symbol library; draw a project to their standard and back",
     "Old drawings (DXF) behind a sheet to trace over; revision clouds round what changed since an issue",
     "Send a line to Datum Pipe, a control loop to Datum Sim, and equipment and lines to Datum Calc as calculation sheets",
+    "Sizing of control valves (IEC 60534-2-1), orifice plates (ISO 5167-2) and relief valves (API 520), written to their datasheets",
     "Stream compositions with a component balance; an I/O summary per control system with spare",
     "Instrument wiring: junction boxes, cables and I/O cards; a cable schedule and the I/O allocation",
     "A valve and fitting take-off by type, size, pipe class and rating",
@@ -78,7 +79,7 @@
       "items": [
         "0.5.0: instrument wiring: cables, junction boxes, terminals, I/O cards, cable schedule; loop diagrams from them (done)",
         "0.5.1: calculation sheets in Datum Calc from an object's data (pump power and NPSH, line pressure drop, exchanger, vessel wall) (done)",
-        "0.5.2: sizing of control valves, orifices and relief valves",
+        "0.5.2: sizing of control valves, orifices and relief valves (done)",
         "0.5.3: equipment datasheets; stream tables imported from simulator results (Excel, CSV)",
         "0.5.4: reports you design yourself: columns, filters and grouping, saved and exported"
       ]

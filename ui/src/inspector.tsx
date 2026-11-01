@@ -91,6 +91,7 @@ const ItemPanel = (p: { it: Item }) => {
       <table class="vmini"><tbody><For each={conns()}>{c => <tr classList={{ f: c.ids.length > 0 }} onClick={() => c.ids.length && setSel(c.ids)}><td>{c.port}</td><td class="r">{c.lines.length ? c.lines.join(", ") : <span class="muted">open</span>}</td></tr>}</For></tbody></table>
     </Show>
     <Show when={v() && derived()?.issues.some(i => i.ids.includes(p.it.id))}><Issues id={p.it.id} /></Show>
+    <Sizing item={p.it.id} />
     <Calcs obj={p.it.obj} />
     <History id={p.it.obj} />
   </>;
@@ -211,6 +212,30 @@ const SheetPanel = () => {
     <Row label="Name"><input value={p().name} onChange={e => act({ SetProject: { name: e.currentTarget.value, units: p().units } })} /></Row>
     <Row label="Units" hint="How values are shown and typed. The file keeps SI units."><Pick value={p().units} set={u => act({ SetProject: { name: p().name, units: u } })} options={[["SI", "SI: bar, °C, m³/h, kg/m³, cP, m"], ["US", "US: psi, °F, gpm, lb/ft³, cP, ft"]]} /></Row>
   </>;
+};
+
+interface SizingOut { sizable: boolean; error: string; result?: { what: string; method: string; inputs: [string, string][]; results: [string, string][]; notes: string[]; writes: [string, any][] } }
+
+/** Sizing (engine: sizing.rs): a control valve's Cv, an orifice's bore, a relief valve's area, recalculated after each change. */
+const Sizing = (p: { item: number }) => {
+  const [z] = createResource(() => [p.item, proj()] as const, ([i]) => call<SizingOut>("sizing", { item: i }));
+  return (
+    <Show when={z()?.sizable}>
+      <h4>Sizing <Help k="sizing" /></h4>
+      <Show when={z()!.result} fallback={<p class="muted small sizeneed">{z()!.error}</p>}>{r => <div class="sizing">
+        <p class="muted small">{r().method}</p>
+        <table class="vmini"><tbody>
+          <For each={r().inputs}>{([k, v]) => <tr><td>{k}</td><td class="r">{v}</td></tr>}</For>
+          <For each={r().results}>{([k, v]) => <tr class="res"><td><b>{k}</b></td><td class="r"><b>{v}</b></td></tr>}</For>
+        </tbody></table>
+        <For each={r().notes}>{n => <p class="muted small">{n}</p>}</For>
+        <div class="ibtns"><button class="btn sm" title="Write the result to this object's data, so it shows on the datasheet and in the lists" onClick={() => {
+          const it = itemOf(p.item);
+          if (it) act({ Batch: { ops: r().writes.map(([k, v]) => ({ SetData: { ids: [it.obj], key: k, val: v } })) } });
+        }}>Write to the datasheet</button></div>
+      </div>}</Show>
+    </Show>
+  );
 };
 
 /** Calculation sheets in Datum Calc for an object (pump power, NPSH, line pressure drop…). */

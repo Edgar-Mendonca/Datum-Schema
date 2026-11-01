@@ -700,6 +700,16 @@ const shots = process.env.SHOTS;
     check("the sheet is a Datum Calc file with the pump's flow", !!m && m.format === 1 && m.regions.some(r => r.text.startsWith("Q = ") && r.text.endsWith("from P-101A")), ex?.text.slice(0, 120)); }
   await p.keyboard.press("Escape");
 
+  // 49. A control valve sized in the Inspector and its Cv written to its data.
+  await openEx("Pump transfer");
+  { const q = await project(); const lv = q.items.find(i => tagOf(q, i) === "LV-101");
+    await inv("apply", { op: { SetData: { ids: [lv.obj], key: "dp_design", val: 50000 } } });
+    const [x, y] = await scr(lv.x, lv.y); await p.mouse.click(x, y); await p.waitForTimeout(500); }
+  check("the Inspector sizes the control valve", ((await p.textContent(".insp .sizing").catch(() => "")) ?? "").includes("Cv required"));
+  await p.click(".insp .sizing button:has-text('Write to the datasheet')"); await p.waitForTimeout(400);
+  check("the Cv is written to its data", Number((await project()).objects.find(o => o.tag === "LV-101").data.cv_required) > 1);
+  await p.keyboard.press("Escape");
+
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();
   await fetch(`${url}quit`).catch(() => {});

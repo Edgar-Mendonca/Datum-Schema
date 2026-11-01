@@ -220,7 +220,7 @@ fn pump() -> (Project, Faults) {
     let (cka, ga) = (x.it("check", 185.0, 134.0, 0, ""), x.it("gate", 205.0, 134.0, 0, ""));
     let (ckb, gb) = (x.it("check", 185.0, 184.0, 0, ""), x.it("gate", 205.0, 184.0, 0, ""));
     let (iso1, lv, iso2) = (x.it("gate", 250.0, 134.0, 0, ""), x.it("cv_pneu", 270.0, 134.0, 0, "LV-101"), x.it("gate", 290.0, 134.0, 0, ""));
-    x.data(&[lv], &[("fail", t("FC")), ("size", t("3")), ("class", t("300#")), ("operator", t("Pneumatic")), ("loop", t("101"))]);
+    x.data(&[lv], &[("fail", t("FC")), ("size", t("3")), ("class", t("300#")), ("operator", t("Pneumatic")), ("loop", t("101")), ("dp_design", bar(0.8))]);
     let vessel = x.it("vvessel", 340.0, 142.0, 0, "V-101");
     x.data(&[vessel], &[("service", t("Receiver")), ("volume", n(12.0)), ("design_p", bar(10.0)), ("design_t", degc(65.0)), ("oper_p", bar(4.0)), ("material", t("Carbon steel")), ("size", t("2000 × 4000"))]);
     let dis_a = x.chain(E::P(pa, "discharge"), &[cka, ga, iso1, lv, iso2], E::P(vessel, "left upper"), Kind::Major);
@@ -229,7 +229,7 @@ fn pump() -> (Project, Faults) {
     x.pipe(&dis_b, "3", "P", "1004", "A1A", "Pump B discharge", &water(12.0, 4.5));
     // Relief: the safety valve on the vessel's top, to a vent.
     let psv = x.it("psv", 340.0, 108.0, 0, "PSV-101");
-    x.data(&[psv], &[("set_p", bar(10.0)), ("size", t("2")), ("class", t("300#"))]);
+    x.data(&[psv], &[("set_p", bar(10.0)), ("relieving_rate", Val::Num(2.0)), ("relieving_t", Val::Num(458.0)), ("mw", Val::Num(18.0)), ("k_ratio", Val::Num(1.33)), ("size", t("2")), ("class", t("300#"))]);
     let vent = x.it("vent", 365.0, 96.0, 0, "");
     let ri = x.ln(E::P(vessel, "top"), E::P(psv, "inlet"), Kind::Major);
     x.pipe(&[ri], "2", "P", "1005", "A1A", "PSV-101 inlet", &[("design_p", bar(10.0))]);

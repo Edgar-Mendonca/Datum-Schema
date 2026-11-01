@@ -25,7 +25,7 @@
 
 Draw the plant with real symbols, and every symbol and line carries its data and knows what it is connected to. So Datum Schema writes the line list, equipment list, instrument index and valve list for you, always in step with the drawing; checks the drawing as you work; and sizes every line, with its velocity and pressure drop against limits. It is for process, chemical, mechanical, piping and instrument engineers, operators and students. It is free and open source (MIT), Windows first, installs in seconds and updates itself. More on the family site: [edgar-mendonca.github.io/Datum/apps/schema](https://edgar-mendonca.github.io/Datum/apps/schema).
 
-> **Hydraulic results are a sizing aid.** Velocities and pressure drops help you size lines; they are checked by the engineer before they are used. The same goes for the heat and mass balance checks (they check the numbers typed, they are not a simulation) and for the models sent to Datum Pipe and Datum Sim (starting points with stated assumptions).
+> **Hydraulic results are a sizing aid.** Velocities and pressure drops help you size lines; they are checked by the engineer before they are used. The same goes for the heat and mass balance checks (they check the numbers typed, they are not a simulation) and for the models sent to Datum Pipe and Datum Sim (starting points with stated assumptions), and for the sizing of control valves, orifice plates and relief valves.
 
 ## What it does
 
@@ -47,6 +47,7 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Review comments**: pinned to the drawing, with replies and resolve or reopen; reviewers work on their own copies and their comments are taken back in without doubles.
 - **Revisions**: issue a sheet at a revision, compare it later with what changed, and cloud the changes with the revision triangle.
 - **The Datum family**: send a line to Datum Pipe as a stress model, a control loop to Datum Sim as a model to tune, and a pump, compressor, exchanger, vessel, tank or line to Datum Calc as a calculation sheet filled from its data.
+- **Sizing**: a control valve's Cv (IEC 60534-2-1), an orifice plate's bore (ISO 5167-2) and a relief valve's area and orifice letter (API 520, API 526), from its data and its lines, written to its datasheet.
 - **I/O summary**: inputs and outputs per control system (AI, AO, DI, DO, fieldbus) with 20% spare, from the instruments' wiring and signals.
 - **Company rules and tag formats**: your own checks on any attribute of any kind of object; tags written your way (separator, unit code, numbering, digits).
 - **Assemblies and data labels**: groups saved and placed again with the next free tags; chosen data shown under each kind of symbol.

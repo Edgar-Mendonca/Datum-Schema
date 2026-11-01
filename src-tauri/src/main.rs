@@ -340,6 +340,12 @@ fn calc_sheets(st: State<St>, obj: u32) -> Vec<datum_core::calc::Sheet> {
     datum_core::calc::sheets_for(&st.lock().doc.p, obj)
 }
 
+/// Sizes a control valve, orifice plate or relief valve from its data and its lines.
+#[tauri::command]
+fn sizing(st: State<St>, item: u32) -> datum_core::sizing::Shown {
+    datum_core::sizing::shown(&st.lock().doc.p, item)
+}
+
 /// What to look at after a change: overrides of line values, datasheets and sheets changed since issue.
 #[tauri::command]
 fn todo(st: State<St>) -> Vec<datum_core::propagate::Todo> {
@@ -743,7 +749,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, title_preview, title_standard, spec_starter, specs_csv, todo, calc_sheets, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
+            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, title_preview, title_standard, spec_starter, specs_csv, todo, calc_sheets, sizing, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
             options, set_options, autosave, recovery, recover, recent, startup_file, open_url, version, quit, check_update, install_update
         ])
         .run(tauri::generate_context!())
