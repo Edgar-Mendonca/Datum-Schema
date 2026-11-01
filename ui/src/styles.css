@@ -1180,3 +1180,8 @@ tr.behind td { background: var(--err-bg); }
 .lblrule { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px; }
 .lblrule select { min-width: 180px; }
 .lblkeys { display: flex; flex-wrap: wrap; gap: 4px 12px; flex: 1; }
+/* Company rules and tags. */
+.rulestbl select { max-width: 170px; }
+.rulestbl input:not([type=checkbox]):not(.num) { width: 100%; }
+.rulestbl input.num { width: 70px; }
+.rulestbl td.c { text-align: center; }

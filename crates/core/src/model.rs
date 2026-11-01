@@ -514,6 +514,10 @@ pub struct Settings {
     pub title_block: TitleBlock,
     /// The pipe specs (pipe classes) lines are built to.
     pub specs: Vec<crate::specs::PipeSpec>,
+    /// How new tags are written.
+    pub tag_format: crate::tags::TagFormat,
+    /// The company's own rules (check 24).
+    pub rules: Vec<crate::rules::UserRule>,
     /// Saved groups of symbols and lines, placed again as one (a control valve station…).
     pub assemblies: Vec<Assembly>,
     /// The data shown under each kind of symbol on the drawing.
@@ -554,7 +558,7 @@ pub const MAX_LOGO: usize = 280_000;
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), specs: vec![], assemblies: vec![], labels: vec![], components: vec![] }
+        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), specs: vec![], tag_format: crate::tags::TagFormat::default(), rules: vec![], assemblies: vec![], labels: vec![], components: vec![] }
     }
 }
 
@@ -640,11 +644,25 @@ impl Project {
         id
     }
 
+    /// An object by id. Objects are kept in id order (`normalize`), so this is a binary search;
+    /// a project out of order still finds its objects, more slowly.
     pub fn obj(&self, id: u32) -> Option<&Obj> {
-        self.objects.iter().find(|o| o.id == id)
+        if id == 0 {
+            return None;
+        }
+        match self.objects.binary_search_by_key(&id, |o| o.id) {
+            Ok(i) => Some(&self.objects[i]),
+            Err(_) => self.objects.iter().find(|o| o.id == id),
+        }
     }
     pub fn obj_mut(&mut self, id: u32) -> Option<&mut Obj> {
-        self.objects.iter_mut().find(|o| o.id == id)
+        if id == 0 {
+            return None;
+        }
+        match self.objects.binary_search_by_key(&id, |o| o.id) {
+            Ok(i) => Some(&mut self.objects[i]),
+            Err(_) => self.objects.iter_mut().find(|o| o.id == id),
+        }
     }
     /// The tag of the object a symbol shows.
     pub fn tag_of(&self, it: &Item) -> &str {
@@ -897,6 +915,8 @@ impl Project {
         l.order.retain(|h| h.len() <= 100);
         s.title_block.normalize();
         crate::specs::normalize(&mut s.specs);
+        s.tag_format.normalize();
+        crate::rules::normalize(&mut s.rules);
         s.assemblies.truncate(200);
         let mut seen_a = HashSet::new();
         s.assemblies.retain(|a| !a.name.trim().is_empty() && seen_a.insert(a.name.trim().to_lowercase()));
@@ -994,6 +1014,10 @@ impl Project {
     /// area, every symbol and every process line piece has an object, data values are finite.
     fn normalize_objects(&mut self) -> Vec<String> {
         let mut w = vec![];
+        // In id order, for `obj`'s binary search (stable: equal ids, repaired below, keep their order).
+        if !self.objects.windows(2).all(|x| x[0].id <= x[1].id) {
+            self.objects.sort_by_key(|o| o.id);
+        }
         let ids: HashSet<u32> = self.nodes.iter().map(|n| n.id).collect();
         for n in &mut self.nodes {
             if !["plant", "unit", "area"].contains(&n.level.as_str()) {

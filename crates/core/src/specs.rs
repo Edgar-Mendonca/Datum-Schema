@@ -473,7 +473,7 @@ mod tests {
         assert!(issues(&d.p).is_empty());
         let mut st = d.p.settings.clone();
         st.specs = vec![starter("A1A")];
-        d.apply(Op::SetSettings { settings: st.clone() }).unwrap();
+        d.apply(Op::SetSettings { settings: Box::new(st.clone()) }).unwrap();
         let w = issues(&d.p);
         // The pump example's components are all in the starter class, except the breather.
         assert!(w.iter().all(|i| i.rule == 22 && i.msg.contains("PVSV-101")), "{w:#?}");
@@ -487,13 +487,13 @@ mod tests {
         // 22: a ball valve above its range, and a kind the class does not list.
         let mut st2 = st.clone();
         st2.specs[0].items.retain(|i| i.kind != "gate");
-        d.apply(Op::SetSettings { settings: st2 }).unwrap();
+        d.apply(Op::SetSettings { settings: Box::new(st2) }).unwrap();
         assert!(issues(&d.p).iter().any(|i| i.rule == 22 && i.msg.contains("HV-104") && i.msg.contains("is not in pipe class A1A")));
         // 23: design pressure above the class, and a line bigger than the class.
         let mut st3 = st.clone();
         st3.specs[0].max_p = 5e5;
         st3.specs[0].max = "3".into();
-        d.apply(Op::SetSettings { settings: st3 }).unwrap();
+        d.apply(Op::SetSettings { settings: Box::new(st3) }).unwrap();
         let w = issues(&d.p);
         assert!(w.iter().any(|i| i.rule == 23 && i.msg.contains("design pressure")), "{w:#?}");
         assert!(w.iter().any(|i| i.rule == 23 && i.msg.contains("4\" but pipe class A1A runs from 1/2 to 3")), "{w:#?}");

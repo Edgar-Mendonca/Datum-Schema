@@ -86,12 +86,17 @@ pub fn checks(p: &Project, net: &Net, on: &dyn Fn(u8) -> bool) -> Vec<Issue> {
     }
     // 20. Once a loop's wiring is started, every device in it is wired.
     if on(20) {
-        for l in crate::loops::all(p) {
-            let ms = crate::loops::members(p, &l.key);
-            let wired = |it: &Item, k: &str| p.data_of(it.obj).get(k).is_some_and(|v| !v.text().trim().is_empty());
-            if !ms.iter().any(|it| crate::loops::WIRING.iter().any(|(k, _)| wired(it, k))) {
+        let wired = |it: &Item, k: &str| p.data_of(it.obj).get(k).is_some_and(|v| !v.text().trim().is_empty());
+        // Only the loops where some wiring has been typed.
+        let mut keys: Vec<String> = p.objects.iter().filter(|o| crate::loops::WIRING.iter().any(|(k, _)| o.data.get(*k).is_some_and(|v| !v.text().trim().is_empty()))).filter_map(|o| crate::loops::key_of(&o.tag)).collect();
+        keys.sort();
+        keys.dedup();
+        for key in keys {
+            let ms = crate::loops::members(p, &key);
+            if ms.len() < 2 {
                 continue;
             }
+            let l = crate::loops::LoopInfo { key: key.clone(), tags: vec![] };
             for it in ms.iter().filter(|i| !pfd.contains(&i.sheet)) {
                 let need: Vec<&str> = if crate::loops::in_system(p, it) { vec!["system"] } else { crate::loops::WIRING.iter().map(|x| x.0).collect() };
                 let missing: Vec<String> = crate::loops::WIRING.iter().filter(|(k, _)| need.contains(k) && !wired(it, k)).map(|(_, l)| l.to_lowercase()).collect();

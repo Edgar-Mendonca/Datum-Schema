@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.4 — 2026-11-01
+
+Company rules, tag formats, and speed on large projects.
+
+**Company rules.** File › Options › **Company rules**: your own checks, on every object of a kind and its sub-kinds (a rule on Equipment covers pumps, vessels and exchangers). An attribute must be there, or its value must equal, not equal, be one of, contain, be at least or at most a value (in the project's units); choose the level and, if you like, the words. **Check 24** runs them on every change.
+
+**Tag formats.** File › Options › **Tags**: the separator (P-101, P101, P_101…), a unit or area code put before the number (P-10101), numbering per sheet (101, 201…) or through the project (001, 002…), and the digits. New tags and loop numbers follow it, copies keep the width (V-007 → V-008), and Check › Renumber applies it to every tag.
+
+**Speed.** On a 120-sheet project (2,640 symbols, 2,760 lines) the open sheet now refreshes after an edit in about 40 ms instead of 1.9 s: objects are found by binary search, and the loop wiring check and the To do list look only at loops with wiring and datasheets that were issued. An edit takes about 25 ms, the lists under 80 ms, saving 0.1 s and opening 0.03 s.
+
 ## 0.4.3 — 2026-11-01
 
 Assemblies and data labels.

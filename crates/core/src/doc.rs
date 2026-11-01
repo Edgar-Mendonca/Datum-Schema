@@ -108,7 +108,7 @@ pub enum Op {
     MoveSheet { id: u32, to: usize },
     SetTitle { title: Title },
     SetProject { name: String, units: String },
-    SetSettings { settings: Settings },
+    SetSettings { settings: Box<Settings> },
     /// Number every tag again (per prefix, per sheet, left to right).
     Renumber,
     Batch { ops: Vec<Op> },
@@ -327,7 +327,7 @@ fn auto_tag(p: &Project, it: &Item, typed: &str) -> String {
         return t.to_string();
     }
     if (s.cat.instrument() || s.cat == Cat::Control) && !t.is_empty() {
-        return format!("{}-{}", t.to_uppercase(), next_loop(p, it.sheet));
+        return format!("{}{}{}", t.to_uppercase(), p.settings.tag_format.sep, next_loop(p, it.sheet));
     }
     if t.is_empty() { tags::next_free(p, s.prefix, it.sheet) } else { tags::next_free(p, t, it.sheet) }
 }
@@ -335,11 +335,12 @@ fn auto_tag(p: &Project, it: &Item, typed: &str) -> String {
 /// The next loop number not used by any instrument or control valve on a sheet (101 … per sheet).
 pub fn next_loop(p: &Project, sheet: u32) -> String {
     let used: HashSet<u64> = p.items.iter().filter(|i| symbols::get(&i.sym).is_some_and(|s| s.cat.instrument() || s.cat == Cat::Control)).filter_map(|i| tags::split(p.tag_of(i)).1).collect();
-    let mut n = p.sheet_no(sheet).max(1) as u64 * 100 + 1;
-    while used.contains(&n) {
+    let f = &p.settings.tag_format;
+    let mut n = if f.numbering == "project" { 1 } else { p.sheet_no(sheet).max(1) as u64 * 100 + 1 };
+    while f.number(n).parse::<u64>().is_ok_and(|x| used.contains(&x)) {
         n += 1;
     }
-    n.to_string()
+    f.number(n)
 }
 
 /// The line-number object a new process piece belongs to: the one it continues through an in-line
@@ -733,7 +734,7 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
             p.name = crate::clip(name.trim(), 200);
             p.units = units;
         }
-        Op::SetSettings { settings } => p.settings = settings,
+        Op::SetSettings { settings } => p.settings = *settings,
         Op::Renumber => {
             for (id, t) in tags::renumber(p) {
                 p.obj_mut(id).ok_or("That object no longer exists.")?.tag = t;
@@ -1114,7 +1115,7 @@ mod tests {
         let mut e = Doc::new(Project::new());
         let mut st = e.p.settings.clone();
         st.assemblies = d.p.settings.assemblies.clone();
-        e.apply(Op::SetSettings { settings: st }).unwrap();
+        e.apply(Op::SetSettings { settings: Box::new(st) }).unwrap();
         let s = e.p.sheets[0].id;
         let made = e.apply(Op::PlaceAssembly { name: "CV station".into(), sheet: s, x: 100.0, y: 100.0 }).unwrap();
         assert!(e.p.items.iter().any(|i| made.contains(&i.id) && e.p.tag_of(i) == "LV-101"));

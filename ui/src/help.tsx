@@ -31,6 +31,7 @@ export const RULES: [number, string, string][] = [
   [21, "A line's pipe class is not one of the project's pipe specs", "warning"],
   [22, "A valve or fitting its line's pipe class does not allow at that size", "warning"],
   [23, "A line outside its pipe class's sizes, design pressure or design temperature", "warning"],
+  [24, "A company rule (File › Options › Company rules) is not met", "set by the rule"],
 ];
 
 export const HELP: Record<string, Topic> = {
@@ -116,6 +117,9 @@ export const HELP: Record<string, Topic> = {
   assemblies: { t: "Assemblies and data labels", what: "An assembly is a group saved from the drawing (a control valve station with its block valves and bypass, a pump set) and placed again as one. Data labels show chosen data under every symbol of a kind.",
     how: ["Select the symbols, lines and notes, then Format › Save as Assembly and give it a name. Its data goes with it.", "Place it from the palette's Assemblies tab: click it, then click the sheet (Shift keeps placing). Its symbols get the next free tags; lines to things left out become open ends.", "File › Options › Assemblies renames, deletes and shares them as a file, or uses them for new projects.", "File › Options › Data labels: choose a kind of symbol (Pump, Vessel, Control valve…) and the data to show under it, in the project's units."],
     tip: "An assembly saved in one project can be loaded into another; its tags are kept where they are free." },
+  company: { t: "Company rules and tags", what: "Your company's own checks, and how new tags are written.",
+    how: ["File › Options › Company rules: every object of a kind (Equipment, Pump, Control valve, Line number…) must have an attribute, or its value must equal, not equal, be one of, contain, be at least or at most a value. Choose the level (error, warning, note) and, if you like, the words the Checks panel says. Check 24 runs them on every change.", "File › Options › Tags: the separator, a unit or area code put before the number, numbering per sheet (101, 201…) or through the project (001, 002…), and the digits. New tags follow it; Check › Renumber applies it to every tag."],
+    tip: "Rules on a kind apply to its sub-kinds too: a rule on Equipment covers pumps, vessels and exchangers." },
   history: { t: "History", what: "Every change to an object is recorded with who made it, when, and the old and new value. The history is saved in the project file, so it survives closing and reopening; undo and redo are recorded too." },
   inspector: { t: "Inspector", what: "The selected item's data, with units: tag, service, design and operating conditions, sizes, connections, and for lines the hydraulics. With nothing selected, the sheet, its revisions and the title block." },
   "cat:vessel": { t: "Vessels", what: "Vertical vessels, horizontal drums, tanks, columns (trays or packing), a separator with a boot, a filter vessel, a knock-out drum and a silo. Their nozzles are ports; each carries design and operating conditions, material, volume and a relief note." },

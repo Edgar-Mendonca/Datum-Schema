@@ -263,7 +263,7 @@ fn rules_switch_off() {
     assert!(b.has(9));
     let mut s = b.d.p.settings.clone();
     s.off.push(9);
-    b.d.apply(Op::SetSettings { settings: s }).unwrap();
+    b.d.apply(Op::SetSettings { settings: Box::new(s) }).unwrap();
     assert!(!b.has(9));
 }
 
@@ -274,7 +274,7 @@ fn r6_required_class_attributes() {
     assert!(!b.has(6));
     let mut s = b.d.p.settings.clone();
     s.user_attrs.push(crate::classes::UserAttr { class: "Pump".into(), attr: crate::classes::Attr { key: "seal_plan".into(), label: "Seal plan".into(), required: true, ..Default::default() } });
-    b.d.apply(Op::SetSettings { settings: s }).unwrap();
+    b.d.apply(Op::SetSettings { settings: Box::new(s) }).unwrap();
     assert!(b.issues().iter().any(|i| i.rule == 6 && i.msg.contains("seal plan")));
     b.set(&[pm], "seal_plan", Val::Text("53B".into()));
     assert!(!b.has(6));

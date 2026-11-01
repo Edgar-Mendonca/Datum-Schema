@@ -34,12 +34,16 @@ export interface Line { id: number; sheet: number; kind: Kind; a: End; b: End; p
 export type NoteKind = "note" | "leader" | "hold";
 export interface Note { id: number; sheet: number; kind: NoteKind; x: number; y: number; w: number; h: number; text: string; to: Pt }
 export interface Limit { service: string; name: string; vmin: number; vmax: number; dp: number }
-export interface Settings { line_format: string; off: number[]; limits: Limit[]; roughness: number; grid: number; hidden: string[]; user_attrs: UserAttr[]; ds_layout: DsLayout; standard: Standard; title_block: TitleBlock; specs: PipeSpec[]; assemblies: Assembly[]; labels: LabelRule[]; components: string[] }
+export interface Settings { line_format: string; off: number[]; limits: Limit[]; roughness: number; grid: number; hidden: string[]; user_attrs: UserAttr[]; ds_layout: DsLayout; standard: Standard; title_block: TitleBlock; specs: PipeSpec[]; tag_format: TagFormat; rules: UserRule[]; assemblies: Assembly[]; labels: LabelRule[]; components: string[] }
 /** A pipe class: limits in SI (Pa, K, m), sizes as NPS text, and the components it allows by size. */
 /** A saved group of symbols, lines and notes round (0, 0), with copies of their objects. */
 export interface Assembly { name: string; items: Item[]; lines: Line[]; notes: Note[]; objs: Obj[] }
 /** The data shown under every symbol of a class. */
 export interface LabelRule { class: string; keys: string[] }
+/** How new tags are written. */
+export interface TagFormat { sep: string; unit: string; numbering: string; digits: number }
+/** A company rule (check 24): `num` in SI for "at least" and "at most". */
+export interface UserRule { on: boolean; class: string; key: string; test: string; value: string; num: number; level: string; message: string }
 export interface SpecItem { kind: string; min: string; max: string; desc: string; code: string; ends: string }
 /** What each end of a type brings with it (per end), in a size range. */
 export interface Implied { what: string; ends: string; per: number; min: string; max: string; desc: string; code: string }

@@ -6,7 +6,7 @@
 | | |
 | --- | --- |
 | **Product** | Datum Schema: intelligent P&IDs and process flow diagrams: draw, check and list (symbols and lines that carry their data and connections; live line list, equipment list, instrument index and valve list; drawing checks; line hydraulics; print, SVG and DXF) |
-| **Current version** | 0.4.3 (2026-11-01) |
+| **Current version** | 0.4.4 (2026-11-01) |
 | **Repo** | `Edgar-Mendonca/Datum-Schema` · branch `claude/vigilant-hamilton-ku7r0w` (the first branch pushed, so the default branch) |
 | **Stack** | Rust engine (`crates/core`: model, symbols, graph, tags, checks, hydraulics, lists, frame, routing, DXF), Tauri 2, SolidJS + strict TypeScript; no Python |
 | **Identifier** | `com.edgarmendonca.datumschema` · files `.dschema` (SQLite, `format` 4 from 0.2.0 (items.base, `underlays` and `snapshots` tables, meta "symbols"); 3 from 0.1.9; 2 before: no `issues` table; JSON `format` 1 from 0.1.0–0.1.4 converts) · symbol libraries `.dschemalib` (JSON, in app data › libraries) · installer `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` · publisher "Datum" |
@@ -45,6 +45,9 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | `ui/src/review.tsx` | The Comment tool's dialog, the Comments panel, Import Review |
 | `crates/core/src/propagate.rs` | Values passed along (`run`, from `normalize`: line size and class → component "size", "pipe_class", remembered in hidden "~" keys so typed values are kept) and `todo` (overrides, datasheets and sheets changed since issue); `hidden` keys skipped by history and DEXPI |
 | `ui/src/todo.tsx` | The To do tab |
+| `crates/core/src/rules.rs` | Company rules (`settings.rules`): tests required, equals, not equals, one of, contains, at least, at most on one attribute of a class and its subclasses; check 24 |
+| `crates/core/examples/bench_big.rs` | A 120-sheet project: an edit, the open sheet, lists, To do, save and open timed |
+| `ui/src/rules.tsx` | Options › Company rules and Options › Tags |
 | `crates/core/src/specs.rs` | Pipe specs (`PipeSpec`, `SpecItem` in `settings.specs`): `normalize`, `find` (case-insensitive), `item_class_size` (terminals by their own size), `entry`, checks 21–23, `import_csv`, `starter` (CS 150#) |
 | `ui/src/specs.tsx` | Options › Pipe specs: classes, limits, component table, CSV, files |
 | `crates/core/src/revs.rs` | Sheet revisions: `snapshot` (items, lines with routes, notes, objects' tag and data), `compare` (added, removed, changed: moved, rerouted, symbol, tag, data; gathered into areas), `cloud` (scallops and the triangle), `clouds` for the view, `next_rev` |
@@ -105,6 +108,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 
 | Version | Decision | Why |
 | --- | --- | --- |
+| 0.4.4 | Tag formats (`settings.tag_format`: separator, digit-only unit code before the number, per-sheet or project numbering, digits) always keep the prefix letters first and the number last, so `tags::split`/`loop_of` and every check keep working; "<unit>-<prefix>" forms were left out for that reason | Loops group by number; a format that put digits first would break them |
+| 0.4.4 | `Project::obj` is a binary search over objects kept in id order (sorted in `normalize` only when out of order), with a linear fallback; check 20 builds only loops with wiring typed; To do builds only issued datasheets | The open sheet took 1.9 s on 120 sheets; 39 ms after |
 | 0.4.3 | An assembly (`settings.assemblies`) keeps its items, lines and notes round (0, 0) and copies of their objects; `Op::PlaceAssembly` reuses `paste` with those copies (tags kept where free, else bumped). Data labels (`settings.labels`: class and up to six keys) are drawn by the engine under the item's other texts, in display units, for the class and its subclasses | One paste path; labels follow the class library |
 | 0.4.2 | Implied items come from rules on the pipe class (`PipeSpec.implied`: what, end type, per end, sizes, description, code), applied to each component's ends of that type (its process ports); an end type left blank is read from the description. Each flanged end counts as its own joint (a valve bolted straight to another's flange is counted twice) | Simple and explainable; good enough for a requisition estimate, checked by the engineer |
 | 0.4.1 | Propagation runs in `normalize` (every edit and open), writing the line's size and class into the component's data, and remembers what it wrote in hidden "~size"/"~pipe_class" keys: a value still equal to the last written one is the engine's to change, anything else is the user's override (kept, listed on To do). The pipe class goes to "pipe_class" because a valve's "class" attribute already holds its rating (the examples' 300#). Control and relief valves, reducers and terminals are not sized from the line | Lists and datasheets show real values; typed values are never lost; no false overrides on valves sized below the line |
@@ -204,9 +209,9 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.4.1 | Values passed along a line (size, pipe class) to in-line items; the To do tab | ✅ |
 | 0.4.2 | Implied items (flanges, gaskets, bolts) in the take-off; end types on spec components | ✅ |
 | 0.4.3 | Assemblies (save, place, share, defaults); data labels by class | ✅ |
-| 0.4.4 | User rules and tag formats per class; speed on large projects | 🔜 |
-| — | Brainstorm again after 0.4.4: compare with the commercial suites, re-plan | ⬜ |
-| 0.5.0 | Instrument wiring database (cables, JBs, terminals, I/O cards, cable schedule); loop diagrams from it | ⬜ |
+| 0.4.4 | Company rules (check 24), tag formats, speed on 120 sheets (open sheet 1.9 s → 39 ms) | ✅ |
+| — | Brainstorm again after 0.4.4 (or after 0.5.0, as the user asked to continue to it): compare with the commercial suites, re-plan | 🔜 |
+| 0.5.0 | Instrument wiring database (cables, JBs, terminals, I/O cards, cable schedule); loop diagrams from it | 🔜 |
 | 0.5.1 | Calculation sheets in Datum Calc from an object's data (its packs: pump power, NPSH, pipe Δp, HX LMTD, pressure vessel, tank…), as `.dcalc` files like the Pipe and Sim links | ⬜ |
 | 0.5.2 | Sizing: control valves (ISA-75.01), orifices (ISO 5167), relief valves (API 520) | ⬜ |
 | 0.5.3 | Equipment datasheets; simulator stream tables imported (Excel, CSV) | ⬜ |
@@ -330,4 +335,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 ### 2026-11-01: Session 1, 0.4.3 (assemblies and data labels)
 - `Op::SaveAssembly`/`PlaceAssembly` (with `doc::assembly` and `paste` taking source objects), labels in `view.rs`, `ui/src/assemblies.tsx` (save dialog, palette tab, Options sections). An assembly placed in another project first took the next tag although its own was free; now kept where free. Names match whatever their case.
 - Tests: engine 114 (save, replace by name, place with the next tag and data kept, place in another project, labels under pumps only); UI checks for saving, placing and labels.
+
+### 2026-11-01: Session 1, 0.4.4 (company rules, tag formats, speed)
+- `rules.rs` (check 24), `tags::TagFormat` in `next_free`, `next_loop`, `bump` (width kept) and `renumber`; Options sections in `ui/src/rules.tsx`. The new `bench_big` example (120 sheets) found the open sheet at 1.9 s, nearly all in check 20 (every loop's members, each found with a linear `obj` search). Fixed as recorded in Decisions; the open sheet is 39 ms.
+- Tests: engine 116 (rules pass and fail, levels and words, off rules, tag formats and their normalising); UI checks for a company rule in the Checks panel and the tag preview.
 

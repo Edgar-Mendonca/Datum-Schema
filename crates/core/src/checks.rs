@@ -21,7 +21,7 @@ pub struct Issue {
 }
 
 /// The number of rules.
-pub const RULES: u8 = 23;
+pub const RULES: u8 = 24;
 
 const ERROR: &str = "error";
 const WARNING: &str = "warning";
@@ -337,6 +337,11 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
     // 21, 22 and 23. Pipe specs: known classes, components allowed, sizes and limits.
     if on(21) || on(22) || on(23) {
         v.extend(crate::specs::checks(p, net, &on));
+    }
+
+    // 24. The company's own rules.
+    if on(24) {
+        v.extend(crate::rules::checks(p, net));
     }
 
     // 16. A P&ID line that names a PFD stream carries what the stream says.

@@ -18,7 +18,7 @@
     },
     {
       "title": "Check it as you go",
-      "text": "Twenty-three rules run on every change: duplicate tags, open ends, size and class changes, check valves, relief paths, control loops, velocities and pressure drops, heat, mass and component balances on process flow diagrams, instrument ranges, loop wiring and pipe specs. Click an issue to go to it."
+      "text": "Twenty-four rules run on every change: duplicate tags, open ends, size and class changes, check valves, relief paths, control loops, velocities and pressure drops, heat, mass and component balances on process flow diagrams, instrument ranges, loop wiring pipe specs and your company's own rules. Click an issue to go to it."
     },
     {
       "title": "Print the drawings and lists",
@@ -45,7 +45,7 @@
     "A valve dropped on a line splits it and joins both halves",
     "Off-page connectors pair across sheets; click one to jump to its partner",
     "Live line list, equipment list, instrument index, valve list and datasheet index",
-    "Twenty-three checks, including balances, instrument ranges and pipe specs, each with a click to the problem",
+    "Twenty-four checks, including balances, instrument ranges, pipe specs and your own rules, each with a click to the problem",
     "Line hydraulics: velocity, Reynolds number, Colebrook friction factor and pressure drop against limits",
     "SI and US units; DXF, SVG, PDF, Excel, CSV and the DEXPI P&ID exchange format (export and import)",
     "Automatic tags and loop numbers, renumbering, a legend sheet",
@@ -61,19 +61,19 @@
     {
       "v": "0.4",
       "title": "Piping rules",
-      "when": "Now",
+      "when": "Done",
       "items": [
         "0.4.0: pipe specs: each pipe class lists the components it allows, by size and rating; spec checks (done)",
         "0.4.1: values passed along a line (size and class to its valves and fittings) and a to-do list after changes (done)",
         "0.4.2: implied items (flanges, gaskets, bolts) in the take-off (done)",
         "0.4.3: assemblies (a group placed as one) and data labels you choose on the drawing (done)",
-        "0.4.4: rules and tag formats of your own; speed on large projects"
+        "0.4.4: rules and tag formats of your own; speed on large projects (done)"
       ]
     },
     {
       "v": "0.5",
       "title": "Instruments and calculations",
-      "when": "Next",
+      "when": "Now",
       "items": [
         "0.5.0: instrument wiring: cables, junction boxes, terminals, I/O cards, cable schedule; loop diagrams from them",
         "0.5.1: calculation sheets in Datum Calc from an object's data (pump power and NPSH, line pressure drop, exchanger, vessel wall)",

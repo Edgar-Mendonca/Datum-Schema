@@ -27,6 +27,7 @@ pub mod pipes;
 pub mod review;
 pub mod propagate;
 pub mod revs;
+pub mod rules;
 pub mod specs;
 pub mod route;
 pub mod symbols;

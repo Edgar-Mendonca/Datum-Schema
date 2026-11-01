@@ -120,7 +120,11 @@ pub fn todo(p: &Project) -> Vec<Todo> {
             }
         }
     }
-    for ds in crate::datasheets::all(p).into_iter().filter(|d| !d.rev.is_empty() && d.changed > 0) {
+    // Only issued datasheets can have changed since their issue.
+    let issued: std::collections::HashSet<u32> = p.issues.iter().map(|i| i.obj).collect();
+    let mut shown = std::collections::HashSet::new();
+    let sheets: Vec<crate::datasheets::Datasheet> = p.items.iter().filter(|i| issued.contains(&i.obj) && shown.insert(i.obj)).filter_map(|i| crate::datasheets::build_in(p, &net, i.obj).ok()).collect();
+    for ds in sheets.into_iter().filter(|d| !d.rev.is_empty() && d.changed > 0) {
         v.push(Todo { kind: "datasheet", what: format!("{}'s datasheet has {} change{} since revision {}: issue it again.", ds.tag, ds.changed, if ds.changed == 1 { "" } else { "s" }, ds.rev), ids: vec![ds.item], sheet: ds.sheet, key: String::new(), value: String::new(), rev: ds.rev.clone(), obj: ds.obj });
     }
     for s in &p.sheets {

@@ -24,6 +24,49 @@ pub fn loop_of(tag: &str) -> (String, String) {
     (l.to_uppercase(), n.map(|n| n.to_string()).unwrap_or_default())
 }
 
+/// How new tags are written: the prefix, a separator, then an optional fixed number (a unit or
+/// area code) and the number, padded to `digits`; numbered from 101 on each sheet (201 on sheet
+/// 2…) or from 1 through the project.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+#[serde(default)]
+pub struct TagFormat {
+    pub sep: String,
+    pub unit: String,
+    /// "sheet" or "project".
+    pub numbering: String,
+    pub digits: u8,
+}
+
+impl Default for TagFormat {
+    fn default() -> Self {
+        Self { sep: "-".into(), unit: String::new(), numbering: "sheet".into(), digits: 3 }
+    }
+}
+
+impl TagFormat {
+    pub fn normalize(&mut self) {
+        if !["-", "", " ", "_", ".", "/"].contains(&self.sep.as_str()) {
+            self.sep = "-".into();
+        }
+        self.unit = self.unit.chars().filter(|c| c.is_ascii_digit()).take(4).collect();
+        if self.numbering != "project" {
+            self.numbering = "sheet".into();
+        }
+        self.digits = self.digits.clamp(1, 6);
+    }
+    /// The first number on a sheet.
+    fn first(&self, p: &Project, sheet: u32) -> u64 {
+        if self.numbering == "project" { 1 } else { p.sheet_no(sheet).max(1) as u64 * 100 + 1 }
+    }
+    /// A number as written in a tag: the unit code, then the number padded.
+    pub fn number(&self, n: u64) -> String {
+        format!("{}{:0w$}", self.unit, n, w = self.digits as usize)
+    }
+    pub fn tag(&self, prefix: &str, n: u64) -> String {
+        format!("{prefix}{}{}", self.sep, self.number(n))
+    }
+}
+
 fn used(p: &Project) -> HashSet<String> {
     p.objects.iter().map(|o| o.tag.trim().to_uppercase()).filter(|t| !t.is_empty()).collect()
 }
@@ -34,10 +77,10 @@ pub fn next_free(p: &Project, prefix: &str, sheet: u32) -> String {
         return String::new();
     }
     let used = used(p);
-    let base = (p.sheet_no(sheet).max(1) as u64) * 100;
-    let mut n = base + 1;
+    let f = &p.settings.tag_format;
+    let mut n = f.first(p, sheet);
     loop {
-        let t = format!("{prefix}-{n}");
+        let t = f.tag(prefix, n);
         if !used.contains(&t.to_uppercase()) {
             return t;
         }
@@ -78,8 +121,10 @@ pub fn bump(p: &Project, tag: &str, extra: &HashSet<String>) -> String {
         }
         Some(n) => {
             let mut k = n + 1;
+            // Keep the number's width (P-001 → P-002).
+            let w = tag.chars().skip_while(|c| !c.is_ascii_digit()).take_while(|c| c.is_ascii_digit()).count();
             loop {
-                let t = format!("{pre}{sep}{k}{suf}");
+                let t = format!("{pre}{sep}{k:0w$}{suf}");
                 if free(&t) {
                     return t;
                 }
@@ -122,7 +167,8 @@ pub fn renumber(p: &Project) -> Vec<(u32, String)> {
         v.sort_by(|a, b| (a.0 + a.1 * 0.001).total_cmp(&(b.0 + b.1 * 0.001)));
         // Old number → new number, in order of first appearance.
         let mut map: BTreeMap<Option<u64>, u64> = BTreeMap::new();
-        let mut next = sheet as u64 * 100 + 1;
+        let f = &p.settings.tag_format;
+        let mut next = if f.numbering == "project" { 1 } else { sheet as u64 * 100 + 1 };
         for (_, _, id, num, suf) in &v {
             let n = match (num, map.get(num)) {
                 (Some(_), Some(n)) => *n,
@@ -138,7 +184,7 @@ pub fn renumber(p: &Project) -> Vec<(u32, String)> {
             let it = p.obj(*id).map(|o| o.tag.clone()).unwrap_or_default();
             let (pre, _, _) = split(&it);
             let pre = if key == "#loop" { pre } else { key.clone() };
-            out.push((*id, format!("{pre}-{n}{suf}")));
+            out.push((*id, format!("{}{suf}", f.tag(&pre, n))));
         }
     }
     out

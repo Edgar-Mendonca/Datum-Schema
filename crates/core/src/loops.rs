@@ -49,6 +49,11 @@ pub struct LoopView {
     pub missing: Vec<String>,
 }
 
+/// The loop a tag belongs to ("L-101" for LT-101).
+pub(crate) fn key_of(tag: &str) -> Option<String> {
+    loop_key(tag)
+}
+
 fn loop_key(tag: &str) -> Option<String> {
     let (letters, n) = tags::loop_of(tag);
     let first = letters.chars().next()?;

@@ -601,7 +601,7 @@ const shots = process.env.SHOTS;
   { const n = await p.$$eval(".guide .gmain .gtopic", els => els.length);
     const helpBtns = await p.$$eval(".gtoc a", els => els.map(e => e.textContent));
     check("the guide has every chapter and many topics", n >= 40 && helpBtns.includes("Glossary") && helpBtns.some(t => t.includes("Process flow diagrams")), `${n} topics; ${helpBtns.join(" / ")}`);
-    check("the guide lists every check rule", (await p.$$eval(".guide .grules tr", els => els.length)) === 23);
+    check("the guide lists every check rule", (await p.$$eval(".guide .grules tr", els => els.length)) === 24);
     await p.fill(".gsearch", "revision cloud"); await p.waitForTimeout(200);
     const found = await p.$$eval(".guide .gmain .gtopic h3", els => els.map(e => e.textContent));
     check("search narrows the guide", found.length >= 1 && found.length < 6 && found.some(t => t.includes("Revisions")), JSON.stringify(found));
@@ -658,6 +658,19 @@ const shots = process.env.SHOTS;
   await p.click(".lblsec button:has-text('Add a label rule')"); await p.waitForTimeout(300);
   await p.click(".bs .back"); await p.waitForTimeout(400);
   check("data labels show the pumps' flow under them", (await p.$$eval(".dsvg text", els => els.map(e => e.textContent))).filter(t => t.endsWith("m³/h")).length >= 2);
+
+  // 46. A company rule (check 24) and the tag format.
+  await openEx("Pump transfer");
+  await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Options')"); await p.waitForTimeout(300);
+  await p.click(".rulesec button:has-text('Add a rule')"); await p.waitForTimeout(300);
+  await p.selectOption(".rulestbl tbody tr >> nth=0 >> td:nth-child(4) select", "equals"); await p.waitForTimeout(300);
+  await p.fill(".rulestbl tbody tr >> nth=0 >> td:nth-child(5) input", "Titanium"); await p.press(".rulestbl tbody tr >> nth=0 >> td:nth-child(5) input", "Tab"); await p.waitForTimeout(300);
+  await p.selectOption(".tagsec select >> nth=1", "project"); await p.waitForTimeout(300);
+  check("the tag format shows the new tags", (await p.textContent(".tagsec")).includes("P-001, P-002"));
+  await p.click(".bs .back"); await p.waitForTimeout(300);
+  await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
+  { const t = await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent)); const st = (await project()).settings.rules;
+    check("check 24 runs the company rule", t.some(x => x.includes("material must be Titanium")), JSON.stringify([st, t.slice(0, 6), await p.textContent(".status")])); }
 
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();
