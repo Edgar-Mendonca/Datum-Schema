@@ -65,7 +65,7 @@
       "items": [
         "0.4.0: pipe specs: each pipe class lists the components it allows, by size and rating; spec checks (done)",
         "0.4.1: values passed along a line (size and class to its valves and fittings) and a to-do list after changes (done)",
-        "0.4.2: implied items (flanges, gaskets, bolts) in the take-off",
+        "0.4.2: implied items (flanges, gaskets, bolts) in the take-off (done)",
         "0.4.3: assemblies (a group placed as one) and data labels you choose on the drawing",
         "0.4.4: rules and tag formats of your own; speed on large projects"
       ]

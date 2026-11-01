@@ -272,7 +272,7 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
                     g.3.push(it.sheet);
                 }
             }
-            let rows = groups
+            let mut rows: Vec<Row> = groups
                 .into_iter()
                 .map(|((_, name, (_, size), class, rating), (ids, mut tags, untagged, sheets))| {
                     tags.sort_by_key(|t| { let (a, n, _) = crate::tags::split(t); (a, n, t.clone()) });
@@ -289,6 +289,14 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
                     Row { sheet: ids.first().and_then(|i| p.item(*i)).map_or(0, |i| i.sheet), ids, cells, status: None }
                 })
                 .collect();
+            // Then what their ends bring with them (flanges, gaskets, bolts), from the pipe specs.
+            let fmt = |q: f64| if (q - q.round()).abs() < 1e-9 { format!("{}", q.round() as i64) } else { crate::fmt_sig(q, 3) };
+            rows.extend(crate::specs::implied(p, &net).into_iter().map(|r| {
+                let rating = crate::specs::find(p, &r.class).map(|s| s.rating.clone()).unwrap_or_default();
+                let size = if crate::pipes::nps_inches(&r.size).is_some() { format!("{}\"", r.size.trim_end_matches('"')) } else { r.size.clone() };
+                let cells = vec![r.what, size, r.class, rating, fmt(r.qty), format!("implied by the {}", r.from.join(", ")), String::new(), r.desc, r.code];
+                Row { sheet: r.ids.first().and_then(|i| p.item(*i)).map_or(0, |i| i.sheet), ids: r.ids, cells, status: None }
+            }));
             let mut cs = cols(&specs, us);
             cs[4].num = true;
             (cs, rows)
@@ -436,7 +444,7 @@ mod tests {
         assert!(row("Vent", "3\"").unwrap()[5].contains("1 untagged"));
         // Every piping component once: the quantities add up to the piping objects drawn.
         let piping = p.items.iter().filter(|i| symbols::get(&i.sym).is_some_and(|s| matches!(s.cat, Cat::Valve | Cat::Control | Cat::Fitting) || (s.cat == Cat::Primary && s.inline))).map(|i| i.obj).collect::<std::collections::HashSet<_>>().len();
-        assert_eq!(l.rows.iter().map(|r| r.cells[4].parse::<usize>().unwrap()).sum::<usize>(), piping);
+        assert_eq!(l.rows.iter().filter(|r| !r.cells[5].starts_with("implied by")).map(|r| r.cells[4].parse::<usize>().unwrap()).sum::<usize>(), piping);
         // A relief valve between two sizes shows both.
         let c = build(&crate::examples::get("compressor").unwrap(), "takeoff").unwrap();
         assert!(c.rows.iter().any(|r| r.cells[0] == "Pressure safety valve" && r.cells[1] == "3\" × 2\""));

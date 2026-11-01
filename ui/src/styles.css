@@ -1171,3 +1171,6 @@ tr.behind td { background: var(--err-bg); }
 .todo { display: flex; gap: 8px; align-items: center; padding: 4px 2px; border-bottom: 1px solid var(--line); }
 .todo .tk { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--text2); width: 90px; flex: none; }
 .todo .tw { flex: 1; }
+.specitems td select { min-width: 120px; }
+.specitems.implied th:nth-child(6) { width: 40%; }
+.imph { margin: 12px 0 4px; }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.2 — 2026-11-01
+
+Implied items: flanges, gaskets and bolts in the take-off.
+
+**Implied items.** Each pipe class now says what every end of a component brings with it: by default, at each flanged end, a weld-neck flange, a gasket and a bolt set, each with its description, commodity code and size range. The valve and fitting take-off adds them by size and class after the components (fourteen 3" gaskets for seven flanged 3" valves), saying which components imply them.
+
+**Ends.** Each component of a class has its end type (flanged, butt weld, socket weld, threaded or none); left blank, it is read from the description (“flanged RF” is flanged, “socket weld” socket weld). Edit both in File › Options › Pipe specs; a CSV table may have an Ends column.
+
 ## 0.4.1 — 2026-11-01
 
 Values passed along a line, and the To do list.

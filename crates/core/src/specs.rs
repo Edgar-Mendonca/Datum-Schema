@@ -18,6 +18,24 @@ pub struct SpecItem {
     pub max: String,
     pub desc: String,
     pub code: String,
+    /// How it joins its line: "flanged", "butt weld", "socket weld", "threaded" or "none"; empty
+    /// is read from the description.
+    pub ends: String,
+}
+
+/// What each end of a given kind brings with it (a weld-neck flange, a gasket and a bolt set at
+/// every flanged end), in a size range.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
+pub struct Implied {
+    pub what: String,
+    pub ends: String,
+    /// How many per end.
+    pub per: f64,
+    pub min: String,
+    pub max: String,
+    pub desc: String,
+    pub code: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
@@ -38,6 +56,29 @@ pub struct PipeSpec {
     /// The schedule its pipe is made in.
     pub sched: String,
     pub items: Vec<SpecItem>,
+    /// What each end of a component brings with it, for the take-off.
+    pub implied: Vec<Implied>,
+}
+
+pub const ENDS: [&str; 5] = ["flanged", "butt weld", "socket weld", "threaded", "none"];
+
+/// A component's end type: as set, else read from its description.
+pub fn ends_of(i: &SpecItem) -> &'static str {
+    if let Some(e) = ENDS.iter().find(|e| i.ends.eq_ignore_ascii_case(e)) {
+        return e;
+    }
+    let d = i.desc.to_lowercase();
+    if d.contains("flanged") || d.contains(" rf") || d.contains(", rf") || d.contains("wafer") || d.contains("lug") {
+        "flanged"
+    } else if d.contains("socket") || d.contains(" sw") {
+        "socket weld"
+    } else if d.contains("thread") || d.contains("npt") || d.contains("screwed") {
+        "threaded"
+    } else if d.contains("bw") || d.contains("butt") {
+        "butt weld"
+    } else {
+        "none"
+    }
 }
 
 pub const MAX_SPECS: usize = 200;
@@ -64,7 +105,19 @@ pub fn normalize(specs: &mut Vec<PipeSpec>) {
         s.sched = crate::clip(s.sched.trim(), 12);
         s.items.truncate(MAX_ITEMS);
         s.items.retain(|i| !i.kind.trim().is_empty());
+        s.implied.truncate(50);
+        s.implied.retain(|i| !i.what.trim().is_empty());
+        for i in &mut s.implied {
+            i.what = crate::clip(i.what.trim(), 60);
+            i.ends = crate::clip(i.ends.trim(), 20);
+            i.per = if i.per.is_finite() { i.per.clamp(0.0, 100.0) } else { 1.0 };
+            i.min = crate::clip(i.min.trim(), 12);
+            i.max = crate::clip(i.max.trim(), 12);
+            i.desc = crate::clip(&i.desc, 200);
+            i.code = crate::clip(&i.code, 60);
+        }
         for i in &mut s.items {
+            i.ends = crate::clip(i.ends.trim(), 20);
             i.kind = crate::clip(i.kind.trim(), 40);
             i.min = crate::clip(i.min.trim(), 12);
             i.max = crate::clip(i.max.trim(), 12);
@@ -197,6 +250,52 @@ pub fn checks(p: &Project, net: &Net, on: &dyn Fn(u8) -> bool) -> Vec<Issue> {
     v
 }
 
+/// One line of implied items in the take-off: what, size, class, how many, and the components
+/// that bring them.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ImpliedRow {
+    pub what: String,
+    pub size: String,
+    pub class: String,
+    pub qty: f64,
+    pub desc: String,
+    pub code: String,
+    pub ids: Vec<u32>,
+    pub from: Vec<String>,
+}
+
+/// The implied items of every piping component on the P&IDs: for each of its ends whose type a
+/// rule of its class names, that rule's items (one count per object). Rows are by item, size and
+/// class.
+pub fn implied(p: &Project, net: &Net) -> Vec<ImpliedRow> {
+    let pfd: std::collections::HashSet<u32> = p.sheets.iter().filter(|s| s.pfd).map(|s| s.id).collect();
+    let mut rows: std::collections::BTreeMap<(String, (u64, String), String), ImpliedRow> = std::collections::BTreeMap::new();
+    let mut seen = std::collections::HashSet::new();
+    for it in p.items.iter().filter(|i| !pfd.contains(&i.sheet)) {
+        let Some(s) = symbols::get(&it.sym).filter(|s| is_piping(s)) else { continue };
+        if it.obj != 0 && !seen.insert(it.obj) {
+            continue;
+        }
+        let (class, size) = item_class_size(p, net, it);
+        let Some(spec) = find(p, &class) else { continue };
+        let kind = it.base_key();
+        let Some(e) = entry(spec, &kind, &size) else { continue };
+        let ends = ends_of(e);
+        let n_ends = s.ports.iter().filter(|q| !q.signal).count() as f64;
+        let name = symbols::get(&kind).map_or(s.name, |x| x.name).to_lowercase();
+        for r in spec.implied.iter().filter(|r| r.ends.eq_ignore_ascii_case(ends) && within(&size, &r.min, &r.max)) {
+            let order = (inches(&size).map_or(u64::MAX, |x| (x * 1000.0) as u64), size.clone());
+            let row = rows.entry((r.what.clone(), order, spec.name.clone())).or_insert_with(|| ImpliedRow { what: r.what.clone(), size: size.clone(), class: spec.name.clone(), qty: 0.0, desc: r.desc.clone(), code: r.code.clone(), ids: vec![], from: vec![] });
+            row.qty += r.per * n_ends;
+            row.ids.push(it.id);
+            if !row.from.contains(&name) {
+                row.from.push(name.clone());
+            }
+        }
+    }
+    rows.into_values().collect()
+}
+
 /// Spec items read from a CSV table (one row per component: Class, Component, From, To,
 /// Description, Code; headers matched by name, in any order, comma or semicolon separated).
 /// Components are matched to symbols by key or name. The classes named replace their items in
@@ -229,6 +328,7 @@ pub fn import_csv(mut specs: Vec<PipeSpec>, text: &str) -> Result<(Vec<PipeSpec>
     let col = |names: &[&str]| h.iter().position(|x| names.iter().any(|n| x.starts_with(n)));
     let (ci, ki) = (col(&["class", "spec"]).ok_or("No Class column.")?, col(&["component", "item", "type"]).ok_or("No Component column.")?);
     let (fi, ti, di, oi) = (col(&["from", "min", "size from"]), col(&["to", "max", "size to"]), col(&["desc"]), col(&["code", "commodity"]));
+    let ei = col(&["end"]);
     let syms: Vec<&'static crate::symbols::Sym> = symbols::all().iter().filter(|s| is_piping(s)).collect();
     let mut w = vec![];
     let mut got: std::collections::BTreeMap<String, Vec<SpecItem>> = std::collections::BTreeMap::new();
@@ -243,7 +343,7 @@ pub fn import_csv(mut specs: Vec<PipeSpec>, text: &str) -> Result<(Vec<PipeSpec>
             w.push(format!("Row {}: “{}” is not a valve or fitting Datum Schema knows.", n + 2, crate::clip(&comp, 40)));
             continue;
         };
-        got.entry(class).or_default().push(SpecItem { kind: sym.key.to_string(), min: get(fi), max: get(ti), desc: get(di), code: get(oi) });
+        got.entry(class).or_default().push(SpecItem { kind: sym.key.to_string(), min: get(fi), max: get(ti), desc: get(di), code: get(oi), ends: get(ei).to_lowercase() });
     }
     if got.is_empty() {
         return Err(if w.is_empty() { "No components were found in the file.".into() } else { w.join(" ") });
@@ -260,7 +360,7 @@ pub fn import_csv(mut specs: Vec<PipeSpec>, text: &str) -> Result<(Vec<PipeSpec>
 
 /// A typical carbon steel class to start from: 150# RF, ½"–24", the usual valves and fittings.
 pub fn starter(name: &str) -> PipeSpec {
-    let i = |kind: &str, min: &str, max: &str, desc: &str, code: &str| SpecItem { kind: kind.into(), min: min.into(), max: max.into(), desc: desc.into(), code: code.into() };
+    let i = |kind: &str, min: &str, max: &str, desc: &str, code: &str| SpecItem { kind: kind.into(), min: min.into(), max: max.into(), desc: desc.into(), code: code.into(), ends: String::new() };
     PipeSpec {
         name: name.into(),
         desc: "Carbon steel, ASME B16.5 class 150, raised face".into(),
@@ -286,14 +386,19 @@ pub fn starter(name: &str) -> PipeSpec {
             i("strainer_basket", "2", "24", "Basket strainer, flanged RF, WCB", "SB150-01"),
             i("reducer_con", "3/4", "24", "Concentric reducer, BW, A234 WPB", "RC-01"),
             i("reducer_ecc", "3/4", "24", "Eccentric reducer, BW, A234 WPB", "RE-01"),
-            i("blind", "1/2", "24", "Blind flange, RF, A105", "FB150-01"),
-            i("spectacle", "1/2", "12", "Spectacle blind, RF, A516 Gr. 70", "SP150-01"),
+            SpecItem { ends: "none".into(), ..i("blind", "1/2", "24", "Blind flange, RF, A105", "FB150-01") },
+            SpecItem { ends: "none".into(), ..i("spectacle", "1/2", "12", "Spectacle blind, RF, A516 Gr. 70", "SP150-01") },
             i("cv_pneu", "1", "16", "Control valve, globe, flanged RF, WCB (see datasheet)", "CV-SEE-DS"),
             i("cv_motor", "1", "16", "Motor-operated valve, flanged RF, WCB", "MOV-01"),
             i("psv", "1/2", "8", "Pressure safety valve, flanged RF (see datasheet)", "PSV-SEE-DS"),
             i("vent", "1/2", "1", "Vent, gate valve and plug", "VNT-01"),
             i("drain", "1/2", "1", "Drain, gate valve and plug", "DRN-01"),
-            i("orifice", "1", "24", "Orifice plate and flanges (see datasheet)", "FE-SEE-DS"),
+            SpecItem { ends: "none".into(), ..i("orifice", "1", "24", "Orifice plate and flanges (see datasheet)", "FE-SEE-DS") },
+        ],
+        implied: vec![
+            Implied { what: "Weld-neck flange".into(), ends: "flanged".into(), per: 1.0, min: "1/2".into(), max: "24".into(), desc: "Weld-neck flange, RF, class 150, A105, bore to schedule".into(), code: "FWN150-01".into() },
+            Implied { what: "Gasket".into(), ends: "flanged".into(), per: 1.0, min: "1/2".into(), max: "24".into(), desc: "Spiral wound gasket, 316/graphite, CS outer ring, class 150".into(), code: "GSW150-01".into() },
+            Implied { what: "Bolt set".into(), ends: "flanged".into(), per: 1.0, min: "1/2".into(), max: "24".into(), desc: "Stud bolts A193 B7 with two A194 2H nuts, class 150".into(), code: "BS150-01".into() },
         ],
     }
 }
@@ -317,6 +422,34 @@ mod tests {
         assert_eq!(entry(&s, "gate", "1").unwrap().code, "VGA800-01");
         assert_eq!(entry(&s, "gate", "6").unwrap().code, "VGA150-01");
         assert!(entry(&s, "ball", "10").is_none());
+    }
+
+    #[test]
+    fn flanged_components_bring_flanges_gaskets_and_bolts() {
+        let s = starter("A1A");
+        assert_eq!(ends_of(entry(&s, "gate", "6").unwrap()), "flanged");
+        assert_eq!(ends_of(entry(&s, "gate", "1").unwrap()), "socket weld");
+        assert_eq!(ends_of(entry(&s, "reducer_con", "4").unwrap()), "butt weld");
+        assert_eq!(ends_of(entry(&s, "blind", "4").unwrap()), "none");
+        let p = crate::examples::get("pump").unwrap();
+        let net = Net::new(&p);
+        let rows = implied(&p, &net);
+        // Seven 3" flanged components (four gates, two checks, the level control valve), two ends
+        // each: 14 gaskets, 14 flanges, 14 bolt sets.
+        let g3 = rows.iter().find(|r| r.what == "Gasket" && r.size == "3").unwrap();
+        assert_eq!(g3.qty, 14.0, "{rows:#?}");
+        assert!(g3.from.contains(&"gate valve".to_string()) && g3.from.contains(&"check valve".to_string()));
+        assert_eq!(g3.code, "GSW150-01");
+        assert!(rows.iter().any(|r| r.what == "Bolt set" && r.size == "4"));
+        // In the take-off, after the components.
+        let l = crate::lists::build(&p, "takeoff").unwrap();
+        let r = l.rows.iter().find(|r| r.cells[0] == "Gasket" && r.cells[1] == "3\"").unwrap();
+        assert_eq!(r.cells[4], "14");
+        assert!(r.cells[5].starts_with("implied by"));
+        // Without specs, nothing is implied.
+        let mut q = p.clone();
+        q.settings.specs.clear();
+        assert!(implied(&q, &Net::new(&q)).is_empty());
     }
 
     #[test]

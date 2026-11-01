@@ -36,8 +36,10 @@ export interface Note { id: number; sheet: number; kind: NoteKind; x: number; y:
 export interface Limit { service: string; name: string; vmin: number; vmax: number; dp: number }
 export interface Settings { line_format: string; off: number[]; limits: Limit[]; roughness: number; grid: number; hidden: string[]; user_attrs: UserAttr[]; ds_layout: DsLayout; standard: Standard; title_block: TitleBlock; specs: PipeSpec[]; components: string[] }
 /** A pipe class: limits in SI (Pa, K, m), sizes as NPS text, and the components it allows by size. */
-export interface SpecItem { kind: string; min: string; max: string; desc: string; code: string }
-export interface PipeSpec { name: string; desc: string; rating: string; material: string; corrosion: number; max_p: number; max_t: number; min: string; max: string; sched: string; items: SpecItem[] }
+export interface SpecItem { kind: string; min: string; max: string; desc: string; code: string; ends: string }
+/** What each end of a type brings with it (per end), in a size range. */
+export interface Implied { what: string; ends: string; per: number; min: string; max: string; desc: string; code: string }
+export interface PipeSpec { name: string; desc: string; rating: string; material: string; corrosion: number; max_p: number; max_t: number; min: string; max: string; sched: string; items: SpecItem[]; implied: Implied[] }
 /** A drawing standard: a library, and for each of our symbols the library symbol that draws it. */
 export interface Standard { library: string; map: Record<string, string> }
 /** A connection point of a library symbol (dir: 0 right, 1 down, 2 left, 3 up). */

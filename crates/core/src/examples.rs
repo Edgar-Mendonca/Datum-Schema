@@ -254,7 +254,7 @@ fn pump() -> (Project, Faults) {
     let faults = Faults { pb, ckb, dis_a, lv, psv, ri, ro, vent, out };
     // The project's pipe spec: the starter carbon steel class, with the tank's breather valve.
     let mut a1a = crate::specs::starter("A1A");
-    a1a.items.push(crate::specs::SpecItem { kind: "breather".into(), min: "1".into(), max: "8".into(), desc: "Pressure-vacuum breather valve, flanged RF, aluminium".into(), code: "PVSV-SEE-DS".into() });
+    a1a.items.push(crate::specs::SpecItem { kind: "breather".into(), min: "1".into(), max: "8".into(), desc: "Pressure-vacuum breather valve, flanged RF, aluminium".into(), code: "PVSV-SEE-DS".into(), ends: String::new() });
     x.d.p.settings.specs = vec![a1a];
     (x.done(), faults)
 }

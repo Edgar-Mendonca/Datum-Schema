@@ -627,6 +627,8 @@ const shots = process.env.SHOTS;
   await p.keyboard.press("Control+z"); await p.waitForTimeout(400);
   await p.click(".btabs button:has-text('Take-off')"); await p.waitForTimeout(400);
   check("the take-off gives each component its commodity code", (await p.$$eval(".lists tbody tr.f", els => els.map(e => e.textContent))).some(t => t.includes("VGA150-01")));
+  { const rows = await p.$$eval(".lists tbody tr.f", els => els.map(e => [...e.querySelectorAll("td")].map(td => td.textContent)));
+    check("flanges, gaskets and bolts are implied", rows.some(r => r[0] === "Gasket" && r[1] === '3"' && r[4] === "14" && r[8] === "GSW150-01"), JSON.stringify(rows.filter(r => r[0] === "Gasket"))); }
 
   // 44. Values passed along: a valve takes its line's size; one typed differently goes on To do.
   await openEx("Pump transfer");
