@@ -46,7 +46,7 @@
     "Lines route themselves at right angles, hop over each other and carry flow arrows",
     "A valve dropped on a line splits it and joins both halves",
     "Off-page connectors pair across sheets; click one to jump to its partner",
-    "Live line list, equipment list, instrument index, valve list and datasheet index",
+    "Live line list, equipment list, instrument index, valve list and datasheet index, and reports you design yourself",
     "Twenty-five checks, including balances, instrument ranges, pipe specs, wiring and your own rules, each with a click to the problem",
     "Line hydraulics: velocity, Reynolds number, Colebrook friction factor and pressure drop against limits",
     "SI and US units; DXF, SVG, PDF, Excel, CSV and the DEXPI P&ID exchange format (export and import)",
@@ -81,7 +81,7 @@
         "0.5.1: calculation sheets in Datum Calc from an object's data (pump power and NPSH, line pressure drop, exchanger, vessel wall) (done)",
         "0.5.2: sizing of control valves, orifices and relief valves (done)",
         "0.5.3: equipment datasheets; stream tables imported from simulator results (Excel, CSV) (done)",
-        "0.5.4: reports you design yourself: columns, filters and grouping, saved and exported"
+        "0.5.4: reports you design yourself: columns, filters and grouping, saved and exported (done)"
       ]
     },
     {
@@ -91,7 +91,7 @@
       "items": [
         "0.6.0: document status (for review, approval, construction) and transmittals",
         "0.6.1: shared projects: several people, items claimed, work merged",
-        "0.6.2: scripting, report templates, DWG"
+        "0.6.2: scripting, DWG"
       ]
     },
     {

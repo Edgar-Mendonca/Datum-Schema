@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.4 — 2026-11-01
+
+Reports you design yourself.
+
+**New report.** Lists › **New Report**, or **Save as report…** on any list in the bottom panel, opens the report designer:
+- **From**: any list (line list, stream list, equipment list, instrument index, valve list, take-off, I/O summary, cable schedule, I/O allocation, datasheet index…) or every object of a class with all its attributes (every pump, every control valve, every vessel, with the subclasses).
+- **Columns**: tick the ones you want and put them in order.
+- **Filters**: keep only the rows where a column is, is not, contains, does not contain, is empty, is not empty, is at least or at most a value (numbers in the column's unit; "is" takes several values separated by commas).
+- **Group and sort**: group by a column, each group opening with a heading that counts its rows and adds up its numeric columns; sort by another, smallest or largest first.
+- A live preview shows the rows as they will be.
+
+**Saved in the project.** A report is a tab of the bottom panel, always in step with the drawing: click a row to find it, edit its cells like any list's, export it to Excel (group headings in bold) or CSV, print it from File › Print. Edit report… changes it; Delete report removes it.
+
 ## 0.5.3 — 2026-11-01
 
 Equipment datasheets and stream results from a simulator.
