@@ -31,6 +31,7 @@ pub mod revs;
 pub mod rules;
 pub mod sizing;
 pub mod specs;
+pub mod streamsin;
 pub mod route;
 pub mod symbols;
 pub mod symlib;

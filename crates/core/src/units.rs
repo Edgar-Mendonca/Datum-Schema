@@ -279,6 +279,7 @@ pub const QUANTITIES: &[(&str, &str, &str, &str)] = &[
     ("volume", "volumes", "m^3", "gal"),
     ("area", "areas", "m^2", "ft^2"),
     ("thk", "thicknesses and diameters", "mm", "in"),
+    ("mass", "masses", "kg", "lb"),
     ("ratio", "ratios", "", ""),
 ];
 

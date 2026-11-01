@@ -138,7 +138,7 @@ const ClassesSec = () => {
         </tbody></table>
         <div class="addattr">
           <input placeholder="New attribute, e.g. Seal plan" value={label()} onInput={e => setLabel(e.currentTarget.value)} />
-          <Pick value={q()} set={setQ} options={[["", "Text"], ["press", "Pressure"], ["temp", "Temperature"], ["flow", "Volume flow"], ["mflow", "Mass flow"], ["density", "Density"], ["visc", "Viscosity"], ["length", "Length"], ["thk", "Thickness"], ["power", "Power"], ["head", "Head"], ["volume", "Volume"], ["area", "Area"], ["velocity", "Velocity"]]} />
+          <Pick value={q()} set={setQ} options={[["", "Text"], ["press", "Pressure"], ["temp", "Temperature"], ["flow", "Volume flow"], ["mflow", "Mass flow"], ["density", "Density"], ["visc", "Viscosity"], ["length", "Length"], ["thk", "Thickness"], ["power", "Power"], ["head", "Head"], ["volume", "Volume"], ["area", "Area"], ["velocity", "Velocity"], ["mass", "Mass"], ["dp", "Pressure drop"]]} />
           <input placeholder="Choices, comma-separated (optional)" value={choices()} onInput={e => setChoices(e.currentTarget.value)} />
           <Check label="Required" value={req()} set={setReq} />
           <button class="btn sm pri" onClick={add}>Add attribute</button>

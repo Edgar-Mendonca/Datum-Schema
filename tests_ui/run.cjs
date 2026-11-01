@@ -710,6 +710,23 @@ const shots = process.env.SHOTS;
   check("the Cv is written to its data", Number((await project()).objects.find(o => o.tag === "LV-101").data.cv_required) > 1);
   await p.keyboard.press("Escape");
 
+  // 50. A pump's datasheet: its nozzles' lines and its differential from them.
+  await openEx("Pump transfer");
+  { const q = await project(); const pa = q.items.find(i => tagOf(q, i) === "P-101A");
+    const [x, y] = await scr(pa.x, pa.y); await p.mouse.click(x, y); await p.waitForTimeout(400); }
+  await p.click(".insp button:has-text('Datasheet')"); await p.waitForSelector(".dlg .ds");
+  { const t = await p.textContent(".dlg"); check("the pump has a datasheet with its nozzles", t.includes("Pump datasheet") && t.includes("Suction") && t.includes("Differential pressure"), t.slice(0, 200)); }
+  await p.keyboard.press("Escape"); await p.waitForTimeout(200);
+
+  // 51. A simulator's stream results imported into the PFD's streams, with a preview.
+  await openEx("Crude preheat (PFD)");
+  await p.click(".btabs button:has-text('Streams')"); await p.waitForTimeout(300);
+  await p.click(".cfilter button:has-text('Import results')"); await p.waitForSelector(".dlg .imtbl");
+  check("the preview lists the stream values", (await p.$$eval(".dlg .imtbl tbody tr", els => els.length)) >= 4);
+  await p.click(".dlg footer button:has-text('Import')"); await p.waitForTimeout(400);
+  { const q = await project(); const s1 = q.objects.find(o => o.class === "Stream" && String(o.data.number) === "1");
+    check("the stream takes the simulator's temperature", Math.abs(Number(s1.data.temp) - 304.15) < 1e-6, JSON.stringify(s1.data)); }
+
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();
   await fetch(`${url}quit`).catch(() => {});

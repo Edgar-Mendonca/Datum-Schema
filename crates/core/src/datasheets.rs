@@ -102,9 +102,15 @@ pub fn next_rev(p: &Project, obj: u32, status: &str) -> String {
     s.iter().rev().collect()
 }
 
-/// Objects that have a datasheet: instruments, primary elements, control valves, relief devices.
+/// Instruments, primary elements, control valves and relief devices: the instrument datasheets
+/// (what a loop and a process source are found among).
 pub fn has_datasheet(cat: Cat) -> bool {
     cat.instrument() || cat == Cat::Control
+}
+
+/// Everything with a datasheet: the instrument datasheets and equipment (vessels, machines, exchangers).
+pub fn has_sheet(cat: Cat) -> bool {
+    has_datasheet(cat) || cat.equipment()
 }
 
 /// The ISA-5.1 measured variable of a first letter.
@@ -236,7 +242,7 @@ pub fn layout_rows(p: &Project) -> Vec<(String, Vec<String>)> {
     let net = Net::new(p);
     let mut out: Vec<(String, Vec<String>)> = vec![];
     let mut seen = std::collections::HashSet::new();
-    for i in p.items.iter().filter(|i| symbols::get(&i.sym).is_some_and(|s| has_datasheet(s.cat)) && seen.insert(i.obj)) {
+    for i in p.items.iter().filter(|i| symbols::get(&i.sym).is_some_and(|s| has_sheet(s.cat)) && seen.insert(i.obj)) {
         let Ok(d) = full(p, &net, i.obj) else { continue };
         for s in d.sections {
             let at = match out.iter().position(|x| x.0 == s.title) {
@@ -303,8 +309,11 @@ fn sheet(p: &Project, net: &Net, id: u32, us: bool) -> Result<Datasheet, String>
     let obj = p.obj_id(id).and_then(|o| p.obj(o)).ok_or("That object no longer exists.")?;
     let it = p.items.iter().find(|i| i.obj == obj.id).ok_or("Draw the object on a sheet first: its datasheet reads its connections.")?;
     let sym = symbols::get(&it.sym).ok_or("There is no such symbol.")?;
-    if !has_datasheet(sym.cat) {
-        return Err(format!("A {} has no datasheet yet; instruments, control valves and relief devices do.", sym.name.to_lowercase()));
+    if !has_sheet(sym.cat) {
+        return Err(format!("A {} has no datasheet; equipment, instruments, control valves and relief devices do.", sym.name.to_lowercase()));
+    }
+    if sym.cat.equipment() {
+        return equipment(p, net, obj, it, sym, us);
     }
     let (letters, lp) = tags::loop_of(&obj.tag);
     let class_label = classes::get(&obj.class).map_or(obj.class.clone(), |c| c.label.clone());
@@ -352,6 +361,7 @@ fn sheet(p: &Project, net: &Net, id: u32, us: bool) -> Result<Datasheet, String>
     let mut sections = vec![Section { title: "General".into(), rows: general }];
     sections.push(Section { title: "Process conditions".into(), rows: if process.is_empty() { vec![derived("Process line", "not connected".into(), String::new(), "drawing")] } else { process } });
     sections.push(Section { title: own_title.into(), rows: own });
+    sections.extend(groups(&attrs, &user, row));
     sections.push(Section { title: "Specification".into(), rows: spec });
     if !company.is_empty() {
         sections.push(Section { title: "Company attributes".into(), rows: company });
@@ -360,17 +370,111 @@ fn sheet(p: &Project, net: &Net, id: u32, us: bool) -> Result<Datasheet, String>
     Ok(Datasheet { obj: obj.id, item: it.id, sheet: it.sheet, tag: obj.tag.clone(), title, sections, rev: String::new(), status: String::new(), date: String::new(), by: String::new(), issues: vec![], changed: 0, next_rev: BTreeMap::new(), form: String::new(), logo: String::new(), footer: String::new() })
 }
 
+/// Sections for the class's own groups (Sizing, Construction, Shell side…), in the order they first appear.
+fn groups(attrs: &[Attr], user: &std::collections::HashSet<String>, row: impl Fn(&Attr) -> Row) -> Vec<Section> {
+    let mut out: Vec<Section> = vec![];
+    for a in attrs.iter().filter(|a| !a.group.is_empty() && a.group != "Specification" && !user.contains(&a.key)) {
+        match out.iter_mut().find(|s| s.title == a.group) {
+            Some(s) => s.rows.push(row(a)),
+            None => out.push(Section { title: a.group.clone(), rows: vec![row(a)] }),
+        }
+    }
+    out
+}
+
+/// "Suction" from "suction".
+fn cap(s: &str) -> String {
+    let mut c = s.chars();
+    c.next().map_or(String::new(), |f| f.to_uppercase().chain(c).collect())
+}
+
+/// An equipment datasheet: General · Nozzles (each process nozzle's line and its conditions,
+/// from the drawing) · Operating (a machine's differential from its suction and discharge lines)
+/// · the class's attributes and groups · Specification · the project's own attributes.
+fn equipment(p: &Project, net: &Net, obj: &crate::model::Obj, it: &Item, sym: &symbols::Sym, us: bool) -> Result<Datasheet, String> {
+    let class_label = classes::get(&obj.class).map_or(obj.class.clone(), |c| c.label.clone());
+    let sheet = p.sheet(it.sheet).map(|s| s.number.clone()).unwrap_or_default();
+    let mut general = vec![
+        derived("Tag", obj.tag.clone(), String::new(), ""),
+        derived("Type", format!("{class_label} · {}", sym.name), String::new(), "class"),
+        derived("P&ID", sheet, String::new(), "drawing"),
+        derived("Area", p.node_path(obj.node), String::new(), "plant"),
+    ];
+    general.retain(|r| !r.value.is_empty());
+    // Each process nozzle on any sheet showing the object: its line and the line's conditions.
+    let mut nozzles = vec![];
+    let mut at: BTreeMap<String, &crate::model::Data> = BTreeMap::new();
+    for i in p.items.iter().filter(|i| i.obj == obj.id) {
+        let Some(s) = symbols::get(&i.sym) else { continue };
+        for (k, port) in s.ports.iter().enumerate().filter(|(_, x)| !x.signal) {
+            for &(l, _) in net.on_port(i.id, k as u8) {
+                let Some(line) = net.lines.get(&l).filter(|x| x.kind.process() && x.obj != 0) else { continue };
+                if at.contains_key(port.name) || instrument_connection(p, line) {
+                    continue;
+                }
+                let d = p.data_of(line.obj);
+                at.insert(port.name.to_string(), d);
+                let mut parts = vec![crate::graph::obj_number(p, line.obj)];
+                for (key, q) in [("flow", "flow"), ("mflow", "mflow"), ("oper_p", "press"), ("oper_t", "temp")] {
+                    let (v, u) = show(d.get(key), q, us);
+                    if !v.is_empty() {
+                        parts.push(format!("{v} {u}"));
+                    }
+                }
+                nozzles.push(derived(&cap(port.name), parts.join(" · "), String::new(), "drawing"));
+            }
+        }
+    }
+    // A machine: the differential pressure and head its lines give.
+    let mut operating = vec![];
+    let num = |d: &crate::model::Data, k: &str| d.get(k).and_then(|v| v.num()).filter(|x| x.is_finite());
+    let pair = at.get("suction").zip(at.get("discharge")).or_else(|| if sym.cat == Cat::Rotating { at.get("inlet").zip(at.get("outlet")) } else { None });
+    if let Some((s, d)) = pair {
+        if let (Some(ps), Some(pd)) = (num(s, "oper_p"), num(d, "oper_p")) {
+            let (v, u) = show(Some(&Val::Num(pd - ps)), "dp", us);
+            operating.push(derived("Differential pressure", v, u, "lines"));
+            if let Some(rho) = num(s, "density").filter(|r| *r > 0.0) {
+                let (v, u) = show(Some(&Val::Num((pd - ps) / (rho * 9.80665))), "head", us);
+                operating.push(derived("Differential head", v, u, "lines"));
+            }
+        }
+    }
+    let attrs = classes::attrs(Some(p), &obj.class);
+    let row = |a: &Attr| {
+        let (value, unit) = show(obj.data.get(&a.key), &a.q, us);
+        Row { key: a.key.clone(), label: a.label.clone(), value, unit, q: a.q.clone(), choices: a.choices.clone(), required: a.required, source: String::new(), changed: false, was: String::new() }
+    };
+    let user: std::collections::HashSet<String> = p.settings.user_attrs.iter().map(|u| u.attr.key.clone()).collect();
+    let own: Vec<Row> = attrs.iter().filter(|a| a.group.is_empty() && !user.contains(&a.key)).map(row).collect();
+    let spec: Vec<Row> = attrs.iter().filter(|a| a.group == "Specification" && !user.contains(&a.key)).map(row).collect();
+    let company: Vec<Row> = attrs.iter().filter(|a| user.contains(&a.key)).map(row).collect();
+    let chain = classes::chain(&obj.class);
+    let is = |n: &str| chain.iter().any(|c| c.name == n);
+    let kind = if is("Pump") { "Pump" } else if is("Compressor") { "Compressor" } else if is("HeatExchanger") || is("Heater") { "Heat exchanger" } else if is("Vessel") { "Vessel" } else { "Equipment" };
+    let mut sections = vec![Section { title: "General".into(), rows: general }];
+    sections.push(Section { title: "Nozzles".into(), rows: if nozzles.is_empty() { vec![derived("Process lines", "not connected".into(), String::new(), "drawing")] } else { nozzles } });
+    let mut own = own;
+    own.splice(0..0, operating);
+    sections.push(Section { title: "Operating and design".into(), rows: own });
+    sections.extend(groups(&attrs, &user, row));
+    sections.push(Section { title: "Specification".into(), rows: spec });
+    if !company.is_empty() {
+        sections.push(Section { title: "Company attributes".into(), rows: company });
+    }
+    Ok(Datasheet { obj: obj.id, item: it.id, sheet: it.sheet, tag: obj.tag.clone(), title: format!("{kind} datasheet"), sections, rev: String::new(), status: String::new(), date: String::new(), by: String::new(), issues: vec![], changed: 0, next_rev: BTreeMap::new(), form: String::new(), logo: String::new(), footer: String::new() })
+}
+
 /// Every datasheet with every row (the layout's hidden rows too), for the import.
 pub fn all_full(p: &Project, net: &Net) -> Vec<Datasheet> {
     let mut seen = std::collections::HashSet::new();
-    p.items.iter().filter(|i| symbols::get(&i.sym).is_some_and(|s| has_datasheet(s.cat)) && seen.insert(i.obj)).filter_map(|i| full(p, net, i.obj).ok()).collect()
+    p.items.iter().filter(|i| symbols::get(&i.sym).is_some_and(|s| has_sheet(s.cat)) && seen.insert(i.obj)).filter_map(|i| full(p, net, i.obj).ok()).collect()
 }
 
 /// Every datasheet in the project, in tag order.
 pub fn all(p: &Project) -> Vec<Datasheet> {
     let net = Net::new(p);
     let mut seen = std::collections::HashSet::new();
-    let mut v: Vec<Datasheet> = p.items.iter().filter(|i| symbols::get(&i.sym).is_some_and(|s| has_datasheet(s.cat)) && seen.insert(i.obj)).filter_map(|i| build_in(p, &net, i.obj).ok()).collect();
+    let mut v: Vec<Datasheet> = p.items.iter().filter(|i| symbols::get(&i.sym).is_some_and(|s| has_sheet(s.cat)) && seen.insert(i.obj)).filter_map(|i| build_in(p, &net, i.obj).ok()).collect();
     v.sort_by_key(|d| { let (a, n, _) = tags::split(&d.tag); (a, n, d.tag.clone()) });
     v
 }
@@ -514,13 +618,25 @@ mod tests {
             assert!(!pc.rows.is_empty() && pc.rows.iter().all(|r| r.source == "V-101"), "{tag}: {:?}", pc.rows);
             assert!(d.sections[0].rows.iter().any(|r| r.label == "Mounted on" && r.value == "V-101"));
         }
-        // The control valve has valve sections; a pump has no datasheet.
+        // The control valve has valve sections and its sizing data.
         let lv = p.objects.iter().find(|o| o.tag == "LV-101").unwrap();
         let d = build(&p, lv.id).unwrap();
         assert!(d.sections.iter().any(|s| s.title == "Valve" && s.rows.iter().any(|r| r.key == "fail" && r.value == "FC")));
         assert!(d.sections.iter().any(|s| s.title == "Specification" && s.rows.iter().any(|r| r.key == "characteristic")));
+        assert!(d.sections.iter().any(|s| s.title == "Sizing" && s.rows.iter().any(|r| r.key == "dp_design" && r.value == "80")));
+        // A pump's datasheet: its nozzles' lines and conditions, its differential from them.
         let pump = p.objects.iter().find(|o| o.tag == "P-101A").unwrap();
-        assert!(build(&p, pump.id).is_err());
+        let d = build(&p, pump.id).unwrap();
+        assert_eq!(d.title, "Pump datasheet");
+        let nz = d.sections.iter().find(|s| s.title == "Nozzles").unwrap();
+        assert!(nz.rows.iter().any(|r| r.label == "Suction" && r.value.contains("P-1001")) && nz.rows.iter().any(|r| r.label == "Discharge"), "{:?}", nz.rows);
+        let op = d.sections.iter().find(|s| s.title == "Operating and design").unwrap();
+        assert!(op.rows.iter().any(|r| r.label == "Differential pressure" && r.source == "lines"), "{:?}", op.rows);
+        // A vessel and a gate valve.
+        let v = p.objects.iter().find(|o| o.tag == "V-101").unwrap();
+        assert_eq!(build(&p, v.id).unwrap().title, "Vessel datasheet");
+        let gate = p.items.iter().find(|i| i.base_key() == "gate").unwrap();
+        assert!(build(&p, gate.id).is_err());
         assert!(all(&p).len() >= 5);
         assert_eq!(&xlsx(&p).unwrap()[..2], b"PK");
     }

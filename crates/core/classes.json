@@ -61,6 +61,18 @@
      "key": "nozzles",
      "label": "Nozzles",
      "type": "text"
+    },
+    {
+     "key": "manufacturer",
+     "label": "Manufacturer",
+     "type": "text",
+     "group": "Specification"
+    },
+    {
+     "key": "model",
+     "label": "Model",
+     "type": "text",
+     "group": "Specification"
     }
    ]
   },
@@ -85,6 +97,103 @@
      "key": "relief",
      "label": "Relief path (if not drawn)",
      "type": "text"
+    },
+    {
+     "key": "orientation",
+     "label": "Orientation",
+     "type": "choice",
+     "choices": [
+      "Vertical",
+      "Horizontal"
+     ],
+     "group": "Construction"
+    },
+    {
+     "key": "diameter",
+     "label": "Inside diameter",
+     "q": "thk",
+     "type": "number",
+     "group": "Construction"
+    },
+    {
+     "key": "length_tt",
+     "label": "Length, tangent to tangent",
+     "q": "length",
+     "type": "number",
+     "group": "Construction"
+    },
+    {
+     "key": "head_type",
+     "label": "Heads",
+     "type": "choice",
+     "choices": [
+      "2:1 ellipsoidal",
+      "Hemispherical",
+      "Torispherical",
+      "Flat",
+      "Conical"
+     ],
+     "group": "Construction"
+    },
+    {
+     "key": "shell_thk",
+     "label": "Shell thickness",
+     "q": "thk",
+     "type": "number",
+     "group": "Construction"
+    },
+    {
+     "key": "head_thk",
+     "label": "Head thickness",
+     "q": "thk",
+     "type": "number",
+     "group": "Construction"
+    },
+    {
+     "key": "corrosion",
+     "label": "Corrosion allowance",
+     "q": "thk",
+     "type": "number",
+     "group": "Construction"
+    },
+    {
+     "key": "code",
+     "label": "Design code",
+     "type": "choice",
+     "choices": [
+      "ASME VIII Div. 1",
+      "ASME VIII Div. 2",
+      "EN 13445",
+      "PD 5500",
+      "AD 2000"
+     ],
+     "group": "Construction"
+    },
+    {
+     "key": "joint_eff",
+     "label": "Joint efficiency",
+     "type": "number",
+     "group": "Construction"
+    },
+    {
+     "key": "insulation",
+     "label": "Insulation",
+     "type": "text",
+     "group": "Construction"
+    },
+    {
+     "key": "weight_empty",
+     "label": "Weight, empty",
+     "q": "mass",
+     "type": "number",
+     "group": "Construction"
+    },
+    {
+     "key": "weight_oper",
+     "label": "Weight, operating",
+     "q": "mass",
+     "type": "number",
+     "group": "Construction"
     }
    ],
    "symbols": [
@@ -136,6 +245,91 @@
      "q": "power",
      "type": "number",
      "dexpi": "NominalPower"
+    },
+    {
+     "key": "npsha",
+     "label": "NPSH available",
+     "q": "head",
+     "type": "number",
+     "group": "Operating"
+    },
+    {
+     "key": "npshr",
+     "label": "NPSH required",
+     "q": "head",
+     "type": "number",
+     "group": "Operating"
+    },
+    {
+     "key": "efficiency",
+     "label": "Efficiency, %",
+     "type": "number",
+     "group": "Operating"
+    },
+    {
+     "key": "speed",
+     "label": "Speed, rpm",
+     "type": "number",
+     "group": "Operating"
+    },
+    {
+     "key": "standard",
+     "label": "Standard",
+     "type": "choice",
+     "choices": [
+      "ISO 13709 (API 610)",
+      "ISO 5199",
+      "ISO 2858",
+      "ISO 9905",
+      "API 674",
+      "API 675"
+     ],
+     "group": "Construction"
+    },
+    {
+     "key": "impeller",
+     "label": "Impeller diameter, rated",
+     "q": "thk",
+     "type": "number",
+     "group": "Construction"
+    },
+    {
+     "key": "casing_material",
+     "label": "Casing material",
+     "type": "text",
+     "group": "Construction"
+    },
+    {
+     "key": "seal",
+     "label": "Shaft seal",
+     "type": "choice",
+     "choices": [
+      "Packing",
+      "Single mechanical",
+      "Double mechanical",
+      "Sealless"
+     ],
+     "group": "Construction"
+    },
+    {
+     "key": "driver",
+     "label": "Driver",
+     "type": "choice",
+     "choices": [
+      "Electric motor",
+      "Steam turbine",
+      "Gas turbine",
+      "Engine",
+      "Expander"
+     ],
+     "group": "Construction"
+    },
+    {
+     "key": "motor_power",
+     "label": "Driver rating",
+     "q": "power",
+     "type": "number",
+     "group": "Construction"
     }
    ]
   },
@@ -163,6 +357,62 @@
      "q": "power",
      "type": "number",
      "dexpi": "NominalPower"
+    },
+    {
+     "key": "efficiency",
+     "label": "Efficiency, %",
+     "type": "number",
+     "group": "Operating"
+    },
+    {
+     "key": "speed",
+     "label": "Speed, rpm",
+     "type": "number",
+     "group": "Operating"
+    },
+    {
+     "key": "stages",
+     "label": "Stages",
+     "type": "number",
+     "group": "Operating"
+    },
+    {
+     "key": "k_ratio",
+     "label": "Ratio of specific heats (k)",
+     "type": "number",
+     "group": "Operating"
+    },
+    {
+     "key": "standard",
+     "label": "Standard",
+     "type": "choice",
+     "choices": [
+      "ISO 10439 (API 617)",
+      "API 618",
+      "ISO 10440 (API 619)",
+      "API 672"
+     ],
+     "group": "Construction"
+    },
+    {
+     "key": "driver",
+     "label": "Driver",
+     "type": "choice",
+     "choices": [
+      "Electric motor",
+      "Steam turbine",
+      "Gas turbine",
+      "Engine",
+      "Expander"
+     ],
+     "group": "Construction"
+    },
+    {
+     "key": "motor_power",
+     "label": "Driver rating",
+     "q": "power",
+     "type": "number",
+     "group": "Construction"
     }
    ]
   },
@@ -216,6 +466,192 @@
      "key": "relief",
      "label": "Relief path (if not drawn)",
      "type": "text"
+    },
+    {
+     "key": "shell_fluid",
+     "label": "Fluid",
+     "type": "text",
+     "group": "Shell side"
+    },
+    {
+     "key": "shell_flow",
+     "label": "Mass flow",
+     "q": "mflow",
+     "type": "number",
+     "group": "Shell side"
+    },
+    {
+     "key": "shell_t_in",
+     "label": "Inlet temperature",
+     "q": "temp",
+     "type": "number",
+     "group": "Shell side"
+    },
+    {
+     "key": "shell_t_out",
+     "label": "Outlet temperature",
+     "q": "temp",
+     "type": "number",
+     "group": "Shell side"
+    },
+    {
+     "key": "shell_p",
+     "label": "Operating pressure",
+     "q": "press",
+     "type": "number",
+     "group": "Shell side"
+    },
+    {
+     "key": "shell_dp",
+     "label": "Allowable pressure drop",
+     "q": "dp",
+     "type": "number",
+     "group": "Shell side"
+    },
+    {
+     "key": "shell_fouling",
+     "label": "Fouling resistance, m²K/W",
+     "type": "number",
+     "group": "Shell side"
+    },
+    {
+     "key": "shell_design_p",
+     "label": "Design pressure",
+     "q": "press",
+     "type": "number",
+     "group": "Shell side"
+    },
+    {
+     "key": "shell_design_t",
+     "label": "Design temperature",
+     "q": "temp",
+     "type": "number",
+     "group": "Shell side"
+    },
+    {
+     "key": "tube_fluid",
+     "label": "Fluid",
+     "type": "text",
+     "group": "Tube side"
+    },
+    {
+     "key": "tube_flow",
+     "label": "Mass flow",
+     "q": "mflow",
+     "type": "number",
+     "group": "Tube side"
+    },
+    {
+     "key": "tube_t_in",
+     "label": "Inlet temperature",
+     "q": "temp",
+     "type": "number",
+     "group": "Tube side"
+    },
+    {
+     "key": "tube_t_out",
+     "label": "Outlet temperature",
+     "q": "temp",
+     "type": "number",
+     "group": "Tube side"
+    },
+    {
+     "key": "tube_p",
+     "label": "Operating pressure",
+     "q": "press",
+     "type": "number",
+     "group": "Tube side"
+    },
+    {
+     "key": "tube_dp",
+     "label": "Allowable pressure drop",
+     "q": "dp",
+     "type": "number",
+     "group": "Tube side"
+    },
+    {
+     "key": "tube_fouling",
+     "label": "Fouling resistance, m²K/W",
+     "type": "number",
+     "group": "Tube side"
+    },
+    {
+     "key": "tube_design_p",
+     "label": "Design pressure",
+     "q": "press",
+     "type": "number",
+     "group": "Tube side"
+    },
+    {
+     "key": "tube_design_t",
+     "label": "Design temperature",
+     "q": "temp",
+     "type": "number",
+     "group": "Tube side"
+    },
+    {
+     "key": "tema",
+     "label": "TEMA type",
+     "type": "text",
+     "group": "Construction"
+    },
+    {
+     "key": "shells",
+     "label": "Shells in series",
+     "type": "number",
+     "group": "Construction"
+    },
+    {
+     "key": "passes",
+     "label": "Tube passes",
+     "type": "number",
+     "group": "Construction"
+    },
+    {
+     "key": "tube_od",
+     "label": "Tube outside diameter",
+     "q": "thk",
+     "type": "number",
+     "group": "Construction"
+    },
+    {
+     "key": "tube_thk",
+     "label": "Tube wall",
+     "q": "thk",
+     "type": "number",
+     "group": "Construction"
+    },
+    {
+     "key": "tube_len",
+     "label": "Tube length",
+     "q": "length",
+     "type": "number",
+     "group": "Construction"
+    },
+    {
+     "key": "tubes",
+     "label": "Number of tubes",
+     "type": "number",
+     "group": "Construction"
+    },
+    {
+     "key": "u_service",
+     "label": "Overall coefficient, service, W/m²K",
+     "type": "number",
+     "group": "Construction"
+    },
+    {
+     "key": "code",
+     "label": "Design code",
+     "type": "choice",
+     "choices": [
+      "ASME VIII Div. 1",
+      "ASME VIII Div. 2",
+      "EN 13445",
+      "PD 5500",
+      "AD 2000"
+     ],
+     "group": "Construction"
     }
    ]
   },

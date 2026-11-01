@@ -84,6 +84,9 @@ const ItemPanel = (p: { it: Item }) => {
     <Show when={["instrument", "primary", "control"].includes(s()?.cat ?? "")}>
       <div class="ibtns"><button class="btn sm" title="The datasheet: this object's data with the process conditions of its line, to print or export" onClick={() => openDatasheet(p.it.obj)}>Datasheet…</button><button class="btn sm" title="The loop diagram of this instrument's loop, with its wiring" onClick={() => openLoops(String(p.it.obj))}>Loop diagram…</button><Help k="datasheets" /></div>
     </Show>
+    <Show when={["vessel", "rotating", "heat"].includes(s()?.cat ?? "")}>
+      <div class="ibtns"><button class="btn sm" title="The equipment datasheet: its data with its nozzles' lines and conditions, to print or export" onClick={() => openDatasheet(p.it.obj)}>Datasheet…</button><Help k="datasheets" /></div>
+    </Show>
     <h4>Data</h4>
     <For each={derived()?.attrs[o()?.class ?? ""] ?? s()?.fields ?? []}>{f => <FieldInput f={f} v={o()?.data[f.key]} ids={[p.it.obj]} placeholder={f.key === "loop" ? (o()?.tag.match(/\d+/)?.[0] ?? "") : undefined} />}</For>
     <Show when={conns().length}>

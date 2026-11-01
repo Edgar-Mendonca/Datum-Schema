@@ -113,6 +113,11 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             s.exports.push(json!({ "kind": kind, "what": what, "text": text }));
             json!(format!("export.{kind}"))
         }
+        "import_streams" => {
+            // The window picks no file here: a simulator's table for streams 1 and 2 stands in.
+            let t = if str_("text").is_empty() { "Name,Units,1,2\nTemperature,C,31,95\nPressure,bara,6.2,5.5\nMass Flow,kg/h,52000,52000\nVapour Fraction,,0,0\n".to_string() } else { str_("text") };
+            serde_json::to_value(datum_core::streamsin::plan(&s.doc.p, t.as_bytes())?).unwrap()
+        }
         "import_datasheets" => {
             let bytes = std::fs::read(import_file()).map_err(|_| "Export the datasheets first: the test imports the last export.".to_string())?;
             serde_json::to_value(datum_core::import::plan(&s.doc.p, &bytes)?).unwrap()

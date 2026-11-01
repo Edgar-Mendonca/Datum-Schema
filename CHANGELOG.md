@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.5.3 — 2026-11-01
+
+Equipment datasheets and stream results from a simulator.
+
+**Equipment datasheets.** Pumps, compressors, vessels, exchangers and every other piece of equipment now have a datasheet, opened from the Inspector, the Plant panel or the datasheet index like an instrument's.
+- **Nozzles**: each process nozzle with its line and the line's flow, pressure and temperature, from the drawing, so the datasheet and the P&ID never disagree.
+- **Operating and design**: a pump's or compressor's differential pressure and head from its suction and discharge lines, with its own flow, head, power, design and operating conditions.
+- New attributes in their own sections: a pump's NPSH available and required, efficiency, speed, standard, impeller, seal and driver; a compressor's stages, speed, standard and driver; a vessel's orientation, diameter, length, heads, thicknesses, corrosion allowance, design code, joint efficiency and weights; an exchanger's shell side and tube side (fluid, flow, temperatures, pressures, allowed pressure drop, fouling) and construction (TEMA type, shells, passes, tubes). Manufacturer and model for all equipment.
+- They are issued, revised (Δ), printed, exported to Excel and imported from Excel like instrument datasheets. A valve's Sizing data now show on its datasheet too.
+
+**Stream results from a simulator.** In the Streams tab, **Import results…** reads a simulator's stream table saved as Excel or CSV into the PFD's streams: mass flow, actual volume flow, temperature, pressure, vapour fraction, density, enthalpy flow, phase and the mass fraction of each of the project's components. Streams are found by number or name in the header row (streams as columns) or the first column (one row per stream); units come from the label or a units column; absolute pressures are kept as gauge. A preview shows every value with what the stream has now, and what cannot be read and why (standard volume flows, mole fractions, unknown components); the import is one edit that Undo takes back.
+
+A new quantity, mass (kg or lb), for weights.
+
 ## 0.5.2 — 2026-11-01
 
 Sizing of control valves, orifice plates and relief valves.

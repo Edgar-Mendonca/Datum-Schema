@@ -8,7 +8,7 @@
   "about": [
     "Datum Schema draws piping and instrument diagrams where every symbol and line carries its data and knows what it is connected to. You place real symbols (vessels, pumps, exchangers, valves, instruments) and join them with lines that route themselves; drop a valve on a line and it goes into it, carry a line to another sheet with a pair of off-page connectors.",
     "Because the drawing knows its connections, Datum Schema writes the line list, the equipment list, the instrument index and the valve list for you, always in step with the drawing; it checks the drawing as you work (duplicate tags, open ends, size changes without a reducer, pumps without check valves and more); and it sizes every line, with its velocity and pressure drop against limits for its service. Hydraulic results are a sizing aid, checked by the engineer.",
-    "Every symbol is a view of a plant object (equipment, valve, instrument, line number) in a plant › unit › area hierarchy, defined by a class library you can extend with your company's attributes. Every change is recorded in the project file, and every instrument, control valve and relief device has a datasheet whose process conditions come straight from the P&ID.",
+    "Every symbol is a view of a plant object (equipment, valve, instrument, line number) in a plant › unit › area hierarchy, defined by a class library you can extend with your company's attributes. Every change is recorded in the project file, and every piece of equipment, instrument, control valve and relief device has a datasheet whose process conditions come straight from the P&ID.",
     "Process flow diagrams sit beside the P&IDs: streams with their flows and conditions, a stream table on the sheet, and heat and mass balance checks. A client's legend sheet (DXF) becomes a symbol library to draw a project to their standard; an old drawing can sit behind a sheet to trace over; issued sheets are compared and the changes clouded. Lines go to Datum Pipe for stress analysis and control loops to Datum Sim for tuning."
   ],
   "steps": [
@@ -40,7 +40,7 @@
     "Review comments pinned to the drawing, with replies; reviewers' copies merged back in",
     "Plant objects in a plant › unit › area hierarchy; symbols are views, every change is recorded",
     "A class library you can extend with your company's attributes",
-    "Instrument datasheets with process conditions from the P&ID; revisions with what changed (Δ); your company's form; import from Excel; print and Excel",
+    "Equipment and instrument datasheets with process conditions from the P&ID; stream results imported from a simulator (Excel, CSV); revisions with what changed (Δ); your company's form; import from Excel; print and Excel",
     "Loop diagrams drawn from the P&ID, with junction box, cable and I/O wiring",
     "Cause-and-effect matrix read from the interlocks on the P&ID",
     "Lines route themselves at right angles, hop over each other and carry flow arrows",
@@ -80,7 +80,7 @@
         "0.5.0: instrument wiring: cables, junction boxes, terminals, I/O cards, cable schedule; loop diagrams from them (done)",
         "0.5.1: calculation sheets in Datum Calc from an object's data (pump power and NPSH, line pressure drop, exchanger, vessel wall) (done)",
         "0.5.2: sizing of control valves, orifices and relief valves (done)",
-        "0.5.3: equipment datasheets; stream tables imported from simulator results (Excel, CSV)",
+        "0.5.3: equipment datasheets; stream tables imported from simulator results (Excel, CSV) (done)",
         "0.5.4: reports you design yourself: columns, filters and grouping, saved and exported"
       ]
     },

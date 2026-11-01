@@ -78,7 +78,7 @@ pub fn read(bytes: &[u8]) -> Result<Vec<Grid>, String> {
 
 /// A label made comparable: lower case, no required mark, no unit in brackets, single spaces.
 /// Returns it with the unit it named, if any.
-fn norm(s: &str) -> (String, String) {
+pub(crate) fn norm(s: &str) -> (String, String) {
     let s = s.trim().trim_end_matches('*').trim();
     let (head, unit) = match (s.rfind('('), s.ends_with(')')) {
         (Some(i), true) => (&s[..i], s[i + 1..s.len() - 1].trim().to_string()),
@@ -88,14 +88,14 @@ fn norm(s: &str) -> (String, String) {
 }
 
 /// A unit as typed (m³/h, kg/m³, °C, psig) to the unit table's form (m^3/h, kg/m^3, °C, psi).
-fn unit_expr(u: &str) -> String {
+pub(crate) fn unit_expr(u: &str) -> String {
     let u = u.trim().replace('³', "^3").replace('²', "^2").replace('·', "*").replace("deg C", "°C").replace("deg F", "°F").replace("degC", "°C").replace("degF", "°F");
     // Gauge marks: the file's gauge pressure is taken as the pressure the datasheet shows.
     u.strip_suffix('g').filter(|x| ["bar", "psi", "kPa", "MPa"].contains(x)).map_or(u.clone(), |x| x.to_string())
 }
 
 /// A number typed with or without a unit ("4.5", "4,5", "4.5 bar") and the unit after it.
-fn number(s: &str) -> Option<(f64, String)> {
+pub(crate) fn number(s: &str) -> Option<(f64, String)> {
     let s = s.trim();
     let end = s.char_indices().find(|&(i, c)| !(c.is_ascii_digit() || c == '.' || c == ',' || c == 'e' || c == 'E' || ((c == '-' || c == '+') && (i == 0 || s[..i].ends_with(['e', 'E']))))).map_or(s.len(), |x| x.0);
     let (num, rest) = s.split_at(end);
@@ -105,7 +105,7 @@ fn number(s: &str) -> Option<(f64, String)> {
 
 /// A value for a row with a quantity, in SI units: the unit typed with it, else the column's, else
 /// the project's display unit. Errors say why it cannot be used.
-fn quantity(text: &str, col_unit: &str, q: &str, us: bool) -> Result<f64, String> {
+pub(crate) fn quantity(text: &str, col_unit: &str, q: &str, us: bool) -> Result<f64, String> {
     let (v, own) = number(text).ok_or_else(|| format!("“{text}” is not a number."))?;
     let unit = if own.is_empty() { col_unit.to_string() } else { own };
     if unit.is_empty() {

@@ -1,4 +1,4 @@
-// Datasheets: one per instrument, control valve or relief device, made by the engine from the
+// Datasheets: one per instrument, control valve, relief device or piece of equipment, made by the engine from the
 // object's class attributes and the process conditions of its line. The object's own values are
 // typed here (they are the same data as the Inspector's); the line's values are shown with where
 // they come from and are edited on the line. Print and Excel export cover every datasheet.
@@ -101,7 +101,7 @@ export const openDatasheet = (id: number) => openDialog(() => {
       <Show when={d()} fallback={<p class="muted">Making the datasheet…</p>}>
         <Show when={d()!.logo || d()!.form}><p class="dsco"><Show when={d()!.logo}><img class="dslogo" src={d()!.logo} alt="" /></Show><span class="muted small">{d()!.form ? `Form ${d()!.form}` : ""}</span></p></Show>
         <p class="dsrev"><b>{revLine(d()!)}</b>{d()!.by ? <span class="muted"> · issued by {d()!.by}</span> : ""}</p>
-        <p class="muted small">Type the instrument's own values here or in the Inspector; grey rows come from the line or the drawing and change there. Δ marks a value changed since the last issue (hover for what it was).</p>
+        <p class="muted small">Type the object's own values here or in the Inspector; grey rows come from the line or the drawing and change there. Δ marks a value changed since the last issue (hover for what it was).</p>
         <DatasheetTable d={d()!} edit />
         <RevBlock d={d()!} />
         <Show when={d()!.footer}><p class="muted small">{d()!.footer}</p></Show>
@@ -114,7 +114,19 @@ export const openDatasheet = (id: number) => openDialog(() => {
  *  ticked values are written, as one edit that Undo takes back. */
 export const importDatasheets = async () => {
   const plan = await call<ImportPlan | null>("import_datasheets");
-  if (!plan) return;
+  if (plan) planDialog(plan, { title: "Import datasheets from Excel", help: "import", what: "worksheets matched a datasheet", unmatched: "Tags with no datasheet in this project", unknownHint: "add them as attributes in Options › Classes, then import again", footer: "Values that come from the line, the vessel or the drawing are never imported: change them there. Blank cells change nothing." });
+};
+
+/** Import a simulator's stream results (Excel or CSV) into the PFD streams, with the same preview. */
+export const importStreams = async () => {
+  const plan = await call<ImportPlan | null>("import_streams");
+  if (plan) planDialog(plan, { title: "Import stream results", help: "streamsin", what: "tables matched the streams", unmatched: "Streams in the file not in this project", unknownHint: "not stream properties Datum Schema keeps", footer: "Absolute pressures are kept as gauge, as the drawing shows them. Blank cells change nothing; the heat and mass balance checks run on the imported values." });
+};
+
+interface PlanText { title: string; help: string; what: string; unmatched: string; unknownHint: string; footer: string }
+
+/** An import plan: what will be written (ticked), what is the same, and what cannot be imported and why. */
+const planDialog = (plan: ImportPlan, t: PlanText) => {
   openDialog(() => {
     const sets = plan.changes.filter(c => c.kind === "set");
     const [on, setOn] = createSignal<boolean[]>(sets.map(() => true));
@@ -129,25 +141,25 @@ export const importDatasheets = async () => {
       return !!r;
     };
     return (
-      <Dialog title="Import datasheets from Excel" wide ok={ok} okText={`Import ${n()} ${n() === 1 ? "value" : "values"}`} help="import">
+      <Dialog title={t.title} wide ok={ok} okText={`Import ${n()} ${n() === 1 ? "value" : "values"}`} help={t.help}>
         <p class="imsum">
-          <b>{sets.length}</b> {sets.length === 1 ? "value" : "values"} to import · {same} already the same · <span classList={{ warnline: others.length > 0 }}>{others.length} not imported</span> · {plan.used} of {plan.sheets} worksheets matched a datasheet
+          <b>{sets.length}</b> {sets.length === 1 ? "value" : "values"} to import · {same} already the same · <span classList={{ warnline: others.length > 0 }}>{others.length} not imported</span> · {plan.used} of {plan.sheets} {t.what}
         </p>
         <Show when={sets.length}>
           <h4>To import <button class="btn sm" onClick={() => setOn(on().map(() => !on().every(Boolean)))}>{on().every(Boolean) ? "Untick all" : "Tick all"}</button></h4>
           <table class="tbl small imtbl"><thead><tr><th /><th>Tag</th><th>Value</th><th>Now</th><th>From the file</th></tr></thead><tbody>
-            <For each={sets}>{(c, i) => <tr><td><input type="checkbox" checked={on()[i()]} onChange={e => setOn(on().map((x, j) => (j === i() ? e.currentTarget.checked : x)))} /></td><td class="mono">{c.tag}</td><td>{c.label}</td><td class="muted">{c.old || "—"}</td><td><b>{c.new}</b></td></tr>}</For>
+            <For each={sets}>{(c, i) => <tr><td><input type="checkbox" checked={on()[i()]} onChange={e => setOn(on().map((x, j) => (j === i() ? e.currentTarget.checked : x)))} /></td><td class="mono">{c.tag}</td><td>{c.label}</td><td class="muted">{c.old || "—"}</td><td><b>{c.new}</b>{c.note ? <span class="muted"> · {c.note}</span> : ""}</td></tr>}</For>
           </tbody></table>
         </Show>
         <Show when={others.length}>
           <h4>Not imported</h4>
           <table class="tbl small imtbl"><thead><tr><th>Tag</th><th>Value</th><th>Now</th><th>The file says</th><th>Why</th></tr></thead><tbody>
-            <For each={others}>{c => <tr class={c.kind}><td class="mono">{c.tag}</td><td>{c.label}</td><td>{c.old || "—"}</td><td>{c.new}</td><td class="muted">{c.kind === "conflict" ? c.note : c.note}</td></tr>}</For>
+            <For each={others}>{c => <tr class={c.kind}><td class="mono">{c.tag}</td><td>{c.label}</td><td>{c.old || "—"}</td><td>{c.new}</td><td class="muted">{c.note}</td></tr>}</For>
           </tbody></table>
         </Show>
-        <Show when={plan.unmatched.length}><p class="small"><b>Tags with no datasheet in this project:</b> {plan.unmatched.join(", ")}</p></Show>
-        <Show when={plan.unknown.length}><p class="small"><b>Columns or rows not recognised:</b> {plan.unknown.join(", ")} <span class="muted">(add them as attributes in Options › Classes, then import again)</span></p></Show>
-        <p class="muted small">Values that come from the line, the vessel or the drawing are never imported: change them there. Blank cells change nothing.</p>
+        <Show when={plan.unmatched.length}><p class="small"><b>{t.unmatched}:</b> {plan.unmatched.join(", ")}</p></Show>
+        <Show when={plan.unknown.length}><p class="small"><b>Columns or rows not recognised:</b> {plan.unknown.join(", ")} <span class="muted">({t.unknownHint})</span></p></Show>
+        <p class="muted small">{t.footer}</p>
       </Dialog>
     );
   });
@@ -177,7 +189,7 @@ export const LayoutSec = () => {
         <label>Logo</label><div class="inline"><Show when={l().logo}><img class="dslogo" src={l().logo} alt="" /></Show><label class="btn sm">Choose…<input type="file" accept="image/png,image/jpeg,image/svg+xml" hidden onChange={e => logo(e.currentTarget.files?.[0])} /></label><Show when={l().logo}><button class="btn sm" onClick={() => set({ logo: "" })}>Remove</button></Show></div>
         <label>Footer</label><div><input value={l().footer} placeholder="A line at the foot of every datasheet" onChange={e => set({ footer: e.currentTarget.value })} /></div>
       </div>
-      <Show when={(rows() ?? []).length} fallback={<p class="muted small">Draw an instrument to choose the rows its datasheet shows.</p>}>
+      <Show when={(rows() ?? []).length} fallback={<p class="muted small">Draw an instrument or a piece of equipment to choose the rows its datasheet shows.</p>}>
         <p class="muted small">Untick the rows your company's form leaves out; move sections up or down. Hidden rows keep their data and are still imported and issued.</p>
         <div class="dsrows"><For each={order()}>{name => {
           const labels = () => (rows() ?? []).find(r => r[0] === name)?.[1] ?? [];
