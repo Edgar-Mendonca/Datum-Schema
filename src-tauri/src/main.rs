@@ -334,6 +334,12 @@ fn title_preview(st: State<St>, block: model::TitleBlock, sheet: u32) -> R<datum
     Ok(datum_core::frame::preview(p, s, &block))
 }
 
+/// What to look at after a change: overrides of line values, datasheets and sheets changed since issue.
+#[tauri::command]
+fn todo(st: State<St>) -> Vec<datum_core::propagate::Todo> {
+    datum_core::propagate::todo(&st.lock().doc.p)
+}
+
 /// A typical carbon steel pipe class to start a spec from.
 #[tauri::command]
 fn spec_starter(name: String) -> datum_core::specs::PipeSpec {
@@ -727,7 +733,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, title_preview, title_standard, spec_starter, specs_csv, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
+            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, title_preview, title_standard, spec_starter, specs_csv, todo, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
             options, set_options, autosave, recovery, recover, recent, startup_file, open_url, version, quit, check_update, install_update
         ])
         .run(tauri::generate_context!())

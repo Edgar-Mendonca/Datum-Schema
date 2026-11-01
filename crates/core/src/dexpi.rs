@@ -102,7 +102,7 @@ impl X {
         let data = p.obj(obj).map_or(&empty, |o| &o.data);
         let mut dexpi: Vec<(String, String, &str, &str)> = extra.iter().map(|(k, v)| (k.to_string(), v.clone(), "string", "")).collect();
         let mut own: Vec<(String, String, &str, &str)> = own_extra.iter().map(|(k, v)| (k.to_string(), v.clone(), "string", "")).collect();
-        for (k, v) in data {
+        for (k, v) in data.iter().filter(|(k, _)| !crate::propagate::hidden(k)) {
             let def = defs.iter().find(|a| a.key == *k);
             let (val, fmt, unit) = match v {
                 // Full precision: SI values can be small (a gas viscosity is about 0.00001 Pa·s).
@@ -877,7 +877,7 @@ pub(crate) mod tests {
             // Data comes back in SI.
             for (a, b) in pairs {
                 let (o, back) = (p.obj(a).unwrap(), q.obj(b).unwrap());
-                for (k, v) in &o.data {
+                for (k, v) in o.data.iter().filter(|(k, _)| !crate::propagate::hidden(k)) {
                     let w = back.data.get(k).unwrap_or_else(|| panic!("{id}: {} lost {k}", o.tag));
                     match (v, w) {
                         (Val::Num(a), Val::Num(b)) => assert!((a - b).abs() <= 1e-6 * a.abs().max(1.0), "{id}: {} {k} {a} {b}", o.tag),

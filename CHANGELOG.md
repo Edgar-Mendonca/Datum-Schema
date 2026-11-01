@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.1 — 2026-11-01
+
+Values passed along a line, and the To do list.
+
+**Values passed along.** A valve's or fitting's size and pipe class now follow the line it sits in: change the line and its components change with it. Control and relief valves, reducers, vents and drains are sized on their own. A value typed on the component is kept; the component follows its line again once it matches. The pipe class goes into a new field, *Pipe class (from its line)*: a valve's own *Class or rating* stays its rating (300#). The valve list shows both, as Pipe class and Rating.
+
+**To do.** A new tab under the drawing lists what to look at after a change: a component whose own size or pipe class differs from its line's (take the line's value with one click), a datasheet changed since it was issued (open it), a sheet changed since its last issued revision (compare it).
+
 ## 0.4.0 — 2026-11-01
 
 Pipe specs: the first of the piping rules.

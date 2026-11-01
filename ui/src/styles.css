@@ -1166,3 +1166,8 @@ tr.behind td { background: var(--err-bg); }
 .specitems th:nth-child(4) { width: 46%; }
 .specitems th:nth-child(5) { width: 130px; }
 .specitems input.num { width: 64px !important; }
+/* The To do tab. */
+.todolist { overflow: auto; height: 100%; padding: 4px 6px; }
+.todo { display: flex; gap: 8px; align-items: center; padding: 4px 2px; border-bottom: 1px solid var(--line); }
+.todo .tk { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--text2); width: 90px; flex: none; }
+.todo .tw { flex: 1; }

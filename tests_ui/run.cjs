@@ -628,6 +628,18 @@ const shots = process.env.SHOTS;
   await p.click(".btabs button:has-text('Take-off')"); await p.waitForTimeout(400);
   check("the take-off gives each component its commodity code", (await p.$$eval(".lists tbody tr.f", els => els.map(e => e.textContent))).some(t => t.includes("VGA150-01")));
 
+  // 44. Values passed along: a valve takes its line's size; one typed differently goes on To do.
+  await openEx("Pump transfer");
+  await p.click(".btabs button:has-text('Valves')"); await p.waitForTimeout(400);
+  { const ri = await p.$$eval(".lists tbody tr.f", els => els.findIndex(e => e.querySelector("td input")?.value === "HV-104"));
+    const cell = p.locator(`.lists tbody tr.f >> nth=${ri}`).locator("td:nth-child(3) input");
+    check("the valve has its line's size and pipe class", (await cell.inputValue()) === "3" && (await p.locator(`.lists tbody tr.f >> nth=${ri}`).locator("td:nth-child(4)").textContent()) === "A1A");
+    await cell.fill("2"); await cell.press("Enter"); await p.waitForTimeout(400); }
+  await p.click(".btabs button:has-text('To do')"); await p.waitForTimeout(400);
+  check("an override goes on the To do list", (await p.$$eval(".todo .tw", els => els.map(e => e.textContent))).some(t => t.includes("HV-104's size is 2, its line's is 3")));
+  await p.click(".todo button:has-text('Take the line')"); await p.waitForTimeout(400);
+  check("taking the line's size clears it", (await p.$$(".todo")).length === 0 && (await project()).objects.find(o => o.tag === "HV-104").data.size === "3");
+
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();
   await fetch(`${url}quit`).catch(() => {});

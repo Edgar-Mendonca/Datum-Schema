@@ -188,6 +188,7 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             let sh = p.sheet(id).or(p.sheets.first()).ok_or("no sheet")?;
             serde_json::to_value(datum_core::frame::preview(p, sh, &b)).unwrap()
         }
+        "todo" => serde_json::to_value(datum_core::propagate::todo(&s.doc.p)).unwrap(),
         "spec_starter" => serde_json::to_value(datum_core::specs::starter(&str_("name"))).unwrap(),
         "specs_csv" => {
             let specs: Vec<datum_core::specs::PipeSpec> = serde_json::from_value(a["specs"].clone()).map_err(|e| e.to_string())?;

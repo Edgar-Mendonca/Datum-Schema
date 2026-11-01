@@ -156,12 +156,12 @@ pub fn diff(old: &Project, new: &Project, how: &str) -> Vec<Change> {
                     let name = |p: &Project, n: u32| p.nodes.iter().find(|x| x.id == n).map(|x| x.name.clone()).unwrap_or_default();
                     v.push(ch("move", o, "node", name(old, b.node), name(new, o.node)));
                 }
-                for (k, val) in &o.data {
+                for (k, val) in o.data.iter().filter(|(k, _)| !crate::propagate::hidden(k)) {
                     if b.data.get(k) != Some(val) {
                         v.push(ch("set", o, k, b.data.get(k).map(|x| x.text()).unwrap_or_default(), val.text()));
                     }
                 }
-                for (k, val) in &b.data {
+                for (k, val) in b.data.iter().filter(|(k, _)| !crate::propagate::hidden(k)) {
                     if !o.data.contains_key(k) {
                         v.push(ch("clear", o, k, val.text(), String::new()));
                     }

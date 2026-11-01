@@ -25,6 +25,7 @@ pub mod model;
 pub mod pfd;
 pub mod pipes;
 pub mod review;
+pub mod propagate;
 pub mod revs;
 pub mod specs;
 pub mod route;

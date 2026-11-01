@@ -6,7 +6,7 @@
 | | |
 | --- | --- |
 | **Product** | Datum Schema: intelligent P&IDs and process flow diagrams: draw, check and list (symbols and lines that carry their data and connections; live line list, equipment list, instrument index and valve list; drawing checks; line hydraulics; print, SVG and DXF) |
-| **Current version** | 0.4.0 (2026-11-01) |
+| **Current version** | 0.4.1 (2026-11-01) |
 | **Repo** | `Edgar-Mendonca/Datum-Schema` · branch `claude/vigilant-hamilton-ku7r0w` (the first branch pushed, so the default branch) |
 | **Stack** | Rust engine (`crates/core`: model, symbols, graph, tags, checks, hydraulics, lists, frame, routing, DXF), Tauri 2, SolidJS + strict TypeScript; no Python |
 | **Identifier** | `com.edgarmendonca.datumschema` · files `.dschema` (SQLite, `format` 4 from 0.2.0 (items.base, `underlays` and `snapshots` tables, meta "symbols"); 3 from 0.1.9; 2 before: no `issues` table; JSON `format` 1 from 0.1.0–0.1.4 converts) · symbol libraries `.dschemalib` (JSON, in app data › libraries) · installer `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` · publisher "Datum" |
@@ -43,6 +43,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | `crates/core/src/review.rs` | Review comments (`Comment`, `Reply` with uids; ops Comment, Reply, Resolve, EditComment, MoveComment, DeleteComment, MergeComments; `merge` by uid with the newest status winning; `normalize`; `pins` for the view; `when` dates) |
 | `ui/src/guide.tsx` | The user guide: chapters of help topics (`CHAPTERS`, the rest under "More"), the rules, `SHORTCUTS`, `GLOSSARY` and `GettingStarted` from `dialogs.tsx`; search; A4 print through `#printroot` |
 | `ui/src/review.tsx` | The Comment tool's dialog, the Comments panel, Import Review |
+| `crates/core/src/propagate.rs` | Values passed along (`run`, from `normalize`: line size and class → component "size", "pipe_class", remembered in hidden "~" keys so typed values are kept) and `todo` (overrides, datasheets and sheets changed since issue); `hidden` keys skipped by history and DEXPI |
+| `ui/src/todo.tsx` | The To do tab |
 | `crates/core/src/specs.rs` | Pipe specs (`PipeSpec`, `SpecItem` in `settings.specs`): `normalize`, `find` (case-insensitive), `item_class_size` (terminals by their own size), `entry`, checks 21–23, `import_csv`, `starter` (CS 150#) |
 | `ui/src/specs.tsx` | Options › Pipe specs: classes, limits, component table, CSV, files |
 | `crates/core/src/revs.rs` | Sheet revisions: `snapshot` (items, lines with routes, notes, objects' tag and data), `compare` (added, removed, changed: moved, rerouted, symbol, tag, data; gathered into areas), `cloud` (scallops and the triangle), `clouds` for the view, `next_rev` |
@@ -103,6 +105,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 
 | Version | Decision | Why |
 | --- | --- | --- |
+| 0.4.1 | Propagation runs in `normalize` (every edit and open), writing the line's size and class into the component's data, and remembers what it wrote in hidden "~size"/"~pipe_class" keys: a value still equal to the last written one is the engine's to change, anything else is the user's override (kept, listed on To do). The pipe class goes to "pipe_class" because a valve's "class" attribute already holds its rating (the examples' 300#). Control and relief valves, reducers and terminals are not sized from the line | Lists and datasheets show real values; typed values are never lost; no false overrides on valves sized below the line |
 | 0.4.0 | Specs live in the project's settings; a component is matched by its symbol's base key (so a client symbol counts as what it stands for) and size range; a class's limits are one design pressure and temperature, not the B16.5 P-T table; checks 21–23 run only when the project has specs; vents, drains and sample points are judged by their own size | Simple, explainable checks; no false alarms in projects without specs |
 | 0.3.4 | After 0.3.4 the user asked for a detailed comparison with Smart P&ID, COMOS P&ID and AVEVA Diagrams (given in chat only; commercial names stay out of public text). Agreed: not 1.0 yet; the gaps are piping rules (pipe specs, propagation, implied items, user rules), instrument depth (wiring, sizing, equipment datasheets) and teams (status, shared projects). Roadmap 0.4.x–0.6.x set from it; 3D, electrical and operations stay out of scope (meet them through DEXPI). Brainstorm again after a few releases | The user's direction |
 | 0.3.4 | Family integration as the suites do it: use Datum Calc (its packs) for calculation sheets from an object's data and Datum Sim for dynamics, by writing their own files (never linking their code) | The user's suggestion; packs exist for pump power, NPSH, pipe Δp, compressor, HX LMTD, pressure vessel, tank, pipe wall and more |
@@ -196,8 +199,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.3.3 | Review comments (pins, replies, resolve/reopen, edit, delete; import a reviewer's copy; list, print, Excel) | ✅ |
 | 0.3.4 | User guide (Help › User Guide: chapters from the help topics, rules, shortcuts, glossary; search; print on A4) | ✅ |
 | 0.4.0 | Pipe specs: classes with allowed components by size and rating; checks 21–23; take-off descriptions and codes; CSV import; editor | ✅ |
-| 0.4.1 | Values passed along a line (size, class) to in-line items; a to-do list after changes | 🔜 |
-| 0.4.2 | Implied items (flanges, gaskets, bolts) in the take-off | ⬜ |
+| 0.4.1 | Values passed along a line (size, pipe class) to in-line items; the To do tab | ✅ |
+| 0.4.2 | Implied items (flanges, gaskets, bolts) in the take-off | 🔜 |
 | 0.4.3 | Assemblies; data labels chosen by the user | ⬜ |
 | 0.4.4 | User rules and tag formats per class; speed on large projects | ⬜ |
 | — | Brainstorm again after 0.4.4: compare with the commercial suites, re-plan | ⬜ |
@@ -313,4 +316,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 ### 2026-11-01: Session 1, 0.4.0 (pipe specs)
 - `specs.rs` with checks 21–23, the starter class, CSV import; take-off columns Description and Commodity code; Options editor; Pipe class suggestions in the Inspector; the Pump transfer example carries A1A. A first starter had its temperature limit at the rating point (38 °C), raising false alarms on the example; now 425 °C. A vent on a 3" line was judged at 3"; terminals now use their own size.
 - Tests: engine 110 (ranges, entries, checks 21–23 pass and fail, case-insensitive classes, normalize, CSV with quotes and unknown components, take-off codes); UI checks for the spec in Options, CSV import, check 22 and the take-off codes.
+
+### 2026-11-01: Session 1, 0.4.1 (values passed along, To do)
+- The user asked to keep going to 0.5.0, one release per step. 0.4.1: `propagate.rs` and the To do tab. The first version wrote the pipe class into a valve's "class", which is its rating (300#), and sized control and relief valves from their lines: the To do list filled with false overrides on the examples. Fixed with "pipe_class" and the exclusions.
+- Tests: engine 111 (propagation, overrides kept and listed, taking the line's value, vents unsized, history without hidden keys, sheet and datasheet changes since issue; the DEXPI round trip ignores hidden keys); UI checks for the valve list's line values, an override on To do and taking the line's size.
 

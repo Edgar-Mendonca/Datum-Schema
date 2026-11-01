@@ -206,7 +206,7 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
             (cols(&specs, us), rows)
         }
         "valves" => {
-            let specs: Vec<Spec> = vec![("tag", "Tag", "", true), ("kind", "Type", "", false), ("size", "Size", "", true), ("class", "Class", "", true), ("operator", "Operator", "", true), ("position", "Position", "", true), ("fail", "Fail", "", true), ("on", "Line", "", false), ("service", "Service", "", true), ("area", "Area", "", false), ("sheet", "Sheet", "", false)];
+            let specs: Vec<Spec> = vec![("tag", "Tag", "", true), ("kind", "Type", "", false), ("size", "Size", "", true), ("pipe_class", "Pipe class", "", false), ("class", "Rating", "", true), ("operator", "Operator", "", true), ("position", "Position", "", true), ("fail", "Fail", "", true), ("on", "Line", "", false), ("service", "Service", "", true), ("area", "Area", "", false), ("sheet", "Sheet", "", false)];
             let rows = items(&|c| c.valve())
                 .into_iter()
                 .map(|(o, it)| {

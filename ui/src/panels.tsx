@@ -9,8 +9,9 @@ import { C } from "./cmds";
 import { Help } from "./help";
 import { openDatasheet, issueDialog, importDatasheets } from "./datasheet";
 import { CommentsPanel } from "./review";
+import { TodoPanel, todos } from "./todo";
 
-const TABS: [string, string][] = [["checks", "Checks"], ["comments", "Comments"], ["lines", "Line list"], ["streams", "Streams"], ["equipment", "Equipment"], ["instruments", "Instruments"], ["io", "I/O summary"], ["valves", "Valves"], ["takeoff", "Take-off"], ["datasheets", "Datasheets"]];
+const TABS: [string, string][] = [["checks", "Checks"], ["todo", "To do"], ["comments", "Comments"], ["lines", "Line list"], ["streams", "Streams"], ["equipment", "Equipment"], ["instruments", "Instruments"], ["io", "I/O summary"], ["valves", "Valves"], ["takeoff", "Take-off"], ["datasheets", "Datasheets"]];
 
 const level = (l: string) => (l === "error" ? 0 : l === "warning" ? 1 : 2);
 
@@ -97,18 +98,18 @@ export const Bottom = () => {
     const upf = () => { removeEventListener("mousemove", mv); removeEventListener("mouseup", upf); };
     addEventListener("mousemove", mv); addEventListener("mouseup", upf);
   };
-  const badge = (k: string) => { if (k === "comments") { const n = (proj()?.comments ?? []).filter(c => !c.resolved).length; return n ? ` (${n})` : ""; } if (k !== "checks") return ""; const i = derived()?.issues ?? []; const e = i.filter(x => x.level === "error").length, w = i.filter(x => x.level === "warning").length; return e || w ? ` (${e} · ${w})` : ""; };
+  const badge = (k: string) => { if (k === "todo") { const n = todos()?.length ?? 0; return n ? ` (${n})` : ""; } if (k === "comments") { const n = (proj()?.comments ?? []).filter(c => !c.resolved).length; return n ? ` (${n})` : ""; } if (k !== "checks") return ""; const i = derived()?.issues ?? []; const e = i.filter(x => x.level === "error").length, w = i.filter(x => x.level === "warning").length; return e || w ? ` (${e} · ${w})` : ""; };
   return (
     <section class="bottom" style={{ height: panelOpen() ? `${h()}px` : "30px" }}>
       <Show when={panelOpen()}><div class="bhandle" onMouseDown={resize} /></Show>
       <nav class="btabs">
         <For each={TABS.filter(([k]) => k !== "streams" || proj()?.sheets.some(s => s.pfd))}>{([k, l]) => <button classList={{ on: panelOpen() && panel() === k }} onClick={() => { if (panel() === k && panelOpen()) setPanelOpen(false); else { setPanel(k); setPanelOpen(true); } }}>{l}{badge(k)}</button>}</For>
-        <Help k={panel() === "checks" ? "checks" : panel() === "comments" ? "review" : "lists"} />
+        <Help k={panel() === "checks" ? "checks" : panel() === "comments" ? "review" : panel() === "todo" ? "todo" : "lists"} />
         <span class="grow" />
         <button class="bcollapse" title={panelOpen() ? "Hide the panel" : "Show the panel"} onClick={() => setPanelOpen(!panelOpen())}>{panelOpen() ? "▾" : "▴"}</button>
       </nav>
       <Show when={panelOpen()}>
-        <Show when={panel() === "checks"} fallback={<Show when={panel() === "comments"} fallback={<ListView kind={panel()} />}><CommentsPanel /></Show>}><Checks /></Show>
+        <Show when={panel() === "checks"} fallback={<Show when={panel() === "comments"} fallback={<Show when={panel() === "todo"} fallback={<ListView kind={panel()} />}><TodoPanel /></Show>}><CommentsPanel /></Show>}><Checks /></Show>
       </Show>
     </section>
   );

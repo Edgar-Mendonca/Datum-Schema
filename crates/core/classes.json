@@ -248,6 +248,11 @@
      "label": "Size (NPS)",
      "type": "text",
      "dexpi": "NominalDiameter"
+    },
+    {
+     "key": "pipe_class",
+     "label": "Pipe class (from its line)",
+     "type": "text"
     }
    ]
   },
