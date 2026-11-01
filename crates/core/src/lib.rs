@@ -5,6 +5,7 @@
 pub mod api;
 pub mod cause;
 pub mod checks;
+pub mod calc;
 pub mod classes;
 pub mod dexpi;
 pub mod datasheets;

@@ -334,6 +334,12 @@ fn title_preview(st: State<St>, block: model::TitleBlock, sheet: u32) -> R<datum
     Ok(datum_core::frame::preview(p, s, &block))
 }
 
+/// The calculation sheets that fit an object.
+#[tauri::command]
+fn calc_sheets(st: State<St>, obj: u32) -> Vec<datum_core::calc::Sheet> {
+    datum_core::calc::sheets_for(&st.lock().doc.p, obj)
+}
+
 /// What to look at after a change: overrides of line values, datasheets and sheets changed since issue.
 #[tauri::command]
 fn todo(st: State<St>) -> Vec<datum_core::propagate::Todo> {
@@ -474,11 +480,15 @@ async fn send(app: AppHandle, st: State<'_, St>, kind: String, what: String) -> 
         let a = st.lock();
         match kind.as_str() {
             "pipe" => datum_core::links::to_pipe(&a.doc.p, what.parse().map_err(|_| "Choose a process line.".to_string())?),
+            "calc" => {
+                let (o, pack) = what.split_once(':').ok_or("Choose a calculation.")?;
+                datum_core::calc::to_calc(&a.doc.p, o.parse().map_err(|_| "Choose an object.".to_string())?, pack)
+            }
             "sim" => datum_core::links::to_sim(&a.doc.p, &what),
             k => Err(format!("Unknown app {k}.")),
         }
     })?;
-    let (label, ext) = if kind == "pipe" { ("Datum Pipe model", "dpipe") } else { ("Datum Sim model", "dsim") };
+    let (label, ext) = match kind.as_str() { "pipe" => ("Datum Pipe model", "dpipe"), "calc" => ("Datum Calc sheet", "dcalc"), _ => ("Datum Sim model", "dsim") };
     let Some(path) = app.dialog().file().add_filter(label, &[ext]).set_file_name(&s.file).blocking_save_file().and_then(|f| f.into_path().ok()) else { return Ok(None) };
     doc::write_atomic(&path, s.text.as_bytes())?;
     Ok(Some(SendOut { path: path.display().to_string(), notes: s.notes }))
@@ -733,7 +743,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, title_preview, title_standard, spec_starter, specs_csv, todo, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
+            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, title_preview, title_standard, spec_starter, specs_csv, todo, calc_sheets, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
             options, set_options, autosave, recovery, recover, recent, startup_file, open_url, version, quit, check_update, install_update
         ])
         .run(tauri::generate_context!())

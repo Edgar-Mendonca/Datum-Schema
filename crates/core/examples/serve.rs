@@ -161,6 +161,10 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             let what = str_("what");
             let sent = match str_("kind").as_str() {
                 "pipe" => datum_core::links::to_pipe(&s.doc.p, what.parse().map_err(|_| "Choose a process line.")?)?,
+                "calc" => {
+                    let (o, pack) = what.split_once(':').ok_or("Choose a calculation.")?;
+                    datum_core::calc::to_calc(&s.doc.p, o.parse().map_err(|_| "Choose an object.")?, pack)?
+                }
                 _ => datum_core::links::to_sim(&s.doc.p, &what)?,
             };
             s.exports.push(json!({ "kind": str_("kind"), "what": what, "text": sent.text }));
@@ -188,6 +192,7 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             let sh = p.sheet(id).or(p.sheets.first()).ok_or("no sheet")?;
             serde_json::to_value(datum_core::frame::preview(p, sh, &b)).unwrap()
         }
+        "calc_sheets" => serde_json::to_value(datum_core::calc::sheets_for(&s.doc.p, a["obj"].as_u64().unwrap_or(0) as u32)).unwrap(),
         "todo" => serde_json::to_value(datum_core::propagate::todo(&s.doc.p)).unwrap(),
         "spec_starter" => serde_json::to_value(datum_core::specs::starter(&str_("name"))).unwrap(),
         "specs_csv" => {

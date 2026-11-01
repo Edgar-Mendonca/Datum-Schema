@@ -91,6 +91,7 @@ const ItemPanel = (p: { it: Item }) => {
       <table class="vmini"><tbody><For each={conns()}>{c => <tr classList={{ f: c.ids.length > 0 }} onClick={() => c.ids.length && setSel(c.ids)}><td>{c.port}</td><td class="r">{c.lines.length ? c.lines.join(", ") : <span class="muted">open</span>}</td></tr>}</For></tbody></table>
     </Show>
     <Show when={v() && derived()?.issues.some(i => i.ids.includes(p.it.id))}><Issues id={p.it.id} /></Show>
+    <Calcs obj={p.it.obj} />
     <History id={p.it.obj} />
   </>;
 };
@@ -132,6 +133,7 @@ const LinePanel = (p: { l: Line }) => {
       <For each={fields()}>{f => <FieldInput f={f} v={objOf(p.l.obj)?.data[f.key]} ids={[p.l.obj]} />}</For>
       <Show when={stream()}><p class="muted small">Enthalpy flow is the stream's heat content from your datum; the heat balance compares what goes in and out of each item with its duty.</p></Show>
       <div class="ibtns" style={{ display: stream() ? "none" : undefined }}><button class="btn sm" title="Give this piece a line number of its own (a copy of this line's data), as after a reducer" onClick={() => act({ NewLineObject: { line: p.l.id } })}>New line number from here</button></div>
+      <Calcs obj={p.l.obj} />
       <History id={p.l.obj} />
     </Show>
     <Issues id={p.l.id} />
@@ -209,6 +211,17 @@ const SheetPanel = () => {
     <Row label="Name"><input value={p().name} onChange={e => act({ SetProject: { name: e.currentTarget.value, units: p().units } })} /></Row>
     <Row label="Units" hint="How values are shown and typed. The file keeps SI units."><Pick value={p().units} set={u => act({ SetProject: { name: p().name, units: u } })} options={[["SI", "SI: bar, °C, m³/h, kg/m³, cP, m"], ["US", "US: psi, °F, gpm, lb/ft³, cP, ft"]]} /></Row>
   </>;
+};
+
+/** Calculation sheets in Datum Calc for an object (pump power, NPSH, line pressure drop…). */
+const Calcs = (p: { obj: number }) => {
+  const [list] = createResource(() => [p.obj, proj()] as const, ([o]) => call<{ id: string; name: string }[]>("calc_sheets", { obj: o }));
+  return (
+    <Show when={list()?.length}>
+      <h4>Calculations <Help k="calcs" /></h4>
+      <div class="ibtns"><For each={list()}>{c => <button class="btn sm" title="Save it as a Datum Calc sheet, filled from this object's data" onClick={() => C.send("calc", `${p.obj}:${c.id}`)}>{c.name}…</button>}</For></div>
+    </Show>
+  );
 };
 
 /** The project's pipe classes, offered on a line's Pipe class field. */

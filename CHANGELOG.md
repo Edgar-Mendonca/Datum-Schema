@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.1 — 2026-11-01
+
+Calculation sheets in Datum Calc.
+
+**Calculations.** Select a pump, compressor, exchanger, vessel, tank or line: the Inspector's new **Calculations** group offers the Datum Calc sheets that fit it (pump power and motor size, NPSH available, compressor power and discharge temperature, exchanger duty and area, vessel shell thickness, tank volume and filling time, line pressure drop, pipe wall thickness). Each is saved as a Datum Calc file with the object's data filled in: from the object (flow, head, power, design pressure, area), from the lines on its nozzles (density, operating pressure and temperature, mass flow), from its size and schedule (inside and outside diameter, nominal wall), from its pipe spec (corrosion allowance) and from its service limits (velocity). Each filled value says where it came from; the rest keep the sheet's typical values, listed at the top of the sheet to check.
+
+**No meaningless sheets.** A sheet that cannot be worked without some data (a line's flow, a pump's head, a design pressure) says what to fill in instead of mixing a sample value with yours. Every sheet the examples can make opens and computes in Datum Calc without errors.
+
 ## 0.5.0 — 2026-11-01
 
 The instrument wiring database.

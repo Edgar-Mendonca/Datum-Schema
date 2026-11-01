@@ -25,3 +25,7 @@ Darcy–Weisbach equation and the Colebrook equation (C. F. Colebrook, J. Inst. 
 
 The family window, ribbon, File page, updater and printing are taken from Datum Plan; the drawing
 canvas and the orthogonal router from Datum Sim (all MIT, same author).
+
+The calculation sheets in crates/core/calcpacks (pump power, NPSH, compressor, exchanger LMTD,
+pressure vessel, tank, pipe pressure drop, pipe wall) are copied from Datum Calc's packs (MIT, same
+author), with the references they carry.

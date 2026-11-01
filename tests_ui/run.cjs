@@ -690,6 +690,16 @@ const shots = process.env.SHOTS;
   await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
   check("check 25 finds a valve on an AI card", (await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("LV-101 needs an AO channel")));
 
+  // 48. A pump's calculation sheet in Datum Calc, filled from its data.
+  await openEx("Pump transfer");
+  { const q = await project(); const pa = q.items.find(i => tagOf(q, i) === "P-101A");
+    const [x, y] = await scr(pa.x, pa.y); await p.mouse.click(x, y); await p.waitForTimeout(400); }
+  check("the Inspector offers the pump's calculation sheets", (await p.$$eval(".insp .ibtns button", els => els.map(e => e.textContent))).some(t => t.startsWith("Pump power")));
+  await p.click(".insp button:has-text('Pump power')"); await p.waitForTimeout(400);
+  { const ex = (await inv("exports")).filter(e => e.kind === "calc").pop(); const m = ex && JSON.parse(ex.text);
+    check("the sheet is a Datum Calc file with the pump's flow", !!m && m.format === 1 && m.regions.some(r => r.text.startsWith("Q = ") && r.text.endsWith("from P-101A")), ex?.text.slice(0, 120)); }
+  await p.keyboard.press("Escape");
+
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();
   await fetch(`${url}quit`).catch(() => {});

@@ -46,7 +46,7 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Old drawings**: a DXF shown faintly behind a sheet, to redraw an old P&ID as a live one.
 - **Review comments**: pinned to the drawing, with replies and resolve or reopen; reviewers work on their own copies and their comments are taken back in without doubles.
 - **Revisions**: issue a sheet at a revision, compare it later with what changed, and cloud the changes with the revision triangle.
-- **The Datum family**: send a line to Datum Pipe as a stress model, and a control loop to Datum Sim as a model to tune.
+- **The Datum family**: send a line to Datum Pipe as a stress model, a control loop to Datum Sim as a model to tune, and a pump, compressor, exchanger, vessel, tank or line to Datum Calc as a calculation sheet filled from its data.
 - **I/O summary**: inputs and outputs per control system (AI, AO, DI, DO, fieldbus) with 20% spare, from the instruments' wiring and signals.
 - **Company rules and tag formats**: your own checks on any attribute of any kind of object; tags written your way (separator, unit code, numbering, digits).
 - **Assemblies and data labels**: groups saved and placed again with the next free tags; chosen data shown under each kind of symbol.
