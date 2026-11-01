@@ -47,6 +47,7 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Revisions**: issue a sheet at a revision, compare it later with what changed, and cloud the changes with the revision triangle.
 - **The Datum family**: send a line to Datum Pipe as a stress model, and a control loop to Datum Sim as a model to tune.
 - **I/O summary**: inputs and outputs per control system (AI, AO, DI, DO, fieldbus) with 20% spare, from the instruments' wiring and signals.
+- **Assemblies and data labels**: groups saved and placed again with the next free tags; chosen data shown under each kind of symbol.
 - **Values passed along and To do**: valves and fittings take their line's size and pipe class; overrides, and datasheets and sheets changed since issue, are listed to look at.
 - **Pipe specs**: the project's pipe classes with their limits and the valves and fittings each allows by size, read from a CSV table or started from a typical class; three checks hold the drawing to them.
 - **Valve and fitting take-off**: every piping component counted by type, size, pipe class and rating, with its tags, for a material requisition.

@@ -642,6 +642,23 @@ const shots = process.env.SHOTS;
   await p.click(".todo button:has-text('Take the line')"); await p.waitForTimeout(400);
   check("taking the line's size clears it", (await p.$$(".todo")).length === 0 && (await project()).objects.find(o => o.tag === "HV-104").data.size === "3");
 
+  // 45. An assembly saved from the drawing and placed again; data labels under the pumps.
+  await openEx("Pump transfer");
+  { const q = await project(); const pb = q.items.find(i => tagOf(q, i) === "P-101B");
+    const [px, py] = await scr(pb.x, pb.y); await p.mouse.click(px, py); await p.waitForTimeout(300); }
+  await p.click(".ctxgrp button:has-text('Format')"); await p.click(".ribbon button:has-text('Save as Assembly')"); await p.waitForSelector(".dlg input");
+  await p.fill(".dlg input", "Spare pump"); await p.click(".dlg footer button:has-text('Save')"); await p.waitForTimeout(400);
+  check("the selection is saved as an assembly", (await project()).settings.assemblies.some(a => a.name === "Spare pump" && a.items.length === 1));
+  await p.keyboard.press("Escape");
+  await p.click(".palette header button:has-text('Assemblies')"); await p.click(".asmrow:has-text('Spare pump')");
+  { const [cx, cy] = await scr(200, 150); await p.mouse.click(cx, cy); await p.waitForTimeout(400); }
+  { const q = await project(); check("the assembly is placed with the next free tag", q.items.some(i => tagOf(q, i) === "P-101C")); }
+  await p.click(".palette header button:has-text('Symbols')");
+  await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Options')"); await p.waitForTimeout(300);
+  await p.click(".lblsec button:has-text('Add a label rule')"); await p.waitForTimeout(300);
+  await p.click(".bs .back"); await p.waitForTimeout(400);
+  check("data labels show the pumps' flow under them", (await p.$$eval(".dsvg text", els => els.map(e => e.textContent))).filter(t => t.endsWith("m³/h")).length >= 2);
+
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();
   await fetch(`${url}quit`).catch(() => {});

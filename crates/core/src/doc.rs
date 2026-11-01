@@ -100,6 +100,10 @@ pub enum Op {
     MoveComment { uid: String, x: f64, y: f64 },
     DeleteComment { uid: String },
     MergeComments { comments: Vec<crate::review::Comment> },
+    /// Save the symbols, lines and notes `ids` as an assembly called `name` (replacing one of that name).
+    SaveAssembly { name: String, ids: Vec<u32> },
+    /// Place an assembly with its centre at (x, y): new objects with the next free tags.
+    PlaceAssembly { name: String, sheet: u32, x: f64, y: f64 },
     DeleteSheet { id: u32 },
     MoveSheet { id: u32, to: usize },
     SetTitle { title: Title },
@@ -581,7 +585,20 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
             p.nodes.retain(|n| !below.contains(&n.id));
             p.default_nodes();
         }
-        Op::Paste { sheet, items, lines, notes, dx, dy } => paste(p, sheet, items, lines, notes, dx, dy, created)?,
+        Op::Paste { sheet, items, lines, notes, dx, dy } => paste(p, sheet, items, lines, notes, dx, dy, created, &[])?,
+        Op::SaveAssembly { name, ids } => {
+            let name = crate::clip(name.trim(), 60);
+            if name.is_empty() {
+                return Err("Give the assembly a name.".into());
+            }
+            let a = assembly(p, &name, &ids)?;
+            p.settings.assemblies.retain(|x| !x.name.eq_ignore_ascii_case(&name));
+            p.settings.assemblies.push(a);
+        }
+        Op::PlaceAssembly { name, sheet, x, y } => {
+            let a = p.settings.assemblies.iter().find(|a| a.name.eq_ignore_ascii_case(name.trim())).cloned().ok_or_else(|| format!("There is no assembly called {name}."))?;
+            paste(p, sheet, a.items, a.lines, a.notes, x, y, created, &a.objs)?;
+        }
         Op::Link { a, b } => {
             for id in [a, b].into_iter().filter(|x| *x != 0) {
                 if !p.item(id).and_then(|i| symbols::get(&i.sym)).is_some_and(|s| s.cat == Cat::Connector) {
@@ -923,7 +940,52 @@ pub fn split(p: &mut Project, line_id: u32, item_id: u32) -> Result<Vec<u32>, St
 }
 
 #[allow(clippy::too_many_arguments)]
-fn paste(p: &mut Project, sheet: u32, items: Vec<Item>, lines: Vec<Line>, notes: Vec<Note>, dx: f64, dy: f64, created: &mut Vec<u32>) -> Result<(), String> {
+/// An assembly from the selection: its symbols and notes, and its lines (an end on a symbol left
+/// out becomes an open end where it was), moved to sit round (0, 0), with copies of their objects.
+fn assembly(p: &Project, name: &str, ids: &[u32]) -> Result<model::Assembly, String> {
+    let set: HashSet<u32> = ids.iter().copied().collect();
+    let items: Vec<Item> = p.items.iter().filter(|i| set.contains(&i.id)).cloned().collect();
+    if items.is_empty() {
+        return Err("Select the symbols (and lines) to save as an assembly.".into());
+    }
+    let sheet = items[0].sheet;
+    let inside: HashSet<u32> = items.iter().map(|i| i.id).collect();
+    let free = |e: &End| match e {
+        End::Port { item, .. } if !inside.contains(item) => {
+            let q = crate::graph::end_pt(p, e);
+            End::Free { x: q[0], y: q[1] }
+        }
+        End::Line { line, x, y } if !set.contains(line) => End::Free { x: *x, y: *y },
+        e => e.clone(),
+    };
+    let lines: Vec<Line> = p.lines.iter().filter(|l| set.contains(&l.id) && l.sheet == sheet).map(|l| Line { a: free(&l.a), b: free(&l.b), ..l.clone() }).collect();
+    let notes: Vec<Note> = p.notes.iter().filter(|n| set.contains(&n.id) && n.sheet == sheet).cloned().collect();
+    let (xs, ys): (Vec<f64>, Vec<f64>) = items.iter().map(|i| (i.x, i.y)).unzip();
+    let g = p.settings.grid.max(0.5);
+    let cx = ((xs.iter().cloned().fold(f64::INFINITY, f64::min) + xs.iter().cloned().fold(f64::NEG_INFINITY, f64::max)) / 2.0 / g).round() * g;
+    let cy = ((ys.iter().cloned().fold(f64::INFINITY, f64::min) + ys.iter().cloned().fold(f64::NEG_INFINITY, f64::max)) / 2.0 / g).round() * g;
+    let mv = |e: &End| match e {
+        End::Free { x, y } => End::Free { x: x - cx, y: y - cy },
+        End::Line { line, x, y } => End::Line { line: *line, x: x - cx, y: y - cy },
+        e => e.clone(),
+    };
+    let objs: Vec<model::Obj> = {
+        let mut o: Vec<u32> = items.iter().map(|i| i.obj).chain(lines.iter().map(|l| l.obj)).filter(|o| *o != 0).collect();
+        o.sort_unstable();
+        o.dedup();
+        o.iter().filter_map(|id| p.obj(*id)).cloned().collect()
+    };
+    Ok(model::Assembly {
+        name: name.to_string(),
+        items: items.into_iter().map(|i| Item { x: i.x - cx, y: i.y - cy, ..i }).collect(),
+        lines: lines.into_iter().map(|l| Line { a: mv(&l.a), b: mv(&l.b), pts: l.pts.iter().map(|q| [q[0] - cx, q[1] - cy]).collect(), ..l }).collect(),
+        notes: notes.into_iter().map(|n| Note { x: n.x - cx, y: n.y - cy, to: [n.to[0] - cx, n.to[1] - cy], ..n }).collect(),
+        objs,
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn paste(p: &mut Project, sheet: u32, items: Vec<Item>, lines: Vec<Line>, notes: Vec<Note>, dx: f64, dy: f64, created: &mut Vec<u32>, src_objs: &[model::Obj]) -> Result<(), String> {
     finite(&[dx, dy])?;
     if p.sheet(sheet).is_none() {
         return Err("That sheet no longer exists.".into());
@@ -938,8 +1000,11 @@ fn paste(p: &mut Project, sheet: u32, items: Vec<Item>, lines: Vec<Line>, notes:
         if let Some(n) = objs.get(&o) {
             return *n;
         }
-        let src = old.obj(o).cloned().unwrap_or_else(|| model::Obj { class: class.into(), ..Default::default() });
-        let tag = tags::bump(p, &src.tag, taken);
+        // An assembly brings its own copies; a paste copies the project's.
+        let src = src_objs.iter().find(|x| x.id == o).or_else(|| old.obj(o)).cloned().unwrap_or_else(|| model::Obj { class: class.into(), ..Default::default() });
+        // An assembly keeps its tags where they are free; a copy takes the next ones.
+        let free = !src_objs.is_empty() && !src.tag.trim().is_empty() && !taken.contains(&src.tag.to_uppercase()) && !p.objects.iter().any(|x| x.tag.eq_ignore_ascii_case(&src.tag));
+        let tag = if free { src.tag.clone() } else { tags::bump(p, &src.tag, taken) };
         if !tag.is_empty() {
             taken.insert(tag.to_uppercase());
         }
@@ -1014,6 +1079,62 @@ fn paste(p: &mut Project, sheet: u32, items: Vec<Item>, lines: Vec<Line>, notes:
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_assembly_is_saved_and_placed_again() {
+        let mut d = Doc::new(crate::examples::get("pump").unwrap());
+        // The control valve station: LV-101 with its block valves and the lines between them.
+        let tag = |d: &Doc, t: &str| d.p.items.iter().find(|i| d.p.tag_of(i) == t).unwrap().id;
+        let lv = tag(&d, "LV-101");
+        let net = crate::graph::Net::new(&d.p);
+        let mut ids = vec![lv];
+        for (n, _, _) in net.reach(lv, 0, false, 1, |_, _| true).into_iter().chain(net.reach(lv, 1, false, 1, |_, _| true)) {
+            ids.push(n);
+        }
+        let near: Vec<u32> = d.p.lines.iter().filter(|l| [&l.a, &l.b].iter().all(|e| e.item().is_some_and(|x| ids.contains(&x.0)))).map(|l| l.id).collect();
+        ids.extend(near.iter().copied());
+        assert!(ids.len() >= 5, "{ids:?}");
+        d.apply(Op::SaveAssembly { name: "CV station".into(), ids: ids.clone() }).unwrap();
+        let a = d.p.settings.assemblies[0].clone();
+        assert_eq!(a.items.len(), 3);
+        assert!(!a.lines.is_empty() && a.objs.iter().any(|o| o.tag == "LV-101"));
+        // Saved again under the same name: replaced, not added.
+        d.apply(Op::SaveAssembly { name: "cv STATION".into(), ids: ids.clone() }).unwrap();
+        assert_eq!(d.p.settings.assemblies.len(), 1);
+        assert!(d.apply(Op::SaveAssembly { name: "Nothing".into(), ids: near.clone() }).is_err());
+        // Placed on a new sheet: new objects, the next free tags, the data kept.
+        let s2 = d.apply(Op::AddSheet { sheet: Sheet::default() }).unwrap()[0];
+        let made = d.apply(Op::PlaceAssembly { name: "cv STATION".into(), sheet: s2, x: 200.0, y: 150.0 }).unwrap();
+        let placed: Vec<&Item> = d.p.items.iter().filter(|i| made.contains(&i.id)).collect();
+        assert_eq!(placed.len(), 3);
+        let cv = placed.iter().find(|i| i.base_key() == "cv_pneu").unwrap();
+        assert_eq!(d.p.tag_of(cv), "LV-102");
+        assert_eq!(d.p.data_of(cv.obj).get("fail").map(|v| v.text()), Some("FC".into()));
+        // In another project too, from a copy of the assembly.
+        let mut e = Doc::new(Project::new());
+        let mut st = e.p.settings.clone();
+        st.assemblies = d.p.settings.assemblies.clone();
+        e.apply(Op::SetSettings { settings: st }).unwrap();
+        let s = e.p.sheets[0].id;
+        let made = e.apply(Op::PlaceAssembly { name: "CV station".into(), sheet: s, x: 100.0, y: 100.0 }).unwrap();
+        assert!(e.p.items.iter().any(|i| made.contains(&i.id) && e.p.tag_of(i) == "LV-101"));
+        assert!(e.apply(Op::PlaceAssembly { name: "nope".into(), sheet: s, x: 0.0, y: 0.0 }).is_err());
+    }
+
+    #[test]
+    fn chosen_data_shows_under_symbols() {
+        let mut p = crate::examples::get("pump").unwrap();
+        p.settings.labels = vec![model::LabelRule { class: "Pump".into(), keys: vec!["flow".into(), "head".into()] }];
+        let s = p.sheets[0].clone();
+        let net = crate::graph::Net::new(&p);
+        let v = crate::view::sheet(&p, &s, &net, &[]);
+        let pa = v.items.iter().find(|i| i.tag == "P-101A").unwrap();
+        let t: Vec<String> = pa.texts.iter().filter_map(|x| if let crate::symbols::Prim::Text { s, .. } = x { Some(s.clone()) } else { None }).collect();
+        assert!(t.iter().any(|x| x.ends_with("m³/h")) && t.iter().any(|x| x.ends_with(" m")), "{t:?}");
+        // Vessels are not pumps.
+        let v1 = v.items.iter().find(|i| i.tag == "V-101").unwrap();
+        assert!(!v1.texts.iter().any(|x| matches!(x, crate::symbols::Prim::Text { s, .. } if s.ends_with("m³/h"))));
+    }
 
     pub fn item(d: &mut Doc, sym: &str, x: f64, y: f64) -> u32 {
         let sheet = d.p.sheets[0].id;

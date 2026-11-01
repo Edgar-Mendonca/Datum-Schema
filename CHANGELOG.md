@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.3 — 2026-11-01
+
+Assemblies and data labels.
+
+**Assemblies.** Select a group on the drawing (a control valve station with its block valves and bypass, a pump set) and Format › **Save as Assembly**: its symbols, lines, notes and their data are kept by name. Place it again from the palette's new **Assemblies** tab: click it, then click the sheet (Shift keeps placing). Its symbols get the next free tags (kept where they are free, as in another project); lines to things left out become open ends. File › Options › Assemblies renames, deletes, shares them as a file and uses them for new projects.
+
+**Data labels.** File › Options › **Data labels** chooses the data shown on the drawing under every symbol of a kind and its sub-kinds: a pump's flow and head, a vessel's volume, a control valve's Cv, in the project's units.
+
 ## 0.4.2 — 2026-11-01
 
 Implied items: flanges, gaskets and bolts in the take-off.

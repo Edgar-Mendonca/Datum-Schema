@@ -60,6 +60,26 @@ pub struct Title {
     pub extra: BTreeMap<String, String>,
 }
 
+/// A saved group: its symbols, lines and notes round (0, 0), and copies of their objects (tags and
+/// data), so it can be placed in any project.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
+pub struct Assembly {
+    pub name: String,
+    pub items: Vec<Item>,
+    pub lines: Vec<Line>,
+    pub notes: Vec<Note>,
+    pub objs: Vec<Obj>,
+}
+
+/// The data shown under every symbol of a class (and its subclasses), in the project's units.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
+pub struct LabelRule {
+    pub class: String,
+    pub keys: Vec<String>,
+}
+
 /// A cell of a company title block, in millimetres from the block's top left corner.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
 #[serde(default)]
@@ -494,6 +514,10 @@ pub struct Settings {
     pub title_block: TitleBlock,
     /// The pipe specs (pipe classes) lines are built to.
     pub specs: Vec<crate::specs::PipeSpec>,
+    /// Saved groups of symbols and lines, placed again as one (a control valve station…).
+    pub assemblies: Vec<Assembly>,
+    /// The data shown under each kind of symbol on the drawing.
+    pub labels: Vec<LabelRule>,
     /// The components of the process flow diagrams' streams (each stream's mass fractions are
     /// its data "x:<component>").
     pub components: Vec<String>,
@@ -530,7 +554,7 @@ pub const MAX_LOGO: usize = 280_000;
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), specs: vec![], components: vec![] }
+        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), specs: vec![], assemblies: vec![], labels: vec![], components: vec![] }
     }
 }
 
@@ -873,6 +897,26 @@ impl Project {
         l.order.retain(|h| h.len() <= 100);
         s.title_block.normalize();
         crate::specs::normalize(&mut s.specs);
+        s.assemblies.truncate(200);
+        let mut seen_a = HashSet::new();
+        s.assemblies.retain(|a| !a.name.trim().is_empty() && seen_a.insert(a.name.trim().to_lowercase()));
+        for a in &mut s.assemblies {
+            a.name = crate::clip(a.name.trim(), 60);
+            a.items.truncate(500);
+            a.lines.truncate(500);
+            a.notes.truncate(100);
+            a.objs.truncate(1000);
+            let ok = |v: f64| v.is_finite() && v.abs() <= MAX_COORD;
+            a.items.retain(|i| ok(i.x) && ok(i.y) && crate::symbols::get(&i.sym).is_some());
+            a.notes.retain(|n| ok(n.x) && ok(n.y));
+        }
+        s.labels.truncate(100);
+        s.labels.retain(|l| !l.class.trim().is_empty());
+        for l in &mut s.labels {
+            l.class = crate::clip(l.class.trim(), 80);
+            l.keys.truncate(6);
+            l.keys.retain(|k| !k.trim().is_empty() && k.len() <= 64);
+        }
         let t = &mut self.title;
         t.extra = std::mem::take(&mut t.extra).into_iter().filter(|(k, _)| !k.trim().is_empty()).take(40).map(|(k, v)| (crate::clip(k.trim(), 40), crate::clip(&v, 200))).collect();
         let s = &mut self.settings;

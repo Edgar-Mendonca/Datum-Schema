@@ -366,6 +366,32 @@ pub fn sheet(p: &Project, s: &Sheet, net: &Net, hyd: &[Option<Hyd>]) -> SheetVie
                     }
                 }
             }
+            // The data the project chose to show for this kind of symbol, under its other texts.
+            if let Some(o) = p.obj(it.obj).filter(|_| !p.settings.labels.is_empty()) {
+                let chain: Vec<String> = crate::classes::chain(&o.class).iter().map(|c| c.name.clone()).collect();
+                let keys: Vec<&String> = p.settings.labels.iter().filter(|r| r.class == o.class || chain.contains(&r.class)).flat_map(|r| &r.keys).collect();
+                if !keys.is_empty() {
+                    let attrs = crate::classes::attrs(Some(p), &o.class);
+                    let us = p.units == "US";
+                    let mut y = texts.iter().filter_map(|t| if let Prim::Text { p: q, .. } = t { Some(q[1]) } else { None }).fold(bb[3], f64::max) + 3.0;
+                    let mut done = std::collections::HashSet::new();
+                    for k in keys {
+                        if !done.insert(k.as_str()) {
+                            continue;
+                        }
+                        let Some(v) = o.data.get(k.as_str()) else { continue };
+                        let q = attrs.iter().find(|a| &a.key == k).map(|a| a.q.clone()).unwrap_or_default();
+                        let s = match v.num() {
+                            Some(x) if !q.is_empty() => crate::units::show(x, &q, us),
+                            _ => v.text(),
+                        };
+                        if !s.trim().is_empty() {
+                            texts.push(text([it.x, y], 2.0, crate::clip(&s, 30), 1, false));
+                            y += 2.8;
+                        }
+                    }
+                }
+            }
             let ports = sym
                 .map(|s| (0..s.ports.len()).filter_map(|k| graph::port_pos(it, k as u8).map(|(q, d)| PortView { p: q, dir: d, signal: s.ports[k].signal, used: used.contains(&(it.id, k as u8)) })).collect())
                 .unwrap_or_default();

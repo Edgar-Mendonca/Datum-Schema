@@ -170,6 +170,7 @@ export const Ribbon = () => {
             <G l="Flow" h="lines"><B big i="flow" l="Reverse Flow" run={() => C.reverse(l().id)} /><S><B i="line" l="Straighten" off={!l().pts.length} run={() => act({ SetPts: { id: l().id, pts: [] } })} /><B i="select" l="Whole Line Number" run={() => C.selectRun(l().id)} /></S></G>
           </>}</Show>
           <G l="Edit" h="edit"><S><B i="copy" l="Copy" run={C.copy} /><B i="dup" l="Duplicate" run={C.duplicate} /><B i="del" l="Delete" run={C.del} /></S></G>
+          <G l="Assembly" h="assemblies"><B big i="symbols" l="Save as Assembly" title="Save the selection to place it again as one (a control valve station…)" run={() => import("./assemblies").then(m => m.saveAssembly())} /></G>
         </Show>
       </Show>
       <Show when={tab() === "help"}>

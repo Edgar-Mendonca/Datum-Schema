@@ -1,6 +1,7 @@
 // The symbol palette: every symbol by category, searchable ("ball valve"), with the common
 // instrument functions ready-lettered. Drag a symbol onto the sheet, or click it and then click the
 // sheet.
+import { AssembliesPanel } from "./assemblies";
 import { For, Show, createSignal, createMemo } from "solid-js";
 import { lib, setTool, tool, libs, proj } from "./store";
 import { SymInfo, Cat } from "./api";
@@ -43,14 +44,15 @@ export const Palette = () => {
   const drag = (e: DragEvent, sym: string, tag?: string) => { e.dataTransfer?.setData("text/x-datum-sym", sym); if (tag) e.dataTransfer?.setData("text/x-datum-tag", tag); e.dataTransfer!.effectAllowed = "copy"; };
   const on = (sym: string, tag?: string) => { const t = tool(); return t.k === "place" && t.sym === sym && (t.tag ?? "") === (tag ?? ""); };
   const sym = (k: string) => lib()?.symbols.find(s => s.key === k);
-  const [side, setSide] = createSignal<"symbols" | "library" | "plant">("symbols");
+  const [side, setSide] = createSignal<"symbols" | "library" | "assemblies" | "plant">("symbols");
   // With a drawing standard, our symbols are shown as the library draws them.
   const shown = (s: SymInfo) => { const k = proj()?.settings.standard.map[s.key]; return (k && sym(k)) || s; };
   const libGroups = createMemo(() => libs().map(v => ({ name: v.library.name, syms: v.library.symbols.map(c => sym(c.key)).filter(Boolean) as SymInfo[] })).filter(g => g.syms.length));
   return (
     <aside class="palette">
-      <header><button classList={{ on: side() === "symbols" }} onClick={() => setSide("symbols")}>Symbols</button><Show when={libs().length}><button classList={{ on: side() === "library" }} onClick={() => setSide("library")}>Library</button></Show><button classList={{ on: side() === "plant" }} onClick={() => setSide("plant")}>Plant</button><Help k={side() === "plant" ? "plant" : "palette"} /></header>
+      <header><button classList={{ on: side() === "symbols" }} onClick={() => setSide("symbols")}>Symbols</button><Show when={libs().length}><button classList={{ on: side() === "library" }} onClick={() => setSide("library")}>Library</button></Show><Show when={proj()?.settings.assemblies.length}><button classList={{ on: side() === "assemblies" }} onClick={() => setSide("assemblies")}>Assemblies</button></Show><button classList={{ on: side() === "plant" }} onClick={() => setSide("plant")}>Plant</button><Help k={side() === "plant" ? "plant" : "palette"} /></header>
       <Show when={side() === "plant"}><PlantPanel /></Show>
+      <Show when={side() === "assemblies"}><AssembliesPanel /></Show>
       <Show when={side() === "library"}>
         <div class="pbody"><For each={libGroups()}>{g => <section>
           <div class="pcat"><span>▾</span>{g.name}<small>{g.syms.length}</small></div>

@@ -5,6 +5,7 @@ import { LayoutSec } from "./datasheet";
 import { TitleBlockSec } from "./titleblock";
 import { GuidePage } from "./guide";
 import { SpecsSec } from "./specs";
+import { AssembliesSec, LabelsSec } from "./assemblies";
 import { For, Show, createSignal, createResource, onMount, JSX } from "solid-js";
 import { PrintPage } from "./print";
 import { RoadmapPage } from "./roadmap";
@@ -167,6 +168,12 @@ const ProjectSettings = () => {
     <ClassesSec />
     <Sec t="Pipe specs" about="The pipe classes lines are built to: their sizes and limits, and the valves and fittings each allows, by size, with a description and commodity code. Checks 21–23 hold the drawing to them; the take-off names each component from its class.">
       <SpecsSec />
+    </Sec>
+    <Sec t="Data labels" about="The data shown on the drawing under every symbol of a kind (and its kinds): a pump's flow and head, a vessel's volume, in the project's units.">
+      <LabelsSec />
+    </Sec>
+    <Sec t="Assemblies" about="Groups saved from the drawing (a control valve station, a pump set) and placed again as one, from the palette's Assemblies tab. Share them as a file.">
+      <AssembliesSec />
     </Sec>
     <Sec t="Title block" about="The block in the bottom right corner of every sheet: the standard one, or your company's (its own cells, fields and logo). Save it as a file to use in other projects or share it.">
       <TitleBlockSec />

@@ -6,7 +6,7 @@
 | | |
 | --- | --- |
 | **Product** | Datum Schema: intelligent P&IDs and process flow diagrams: draw, check and list (symbols and lines that carry their data and connections; live line list, equipment list, instrument index and valve list; drawing checks; line hydraulics; print, SVG and DXF) |
-| **Current version** | 0.4.2 (2026-11-01) |
+| **Current version** | 0.4.3 (2026-11-01) |
 | **Repo** | `Edgar-Mendonca/Datum-Schema` · branch `claude/vigilant-hamilton-ku7r0w` (the first branch pushed, so the default branch) |
 | **Stack** | Rust engine (`crates/core`: model, symbols, graph, tags, checks, hydraulics, lists, frame, routing, DXF), Tauri 2, SolidJS + strict TypeScript; no Python |
 | **Identifier** | `com.edgarmendonca.datumschema` · files `.dschema` (SQLite, `format` 4 from 0.2.0 (items.base, `underlays` and `snapshots` tables, meta "symbols"); 3 from 0.1.9; 2 before: no `issues` table; JSON `format` 1 from 0.1.0–0.1.4 converts) · symbol libraries `.dschemalib` (JSON, in app data › libraries) · installer `DatumSchema-x.y.z-setup.exe` + `SHA256SUMS.txt` · publisher "Datum" |
@@ -105,6 +105,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 
 | Version | Decision | Why |
 | --- | --- | --- |
+| 0.4.3 | An assembly (`settings.assemblies`) keeps its items, lines and notes round (0, 0) and copies of their objects; `Op::PlaceAssembly` reuses `paste` with those copies (tags kept where free, else bumped). Data labels (`settings.labels`: class and up to six keys) are drawn by the engine under the item's other texts, in display units, for the class and its subclasses | One paste path; labels follow the class library |
 | 0.4.2 | Implied items come from rules on the pipe class (`PipeSpec.implied`: what, end type, per end, sizes, description, code), applied to each component's ends of that type (its process ports); an end type left blank is read from the description. Each flanged end counts as its own joint (a valve bolted straight to another's flange is counted twice) | Simple and explainable; good enough for a requisition estimate, checked by the engineer |
 | 0.4.1 | Propagation runs in `normalize` (every edit and open), writing the line's size and class into the component's data, and remembers what it wrote in hidden "~size"/"~pipe_class" keys: a value still equal to the last written one is the engine's to change, anything else is the user's override (kept, listed on To do). The pipe class goes to "pipe_class" because a valve's "class" attribute already holds its rating (the examples' 300#). Control and relief valves, reducers and terminals are not sized from the line | Lists and datasheets show real values; typed values are never lost; no false overrides on valves sized below the line |
 | 0.4.0 | Specs live in the project's settings; a component is matched by its symbol's base key (so a client symbol counts as what it stands for) and size range; a class's limits are one design pressure and temperature, not the B16.5 P-T table; checks 21–23 run only when the project has specs; vents, drains and sample points are judged by their own size | Simple, explainable checks; no false alarms in projects without specs |
@@ -202,8 +203,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.4.0 | Pipe specs: classes with allowed components by size and rating; checks 21–23; take-off descriptions and codes; CSV import; editor | ✅ |
 | 0.4.1 | Values passed along a line (size, pipe class) to in-line items; the To do tab | ✅ |
 | 0.4.2 | Implied items (flanges, gaskets, bolts) in the take-off; end types on spec components | ✅ |
-| 0.4.3 | Assemblies; data labels chosen by the user | 🔜 |
-| 0.4.4 | User rules and tag formats per class; speed on large projects | ⬜ |
+| 0.4.3 | Assemblies (save, place, share, defaults); data labels by class | ✅ |
+| 0.4.4 | User rules and tag formats per class; speed on large projects | 🔜 |
 | — | Brainstorm again after 0.4.4: compare with the commercial suites, re-plan | ⬜ |
 | 0.5.0 | Instrument wiring database (cables, JBs, terminals, I/O cards, cable schedule); loop diagrams from it | ⬜ |
 | 0.5.1 | Calculation sheets in Datum Calc from an object's data (its packs: pump power, NPSH, pipe Δp, HX LMTD, pressure vessel, tank…), as `.dcalc` files like the Pipe and Sim links | ⬜ |
@@ -325,4 +326,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 ### 2026-11-01: Session 1, 0.4.2 (implied items)
 - `specs::implied`, `ends_of`, `Implied` rules on each class (the starter: weld-neck flange, gasket, bolt set per flanged end); take-off rows after the components; Ends and Implied tables in the spec editor; CSV Ends column. The test first expected 12 gaskets at 3": the level control valve is a seventh flanged 3" component, so 14 is right.
 - Tests: engine 112 (ends read from descriptions, quantities by size, the take-off rows, nothing without specs); UI check for the implied gaskets in the take-off.
+
+### 2026-11-01: Session 1, 0.4.3 (assemblies and data labels)
+- `Op::SaveAssembly`/`PlaceAssembly` (with `doc::assembly` and `paste` taking source objects), labels in `view.rs`, `ui/src/assemblies.tsx` (save dialog, palette tab, Options sections). An assembly placed in another project first took the next tag although its own was free; now kept where free. Names match whatever their case.
+- Tests: engine 114 (save, replace by name, place with the next tag and data kept, place in another project, labels under pumps only); UI checks for saving, placing and labels.
 
