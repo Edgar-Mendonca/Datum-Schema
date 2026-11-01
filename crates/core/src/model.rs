@@ -518,6 +518,8 @@ pub struct Settings {
     pub tag_format: crate::tags::TagFormat,
     /// The company's own rules (check 24).
     pub rules: Vec<crate::rules::UserRule>,
+    /// Reports the user designed (columns, filters, grouping of a list or a class).
+    pub reports: Vec<crate::reports::Report>,
     /// Saved groups of symbols and lines, placed again as one (a control valve station…).
     pub assemblies: Vec<Assembly>,
     /// The data shown under each kind of symbol on the drawing.
@@ -558,7 +560,7 @@ pub const MAX_LOGO: usize = 280_000;
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), specs: vec![], tag_format: crate::tags::TagFormat::default(), rules: vec![], assemblies: vec![], labels: vec![], components: vec![] }
+        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), specs: vec![], tag_format: crate::tags::TagFormat::default(), rules: vec![], reports: vec![], assemblies: vec![], labels: vec![], components: vec![] }
     }
 }
 
@@ -917,6 +919,7 @@ impl Project {
         crate::specs::normalize(&mut s.specs);
         s.tag_format.normalize();
         crate::rules::normalize(&mut s.rules);
+        crate::reports::normalize(&mut s.reports);
         s.assemblies.truncate(200);
         let mut seen_a = HashSet::new();
         s.assemblies.retain(|a| !a.name.trim().is_empty() && seen_a.insert(a.name.trim().to_lowercase()));

@@ -727,6 +727,18 @@ const shots = process.env.SHOTS;
   { const q = await project(); const s1 = q.objects.find(o => o.class === "Stream" && String(o.data.number) === "1");
     check("the stream takes the simulator's temperature", Math.abs(Number(s1.data.temp) - 304.15) < 1e-6, JSON.stringify(s1.data)); }
 
+  // 52. A report designed from the valve list: grouped, filtered, saved and shown as a tab.
+  await openEx("Pump transfer");
+  await p.click(".tabs button:text-is('Lists')"); await p.click(".ribbon button:has-text('New Report')"); await p.waitForSelector(".dlg .repgrid");
+  await p.fill(".dlg .repname", "Valves by type");
+  await p.selectOption(".dlg .repsrc", "valves"); await p.waitForTimeout(400);
+  { const keys = await p.$$eval(".dlg .repgroup option", els => els.map(e => [e.value, e.textContent]));
+    const type = keys.find(k => k[1].startsWith("Type")); await p.selectOption(".dlg .repgroup", type[0]); await p.waitForTimeout(400); }
+  check("the preview groups the rows", /in \d+ groups/.test(await p.textContent(".dlg .reprows")), await p.textContent(".dlg .reprows"));
+  await p.click(".dlg footer button:has-text('Save the report')"); await p.waitForTimeout(500);
+  check("the report is saved in the project", (await project()).settings.reports.some(r => r.name === "Valves by type" && r.source === "valves"));
+  check("the report is a tab with group headings", (await p.$$(".btabs button:has-text('Valves by type')")).length === 1 && (await p.$$(".lists tr.ghead")).length > 0);
+
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();
   await fetch(`${url}quit`).catch(() => {});

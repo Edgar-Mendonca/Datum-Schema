@@ -1187,3 +1187,14 @@ tr.behind td { background: var(--err-bg); }
 .rulestbl input:not([type=checkbox]):not(.num) { width: 100%; }
 .rulestbl input.num { width: 70px; }
 .rulestbl td.c { text-align: center; }
+
+/* Reports (0.5.4) */
+.lists .egrid tr.ghead td, .tbl tr.ghead td { background: var(--panel); font-weight: 600; }
+.repgrid { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(320px, 1.6fr); gap: 16px; }
+.repcols { max-height: 300px; overflow: auto; border: 1px solid var(--line2); border-radius: 4px; padding: 4px; }
+.repcol { display: flex; align-items: center; gap: 6px; padding: 1px 2px; font-size: 12px; }
+.repcol span { flex: 1; }
+.repf { display: flex; gap: 4px; margin: 3px 0; }
+.repf select, .repf input { min-width: 0; flex: 1; }
+.repprev { max-height: 220px; overflow: auto; }
+@media (max-width: 720px) { .repgrid { grid-template-columns: 1fr; } }

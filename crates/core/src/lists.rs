@@ -35,6 +35,8 @@ pub struct List {
     pub title: String,
     pub cols: Vec<Col>,
     pub rows: Vec<Row>,
+    /// A report's group heading rows (indices into `rows`).
+    pub heads: Vec<usize>,
 }
 
 pub const KINDS: [(&str, &str); 12] = [("lines", "Line list"), ("streams", "Stream list"), ("io", "I/O summary"), ("takeoff", "Valve and fitting take-off"), ("comments", "Review comments"), ("jbs", "Junction boxes"), ("cables", "Cable schedule"), ("ioalloc", "I/O allocation"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list"), ("datasheets", "Datasheet index")];
@@ -65,6 +67,10 @@ fn sheet_no(p: &Project, id: u32) -> String {
 }
 
 pub fn build(p: &Project, kind: &str) -> Result<List, String> {
+    if let Some(name) = kind.strip_prefix("report:") {
+        let r = p.settings.reports.iter().find(|r| r.name.eq_ignore_ascii_case(name.trim())).ok_or_else(|| format!("There is no report called {name}."))?;
+        return crate::reports::run(p, r);
+    }
     let net = Net::new(p);
     let us = p.units == "US";
     let title = KINDS.iter().find(|k| k.0 == kind).ok_or_else(|| format!("There is no list called {kind}."))?.1.to_string();
@@ -413,7 +419,7 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
         }
         _ => unreachable!(),
     };
-    Ok(List { kind: kind.into(), title, cols: cols_, rows })
+    Ok(List { kind: kind.into(), title, cols: cols_, rows, heads: vec![] })
 }
 
 /// What an instrument or valve is on: the line numbers and equipment at its ports' other ends.
@@ -483,6 +489,13 @@ pub fn xlsx(p: &Project, kind: &str) -> Result<Vec<u8>, String> {
     for (r, row) in l.rows.iter().enumerate() {
         for (c, cell) in row.cells.iter().enumerate() {
             let (rr, cc) = (r as u32 + 3, c as u16);
+            if l.heads.contains(&r) {
+                match cell.parse::<f64>() {
+                    Ok(v) if v.is_finite() => ws.write_number_with_format(rr, cc, v, &bold).map_err(e)?,
+                    _ => ws.write_string_with_format(rr, cc, cell, &bold).map_err(e)?,
+                };
+                continue;
+            }
             match cell.parse::<f64>() {
                 Ok(v) if l.cols[c].num && v.is_finite() => ws.write_number(rr, cc, v).map_err(e)?,
                 _ => ws.write_string(rr, cc, cell).map_err(e)?,

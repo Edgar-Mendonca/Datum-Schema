@@ -107,7 +107,9 @@ export const PrintPage = () => {
   });
   const [cause] = createResource(() => call<CauseMatrix>("cause_effect"));
   onCleanup(() => { setPrintOnly(null); setPrintLoop(null); setPrintCause(false); });
-  const [lists] = createResource(async () => Promise.all(LISTS.map(([k]) => call<List>("list", { kind: k }).then(l => l ?? null).catch(() => null))));
+  // The lists, then the project's own reports.
+  const allLists = createMemo((): [string, string][] => [...LISTS, ...(proj()?.settings.reports ?? []).map(r => [`report:${r.name}`, `Report: ${r.name}`] as [string, string])]);
+  const [lists] = createResource(() => allLists().map(x => x[0]).join("\n"), async () => Promise.all(allLists().map(([k]) => call<List>("list", { kind: k }).then(l => l ?? null).catch(() => null))));
   const [zoomP, setZoomP] = createSignal(0.4);
   const sheets = createMemo(() => (views() ?? []).filter(v => which() === "all" || v.id === sheet()?.id));
   /** Rows per A3 landscape list page. */
@@ -152,13 +154,13 @@ export const PrintPage = () => {
     }
     const p = proj();
     (lists() ?? []).forEach((l, i) => {
-      if (!l || !want()[LISTS[i][0]] || !l.rows.length) return;
+      if (!l || !want()[allLists()[i]?.[0] ?? ""] || !l.rows.length) return;
       const chunks = Math.max(1, Math.ceil(l.rows.length / ROWS));
       for (let c = 0; c < chunks; c++) out.push({ w: 420, h: 297, label: `${l.title} ${c + 1}/${chunks}`, body: () => (
         <div class="plist">
           <header><b>{l.title}</b><span>{p?.title.project || p?.name}</span><span>{p?.title.company}</span><span>Page {c + 1} of {chunks}</span></header>
           <table class="tbl small"><thead><tr><For each={l.cols}>{col => <th classList={{ r: col.num }}>{col.label}</th>}</For></tr></thead>
-            <tbody><For each={l.rows.slice(c * ROWS, (c + 1) * ROWS)}>{r => <tr><For each={r.cells}>{(x, j) => <td classList={{ r: l.cols[j()].num }}>{x}</td>}</For></tr>}</For></tbody></table>
+            <tbody><For each={l.rows.slice(c * ROWS, (c + 1) * ROWS)}>{(r, ri) => <tr classList={{ ghead: !!l.heads?.includes(c * ROWS + ri()) }}><For each={r.cells}>{(x, j) => <td classList={{ r: l.cols[j()].num }}>{x}</td>}</For></tr>}</For></tbody></table>
           <table class="ptb"><tbody><tr>
             <td><small>COMPANY</small>{p?.title.company || "—"}</td><td><small>PROJECT</small>{p?.title.project || p?.name}</td><td><small>DOCUMENT</small>{l.title}</td>
             <td><small>BY</small>{p?.title.by || "—"}</td><td><small>CHECKED</small>{p?.title.checked || "—"}</td><td><small>DATE</small>{new Date().toLocaleDateString()}</td><td><small>PAGE</small>{c + 1} of {chunks}</td>
@@ -200,7 +202,7 @@ export const PrintPage = () => {
         <Pick value={which()} set={v => setWhich(v as any)} options={[["all", "Every sheet"], ["this", "This sheet only"]]} />
         <Check label="Fit every sheet to A3" value={fitA3()} set={setFitA3} />
         <h4>Lists</h4>
-        <For each={LISTS}>{([k, l]) => <Check label={l} value={!!want()[k]} set={v => setWant({ ...want(), [k]: v })} />}</For>
+        <For each={allLists()}>{([k, l]) => <Check label={l} value={!!want()[k]} set={v => setWant({ ...want(), [k]: v })} />}</For>
         <Check label="Legend (when there is no legend sheet)" value={!!want().legend} set={v => setWant({ ...want(), legend: v })} />
         <Check label={`Datasheets (${datasheets()?.length ?? 0}, one A4 page each)`} value={!!want().sheets_ds} set={v => setWant({ ...want(), sheets_ds: v })} />
         <Check label={`Loop diagrams (${loops()?.length ?? 0}, one A3 page each)`} value={!!want().loops} set={v => setWant({ ...want(), loops: v })} />
