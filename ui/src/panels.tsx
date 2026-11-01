@@ -9,9 +9,10 @@ import { C } from "./cmds";
 import { Help } from "./help";
 import { openDatasheet, issueDialog, importDatasheets } from "./datasheet";
 import { CommentsPanel } from "./review";
+import { ADD, WIRING_TABS, addWiring } from "./wiring";
 import { TodoPanel, todos } from "./todo";
 
-const TABS: [string, string][] = [["checks", "Checks"], ["todo", "To do"], ["comments", "Comments"], ["lines", "Line list"], ["streams", "Streams"], ["equipment", "Equipment"], ["instruments", "Instruments"], ["io", "I/O summary"], ["valves", "Valves"], ["takeoff", "Take-off"], ["datasheets", "Datasheets"]];
+const TABS: [string, string][] = [...[["checks", "Checks"]] as [string, string][], ["todo", "To do"], ["comments", "Comments"], ["lines", "Line list"], ["streams", "Streams"], ["equipment", "Equipment"], ["instruments", "Instruments"], ["io", "I/O summary"], ["valves", "Valves"], ["takeoff", "Take-off"], ...WIRING_TABS, ["datasheets", "Datasheets"]];
 
 const level = (l: string) => (l === "error" ? 0 : l === "warning" ? 1 : 2);
 
@@ -68,6 +69,7 @@ const ListView = (p: { kind: string }) => {
         <label class="inline small">Group by <select onChange={e => setGroup(+e.currentTarget.value)}><option value="-1">—</option><For each={list()?.cols ?? []}>{(c, i) => <option value={i()}>{c.label}</option>}</For></select></label>
         <span class="grow" /><span class="muted small">{rows().length} rows</span>
         <Show when={p.kind === "datasheets"}><button class="btn sm" title="Import datasheet values from an Excel workbook, with a preview first" onClick={importDatasheets}>Import Excel…</button></Show>
+        <Show when={ADD[p.kind]}><button class="btn sm" onClick={() => addWiring(ADD[p.kind])}>Add {p.kind === "jbs" ? "a junction box" : p.kind === "cables" ? "a cable" : "an I/O card"}…</button></Show>
         <Show when={p.kind === "datasheets" && rows().length}><button class="btn sm" title="Issue every datasheet shown (use the filter to choose), each with its next revision" onClick={() => issueDialog(rows().map(r => r.ids[0]))}>Issue {rows().length} shown…</button></Show>
         <button class="btn sm" onClick={() => C.exportList(p.kind, "xlsx")}>Excel</button><button class="btn sm" onClick={() => C.exportList(p.kind, "csv")}>CSV</button><button class="btn sm" onClick={C.print}>Print</button>
       </div>
@@ -103,7 +105,7 @@ export const Bottom = () => {
     <section class="bottom" style={{ height: panelOpen() ? `${h()}px` : "30px" }}>
       <Show when={panelOpen()}><div class="bhandle" onMouseDown={resize} /></Show>
       <nav class="btabs">
-        <For each={TABS.filter(([k]) => k !== "streams" || proj()?.sheets.some(s => s.pfd))}>{([k, l]) => <button classList={{ on: panelOpen() && panel() === k }} onClick={() => { if (panel() === k && panelOpen()) setPanelOpen(false); else { setPanel(k); setPanelOpen(true); } }}>{l}{badge(k)}</button>}</For>
+        <For each={TABS.filter(([k]) => (k !== "streams" || proj()?.sheets.some(s => s.pfd)) && (!ADD[k] || panel() === k || !!proj()?.objects.some(o => o.class === ADD[k])))}>{([k, l]) => <button classList={{ on: panelOpen() && panel() === k }} onClick={() => { if (panel() === k && panelOpen()) setPanelOpen(false); else { setPanel(k); setPanelOpen(true); } }}>{l}{badge(k)}</button>}</For>
         <Help k={panel() === "checks" ? "checks" : panel() === "comments" ? "review" : panel() === "todo" ? "todo" : "lists"} />
         <span class="grow" />
         <button class="bcollapse" title={panelOpen() ? "Hide the panel" : "Show the panel"} onClick={() => setPanelOpen(!panelOpen())}>{panelOpen() ? "▾" : "▴"}</button>

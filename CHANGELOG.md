@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.5.0 — 2026-11-01
+
+The instrument wiring database.
+
+**Junction boxes, cables and I/O cards** are now objects of the project with their own data: a junction box's terminals, type and location; a cable's type, pairs, from, to, length and route; an I/O card's kind (AI, AO, DI, DO, fieldbus), channels, control system, rack and slot. Add them from Lists › **Wiring** (Junction boxes, Cable schedule, I/O allocation), edit them in the lists, and find them in the Plant panel.
+
+**Devices name them.** Each field instrument and control valve names its junction box and terminals (1, 2 or 1-4), its cable, and its I/O channel as card/channel (AI-01/3), in the Inspector's Wiring group or the loop diagram's wiring table.
+
+**Cable schedule and I/O allocation.** The cable schedule lists every cable with its devices and the pairs used (from and to filled in from its devices when left blank); the I/O allocation lists every channel of every card with its device, or spare, and marks channels used twice. Junction boxes list their terminals used. All print and export to Excel and CSV.
+
+**Check 25** finds wiring that does not add up: a junction box, cable or card that is not in the project, two devices on one channel, a channel beyond its card, a device on a card of the wrong kind (a valve on an AI card), and cables or boxes with more devices than pairs or terminals. Until a project has junction boxes, cables or cards, wiring typed as free text is left alone.
+
+**Loop diagrams** show the cable's type and pairs and the card's kind and control system.
+
 ## 0.4.4 — 2026-11-01
 
 Company rules, tag formats, and speed on large projects.

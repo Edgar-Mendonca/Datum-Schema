@@ -18,7 +18,7 @@
     },
     {
       "title": "Check it as you go",
-      "text": "Twenty-four rules run on every change: duplicate tags, open ends, size and class changes, check valves, relief paths, control loops, velocities and pressure drops, heat, mass and component balances on process flow diagrams, instrument ranges, loop wiring pipe specs and your company's own rules. Click an issue to go to it."
+      "text": "Twenty-five rules run on every change: duplicate tags, open ends, size and class changes, check valves, relief paths, control loops, velocities and pressure drops, heat, mass and component balances on process flow diagrams, instrument ranges, loop wiring pipe specs, instrument wiring and your company's own rules. Click an issue to go to it."
     },
     {
       "title": "Print the drawings and lists",
@@ -32,6 +32,7 @@
     "Old drawings (DXF) behind a sheet to trace over; revision clouds round what changed since an issue",
     "Send a line to Datum Pipe and a control loop to Datum Sim",
     "Stream compositions with a component balance; an I/O summary per control system with spare",
+    "Instrument wiring: junction boxes, cables and I/O cards; a cable schedule and the I/O allocation",
     "A valve and fitting take-off by type, size, pipe class and rating",
     "Your company's title block: its cells, fields and logo, shared as a file",
     "Pipe specs: classes with the components they allow, read from CSV; checks and a take-off with commodity codes",
@@ -45,7 +46,7 @@
     "A valve dropped on a line splits it and joins both halves",
     "Off-page connectors pair across sheets; click one to jump to its partner",
     "Live line list, equipment list, instrument index, valve list and datasheet index",
-    "Twenty-four checks, including balances, instrument ranges, pipe specs and your own rules, each with a click to the problem",
+    "Twenty-five checks, including balances, instrument ranges, pipe specs, wiring and your own rules, each with a click to the problem",
     "Line hydraulics: velocity, Reynolds number, Colebrook friction factor and pressure drop against limits",
     "SI and US units; DXF, SVG, PDF, Excel, CSV and the DEXPI P&ID exchange format (export and import)",
     "Automatic tags and loop numbers, renumbering, a legend sheet",
@@ -75,7 +76,7 @@
       "title": "Instruments and calculations",
       "when": "Now",
       "items": [
-        "0.5.0: instrument wiring: cables, junction boxes, terminals, I/O cards, cable schedule; loop diagrams from them",
+        "0.5.0: instrument wiring: cables, junction boxes, terminals, I/O cards, cable schedule; loop diagrams from them (done)",
         "0.5.1: calculation sheets in Datum Calc from an object's data (pump power and NPSH, line pressure drop, exchanger, vessel wall)",
         "0.5.2: sizing of control valves, orifices and relief valves",
         "0.5.3: equipment datasheets; stream tables imported from simulator results (Excel, CSV)"

@@ -86,7 +86,7 @@ export const sheetSvg = async (id: number) => {
 };
 
 type Page = { w: number; h: number; body: () => JSX.Element; label: string };
-const LISTS: [string, string][] = [["lines", "Line list"], ["streams", "Stream list"], ["equipment", "Equipment list"], ["instruments", "Instrument index"], ["io", "I/O summary"], ["valves", "Valve list"], ["takeoff", "Valve and fitting take-off"], ["comments", "Review comments"], ["datasheets", "Datasheet index"]];
+const LISTS: [string, string][] = [["lines", "Line list"], ["streams", "Stream list"], ["equipment", "Equipment list"], ["instruments", "Instrument index"], ["io", "I/O summary"], ["valves", "Valve list"], ["takeoff", "Valve and fitting take-off"], ["comments", "Review comments"], ["cables", "Cable schedule"], ["ioalloc", "I/O allocation"], ["datasheets", "Datasheet index"]];
 const [printing, setPrinting] = createSignal(false);
 /** Set by a datasheet's Print button: print only that object's datasheet. */
 export const [printOnly, setPrintOnly] = createSignal<number | null>(null);

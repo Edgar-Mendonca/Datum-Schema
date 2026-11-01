@@ -122,8 +122,12 @@ pub fn io_of(p: &Project, it: &Item) -> Option<&'static str> {
     let d = p.data_of(it.obj);
     let get = |k: &str| d.get(k).map(|v| v.text().trim().to_uppercase()).unwrap_or_default();
     let ch = get("io");
-    if let Some(k) = IO.iter().take(4).find(|k| ch.starts_with(*k)) {
-        return Some(k);
+    // A free-text channel ("AI 01-03") names its kind; a card's channel (AI-01/3) does not: the
+    // card's kind is checked against the device (check 25), so the device decides here.
+    if crate::wiring::channel(&ch).is_none() {
+        if let Some(k) = IO.iter().take(4).find(|k| ch.starts_with(*k)) {
+            return Some(k);
+        }
     }
     let base = it.base_key();
     let (letters, _) = tags::loop_of(p.tag_of(it));

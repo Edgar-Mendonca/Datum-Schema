@@ -32,6 +32,7 @@ export const RULES: [number, string, string][] = [
   [22, "A valve or fitting its line's pipe class does not allow at that size", "warning"],
   [23, "A line outside its pipe class's sizes, design pressure or design temperature", "warning"],
   [24, "A company rule (File › Options › Company rules) is not met", "set by the rule"],
+  [25, "Instrument wiring that does not add up: an unknown junction box, cable or card, a shared or missing channel, a card of the wrong kind, a full cable or box", "error"],
 ];
 
 export const HELP: Record<string, Topic> = {
@@ -120,6 +121,9 @@ export const HELP: Record<string, Topic> = {
   company: { t: "Company rules and tags", what: "Your company's own checks, and how new tags are written.",
     how: ["File › Options › Company rules: every object of a kind (Equipment, Pump, Control valve, Line number…) must have an attribute, or its value must equal, not equal, be one of, contain, be at least or at most a value. Choose the level (error, warning, note) and, if you like, the words the Checks panel says. Check 24 runs them on every change.", "File › Options › Tags: the separator, a unit or area code put before the number, numbering per sheet (101, 201…) or through the project (001, 002…), and the digits. New tags follow it; Check › Renumber applies it to every tag."],
     tip: "Rules on a kind apply to its sub-kinds too: a rule on Equipment covers pumps, vessels and exchangers." },
+  wiring: { t: "Instrument wiring", what: "Junction boxes, cables and I/O cards are objects of the project, with their data (terminals; type and pairs; kind, channels and control system). Each field device names its junction box and terminals, its cable, and its I/O channel as <card>/<channel>, such as AI-01/3.",
+    how: ["Lists › Wiring › Junction boxes, Cable schedule or I/O allocation, then Add a junction box, Add a cable or Add an I/O card. Edit their data in the list; they are in the Plant panel too (delete them there).", "On each device (Inspector › Wiring, or the loop diagram's wiring table) type its junction box, terminals (1, 2 or 1-4), cable and I/O channel (AI-01/3).", "The cable schedule lists each cable with its devices and the pairs used; the I/O allocation every channel of every card with its device, or spare. Print them or export them to Excel.", "Check 25 finds a junction box, cable or card that is not in the project, two devices on one channel, a channel beyond the card, a device on a card of the wrong kind (a valve on an AI card), and cables and boxes with more devices than pairs or terminals. Loop diagrams show the cable's type and pairs and the card's kind and system."],
+    tip: "Until the project has junction boxes, cables or cards, wiring typed as free text is left alone." },
   history: { t: "History", what: "Every change to an object is recorded with who made it, when, and the old and new value. The history is saved in the project file, so it survives closing and reopening; undo and redo are recorded too." },
   inspector: { t: "Inspector", what: "The selected item's data, with units: tag, service, design and operating conditions, sizes, connections, and for lines the hydraulics. With nothing selected, the sheet, its revisions and the title block." },
   "cat:vessel": { t: "Vessels", what: "Vertical vessels, horizontal drums, tanks, columns (trays or packing), a separator with a boot, a filter vessel, a knock-out drum and a silo. Their nozzles are ports; each carries design and operating conditions, material, volume and a relief note." },

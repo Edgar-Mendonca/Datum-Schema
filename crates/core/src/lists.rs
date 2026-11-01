@@ -37,7 +37,7 @@ pub struct List {
     pub rows: Vec<Row>,
 }
 
-pub const KINDS: [(&str, &str); 9] = [("lines", "Line list"), ("streams", "Stream list"), ("io", "I/O summary"), ("takeoff", "Valve and fitting take-off"), ("comments", "Review comments"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list"), ("datasheets", "Datasheet index")];
+pub const KINDS: [(&str, &str); 12] = [("lines", "Line list"), ("streams", "Stream list"), ("io", "I/O summary"), ("takeoff", "Valve and fitting take-off"), ("comments", "Review comments"), ("jbs", "Junction boxes"), ("cables", "Cable schedule"), ("ioalloc", "I/O allocation"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list"), ("datasheets", "Datasheet index")];
 
 /// (key, label, quantity, editable)
 type Spec = (&'static str, &'static str, &'static str, bool);
@@ -297,6 +297,74 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
                 let cells = vec![r.what, size, r.class, rating, fmt(r.qty), format!("implied by the {}", r.from.join(", ")), String::new(), r.desc, r.code];
                 Row { sheet: r.ids.first().and_then(|i| p.item(*i)).map_or(0, |i| i.sheet), ids: r.ids, cells, status: None }
             }));
+            let mut cs = cols(&specs, us);
+            cs[4].num = true;
+            (cs, rows)
+        }
+        "jbs" => {
+            let specs: Vec<Spec> = vec![("tag", "Junction box", "", true), ("jb_type", "Type", "", true), ("location", "Location", "", true), ("terminals", "Terminals", "", true), ("used", "Used", "", false), ("hazardous_area", "Hazardous area", "", true), ("devices", "Devices", "", false)];
+            let mut jbs: Vec<&crate::model::Obj> = p.objects.iter().filter(|o| o.class == crate::wiring::JB).collect();
+            jbs.sort_by_key(|o| { let (a, n, _) = crate::tags::split(&o.tag); (a, n, o.tag.clone()) });
+            let rows = jbs
+                .into_iter()
+                .map(|j| {
+                    let devs: Vec<(&Item, &crate::model::Obj)> = p.items.iter().filter_map(|i| p.obj(i.obj).map(|o| (i, o))).filter(|(_, o)| o.data.get("jb").is_some_and(|v| v.text().trim().eq_ignore_ascii_case(&j.tag))).collect();
+                    let mut seen = std::collections::HashSet::new();
+                    let devs: Vec<_> = devs.into_iter().filter(|(_, o)| seen.insert(o.id)).collect();
+                    let used: u32 = devs.iter().map(|(_, o)| o.data.get("jb_terminals").map(|v| v.text()).unwrap_or_default()).map(|t| t.split([',', ';', ' ']).filter(|x| !x.trim().is_empty()).map(|x| x.split_once('-').and_then(|(a, b)| Some(b.trim().parse::<u32>().ok()? + 1 - a.trim().parse::<u32>().ok()?)).unwrap_or(1)).sum::<u32>()).sum();
+                    let cells = specs.iter().map(|&(k, _, q, _)| match k { "tag" => j.tag.clone(), "used" => used.to_string(), "devices" => devs.iter().map(|(_, o)| o.tag.clone()).collect::<Vec<_>>().join(", "), _ => val(&j.data, k, q, us) }).collect();
+                    Row { ids: vec![j.id], sheet: devs.first().map_or(0, |d| d.0.sheet), cells, status: None }
+                })
+                .collect();
+            (cols(&specs, us), rows)
+        }
+        "cables" => {
+            let specs: Vec<Spec> = vec![("tag", "Cable", "", true), ("cable_type", "Type", "", true), ("pairs", "Pairs", "", true), ("used", "Used", "", false), ("from", "From", "", true), ("to", "To", "", true), ("length", "Length", "length", true), ("route", "Route", "", true), ("devices", "Devices", "", false)];
+            let rows = crate::wiring::cables(p)
+                .into_iter()
+                .map(|r| {
+                    let c = r.cable;
+                    let jbs: Vec<String> = { let mut v: Vec<String> = r.devices.iter().filter_map(|(_, o)| o.data.get("jb").map(|x| x.text())).filter(|x| !x.is_empty()).collect(); v.sort(); v.dedup(); v };
+                    let cells = specs
+                        .iter()
+                        .map(|&(k, _, q, _)| match k {
+                            "tag" => c.tag.clone(),
+                            "used" => r.devices.len().to_string(),
+                            "devices" => r.devices.iter().map(|(_, o)| o.tag.clone()).collect::<Vec<_>>().join(", "),
+                            // From the field devices to their junction box, unless typed.
+                            "from" if !c.data.contains_key("from") && !r.devices.is_empty() => r.devices.iter().map(|(_, o)| o.tag.clone()).collect::<Vec<_>>().join(", "),
+                            "to" if !c.data.contains_key("to") && !jbs.is_empty() => jbs.join(", "),
+                            _ => val(&c.data, k, q, us),
+                        })
+                        .collect();
+                    Row { ids: vec![c.id], sheet: r.devices.first().map_or(0, |d| d.0.sheet), cells, status: None }
+                })
+                .collect();
+            let mut cs = cols(&specs, us);
+            cs[2].num = true;
+            cs[3].num = true;
+            (cs, rows)
+        }
+        "ioalloc" => {
+            let specs: Vec<Spec> = vec![("card", "Card", "", false), ("system", "Control system", "", false), ("rack", "Rack / slot", "", false), ("kind", "Kind", "", false), ("ch", "Channel", "", false), ("device", "Device", "", false), ("signal", "Signal", "", false), ("status", "Status", "", false)];
+            let rows = crate::wiring::allocation(p)
+                .into_iter()
+                .map(|r| {
+                    let t = |k: &str| r.card.data.get(k).map(|v| v.text()).unwrap_or_default();
+                    let status = match r.devices.len() { 0 => "spare", 1 => "used", _ => "clash" };
+                    let cells = vec![
+                        r.card.tag.clone(),
+                        t("system"),
+                        [t("rack"), t("slot")].into_iter().filter(|x| !x.is_empty()).collect::<Vec<_>>().join(" / "),
+                        t("io_kind"),
+                        r.ch.to_string(),
+                        r.devices.iter().map(|(_, o)| o.tag.clone()).collect::<Vec<_>>().join(", "),
+                        r.devices.first().and_then(|(_, o)| o.data.get("signal")).map(|v| v.text()).unwrap_or_default(),
+                        status.into(),
+                    ];
+                    Row { ids: r.devices.iter().map(|(i, _)| i.id).collect(), sheet: r.devices.first().map_or(0, |d| d.0.sheet), cells, status: Some(match r.devices.len() { 0 => 0, 1 => 0, _ => 2 }) }
+                })
+                .collect();
             let mut cs = cols(&specs, us);
             cs[4].num = true;
             (cs, rows)

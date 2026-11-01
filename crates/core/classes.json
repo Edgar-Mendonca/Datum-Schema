@@ -698,6 +698,131 @@
    ]
   },
   {
+   "name": "WiringItem",
+   "label": "Wiring item",
+   "parent": "PlantItem",
+   "attributes": [
+    {
+     "key": "location",
+     "label": "Location",
+     "type": "text"
+    }
+   ]
+  },
+  {
+   "name": "JunctionBox",
+   "label": "Junction box",
+   "parent": "WiringItem",
+   "prefix": "JB",
+   "attributes": [
+    {
+     "key": "terminals",
+     "label": "Terminals",
+     "type": "number"
+    },
+    {
+     "key": "jb_type",
+     "label": "Type",
+     "type": "choice",
+     "choices": [
+      "Analogue",
+      "Digital",
+      "Fieldbus",
+      "Power"
+     ]
+    },
+    {
+     "key": "hazardous_area",
+     "label": "Hazardous area",
+     "type": "text"
+    },
+    {
+     "key": "material",
+     "label": "Material",
+     "type": "text"
+    }
+   ]
+  },
+  {
+   "name": "Cable",
+   "label": "Cable",
+   "parent": "WiringItem",
+   "prefix": "C",
+   "attributes": [
+    {
+     "key": "cable_type",
+     "label": "Type",
+     "type": "text"
+    },
+    {
+     "key": "pairs",
+     "label": "Pairs (or cores)",
+     "type": "number"
+    },
+    {
+     "key": "from",
+     "label": "From",
+     "type": "text"
+    },
+    {
+     "key": "to",
+     "label": "To",
+     "type": "text"
+    },
+    {
+     "key": "length",
+     "label": "Length",
+     "q": "length",
+     "type": "number"
+    },
+    {
+     "key": "route",
+     "label": "Route",
+     "type": "text"
+    }
+   ]
+  },
+  {
+   "name": "IOCard",
+   "label": "I/O card",
+   "parent": "WiringItem",
+   "prefix": "IO",
+   "attributes": [
+    {
+     "key": "system",
+     "label": "Control system",
+     "type": "text"
+    },
+    {
+     "key": "rack",
+     "label": "Rack",
+     "type": "text"
+    },
+    {
+     "key": "slot",
+     "label": "Slot",
+     "type": "text"
+    },
+    {
+     "key": "io_kind",
+     "label": "Kind",
+     "type": "choice",
+     "choices": [
+      "AI",
+      "AO",
+      "DI",
+      "DO",
+      "Fieldbus"
+     ]
+    },
+    {
+     "key": "channels",
+     "label": "Channels",
+     "type": "number"
+    }
+   ]
+  },
+  {
    "name": "Annotation",
    "label": "Annotation",
    "parent": "PlantItem",

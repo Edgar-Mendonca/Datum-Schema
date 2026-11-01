@@ -213,7 +213,10 @@ pub fn diagram(p: &Project, key: &str) -> Result<LoopView, String> {
         }
         let signal = d.get("signal").map(|v| v.text()).unwrap_or_default();
         let mid = (start.max(fx + 60.0) + jx) / 2.0;
-        v.push(text(mid, y - 4.0, 2.2, &format!("Cable {}", dash(&wv[2])), 1, false));
+        // The cable's type and pairs from the cable schedule, when the cable is there.
+        let cab = p.objects.iter().find(|o| o.class == crate::wiring::CABLE && !wv[2].is_empty() && o.tag.eq_ignore_ascii_case(&wv[2]));
+        let ctype = cab.map(|c| [c.data.get("cable_type").map(|x| x.text()).unwrap_or_default(), c.data.get("pairs").and_then(|x| x.num()).map(|n| format!("{} pairs", crate::fmt_num(n))).unwrap_or_default()].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join(", ")).unwrap_or_default();
+        v.push(text(mid, y - 4.0, 2.2, &format!("Cable {}{}", dash(&wv[2]), if ctype.is_empty() { String::new() } else { format!(" ({ctype})") }), 1, false));
         if !signal.is_empty() {
             v.push(text(mid, y + 4.5, 2.2, &signal, 1, false));
         }
@@ -238,7 +241,10 @@ pub fn diagram(p: &Project, key: &str) -> Result<LoopView, String> {
         }
         v.push(rect(ix, y - 5.0, iw, 10.0));
         v.push(text(ix + iw / 2.0, y - 2.0, 2.2, &dash(&wv[4]), 1, true));
-        v.push(text(ix + iw / 2.0, y + 2.3, 2.0, &dash(&wv[3]), 1, false));
+        // A card's channel: the card's kind and system, from the wiring.
+        let card = crate::wiring::channel(&wv[4]).and_then(|(c, _)| p.objects.iter().find(|o| o.class == crate::wiring::CARD && o.tag.eq_ignore_ascii_case(&c)));
+        let sys = card.map(|c| [c.data.get("io_kind").map(|x| x.text()).unwrap_or_default(), c.data.get("system").map(|x| x.text()).unwrap_or_default()].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join(" · ")).filter(|s| !s.is_empty()).unwrap_or_else(|| dash(&wv[3]));
+        v.push(text(ix + iw / 2.0, y + 2.3, 2.0, &sys, 1, false));
         io_points.push([ix + iw, y]);
         let gaps: Vec<&str> = WIRING.iter().zip(&wv).filter(|(_, val)| val.trim().is_empty()).map(|((_, l), _)| *l).collect();
         if !gaps.is_empty() {

@@ -48,6 +48,8 @@ pub enum Op {
     },
     /// Delete objects and every symbol and line piece that shows them.
     DeleteObjects { ids: Vec<u32> },
+    /// A plant object that is not drawn (a junction box, a cable, an I/O card…), with its tag and data.
+    AddObject { class: String, tag: String, #[serde(default)] data: model::Data },
     /// Set (or with `val` None, clear) one data field on objects (ids of symbols or line pieces mean
     /// their objects).
     SetData { ids: Vec<u32>, key: String, val: Option<Val> },
@@ -587,6 +589,20 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
             p.default_nodes();
         }
         Op::Paste { sheet, items, lines, notes, dx, dy } => paste(p, sheet, items, lines, notes, dx, dy, created, &[])?,
+        Op::AddObject { class, tag, data } => {
+            if crate::classes::get(&class).is_none() {
+                return Err(format!("There is no class {class}."));
+            }
+            let t = crate::clip(tag.trim(), 60);
+            if !t.is_empty() && p.objects.iter().any(|o| o.tag.eq_ignore_ascii_case(&t)) {
+                return Err(format!("{t} is already a tag."));
+            }
+            let o = p.new_obj(&class, &t);
+            if let Some(ob) = p.obj_mut(o) {
+                ob.data = data.into_iter().filter(|(k, _)| !k.is_empty() && k.len() <= 64).collect();
+            }
+            created.push(o);
+        }
         Op::SaveAssembly { name, ids } => {
             let name = crate::clip(name.trim(), 60);
             if name.is_empty() {
