@@ -32,6 +32,7 @@ pub mod pipes;
 pub mod review;
 pub mod propagate;
 pub mod revs;
+pub mod register;
 pub mod reports;
 pub mod rules;
 pub mod sizing;

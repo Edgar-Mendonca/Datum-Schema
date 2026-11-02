@@ -1204,3 +1204,7 @@ tr.behind td { background: var(--err-bg); }
 .arrbox summary { cursor: pointer; }
 .arrhead { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
 .arrtbl input, .arrtbl select { width: 100%; min-width: 0; }
+
+/* Tag register (0.6.5) */
+.regtext { width: 100%; font-family: var(--mono); font-size: 12px; }
+.regtbl tr.bad td { color: var(--err, #b00020); }

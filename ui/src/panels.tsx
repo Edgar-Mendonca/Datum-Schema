@@ -12,8 +12,9 @@ import { CommentsPanel } from "./review";
 import { ADD, WIRING_TABS, addWiring } from "./wiring";
 import { TodoPanel, todos } from "./todo";
 import { designReport, deleteReport } from "./reports";
+import { addTags, placeRegistered } from "./register";
 
-const TABS: [string, string][] = [...[["checks", "Checks"]] as [string, string][], ["todo", "To do"], ["comments", "Comments"], ["lines", "Line list"], ["streams", "Streams"], ["equipment", "Equipment"], ["instruments", "Instruments"], ["io", "I/O summary"], ["valves", "Valves"], ["takeoff", "Take-off"], ...WIRING_TABS, ["datasheets", "Datasheets"]];
+const TABS: [string, string][] = [...[["checks", "Checks"]] as [string, string][], ["todo", "To do"], ["comments", "Comments"], ["lines", "Line list"], ["streams", "Streams"], ["equipment", "Equipment"], ["instruments", "Instruments"], ["io", "I/O summary"], ["valves", "Valves"], ["takeoff", "Take-off"], ...WIRING_TABS, ["datasheets", "Datasheets"], ["register", "Tag register"]];
 
 const level = (l: string) => (l === "error" ? 0 : l === "warning" ? 1 : 2);
 
@@ -77,6 +78,7 @@ const ListView = (p: { kind: string }) => {
           <button class="btn sm" onClick={() => deleteReport(p.kind.slice(7))}>Delete report</button>
         </Show>
         <Show when={p.kind === "datasheets"}><button class="btn sm" title="Import datasheet values from an Excel workbook, with a preview first" onClick={importDatasheets}>Import Excel…</button></Show>
+        <Show when={p.kind === "register"}><button class="btn sm" title="Add tags before they are drawn: typed, pasted from a spreadsheet, or read from Excel or CSV" onClick={addTags}>Add tags…</button></Show>
         <Show when={p.kind === "streams"}><button class="btn sm" title="Import a simulator's stream results (Excel or CSV), with a preview first" onClick={importStreams}>Import results…</button></Show>
         <Show when={ADD[p.kind]}><button class="btn sm" onClick={() => addWiring(ADD[p.kind])}>Add {p.kind === "jbs" ? "a junction box" : p.kind === "cables" ? "a cable" : "an I/O card"}…</button></Show>
         <Show when={p.kind === "datasheets" && rows().length}><button class="btn sm" title="Issue every datasheet shown (use the filter to choose), each with its next revision" onClick={() => issueDialog(rows().map(r => r.ids[0]))}>Issue {rows().length} shown…</button></Show>
@@ -88,7 +90,7 @@ const ListView = (p: { kind: string }) => {
           <tbody>
             <For each={rows()} fallback={<tr><td colSpan={l().cols.length} class="muted" style={{ padding: "8px" }}>{l().kind === "takeoff" ? "Valves and fittings on the P&IDs appear here, counted by type, size, pipe class and rating." : l().kind === "io" ? "Transmitters, switches and control valves appear here, counted by control system (Inspector › Wiring › Control system) and I/O kind." : l().kind === "streams" ? "Streams appear here: draw process lines on a PFD sheet." : l().kind === "lines" ? "Lines with a number appear here: draw a process line and give it a size, fluid, sequence and class." : "Tagged items appear here as you place them."}</td></tr>}>{(r, ri) => <>
               <Show when={group() >= 0 && (ri() === 0 || rows()[ri() - 1].cells[group()] !== r.cells[group()])}><tr class="grow"><td colSpan={l().cols.length}><b>{l().cols[group()].label}: {r.cells[group()] || "—"}</b></td></tr></Show>
-              <Show when={heads().has(r)} fallback={<tr class="f" classList={{ bad: r.status === 2, warn: r.status === 1 }} onClick={() => p.kind === "datasheets" ? openDatasheet(r.ids[0]) : C.goTo(r.ids, r.sheet)}>
+              <Show when={heads().has(r)} fallback={<tr class="f" classList={{ bad: r.status === 2, warn: r.status === 1 }} onClick={() => p.kind === "datasheets" ? openDatasheet(r.ids[0]) : p.kind === "register" && r.sheet === 0 ? placeRegistered(r.ids[0]) : C.goTo(r.ids, r.sheet)}>
                 <For each={l().cols}>{(c, i) => <td classList={{ r: c.num }}>
                   <Show when={c.edit} fallback={<span>{r.cells[i()]}</span>}><input value={r.cells[i()]} classList={{ mono: c.num }} onClick={e => e.stopPropagation()} onChange={e => edit(r, c, e.currentTarget.value)} /></Show>
                 </td>}</For>

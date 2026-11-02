@@ -39,7 +39,7 @@ pub struct List {
     pub heads: Vec<usize>,
 }
 
-pub const KINDS: [(&str, &str); 12] = [("lines", "Line list"), ("streams", "Stream list"), ("io", "I/O summary"), ("takeoff", "Valve and fitting take-off"), ("comments", "Review comments"), ("jbs", "Junction boxes"), ("cables", "Cable schedule"), ("ioalloc", "I/O allocation"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list"), ("datasheets", "Datasheet index")];
+pub const KINDS: [(&str, &str); 13] = [("register", "Tag register"), ("lines", "Line list"), ("streams", "Stream list"), ("io", "I/O summary"), ("takeoff", "Valve and fitting take-off"), ("comments", "Review comments"), ("jbs", "Junction boxes"), ("cables", "Cable schedule"), ("ioalloc", "I/O allocation"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list"), ("datasheets", "Datasheet index")];
 
 /// (key, label, quantity, editable)
 type Spec = (&'static str, &'static str, &'static str, bool);
@@ -391,6 +391,36 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
             let mut cs = cols(&specs, us);
             cs[0].num = true;
             (cs, rows)
+        }
+        "register" => {
+            let specs: Vec<Spec> = vec![("tag", "Tag", "", true), ("class", "Class", "", false), ("service", "Service", "", true), ("status", "Status", "", false), ("sheet", "Sheets", "", false), ("area", "Area", "", false)];
+            let keeps = p.objects.iter().any(|o| o.data.contains_key("~reg"));
+            let mut objs: Vec<&Obj> = p.objects.iter().filter(|o| crate::register::listed(o)).collect();
+            objs.sort_by_key(|o| {
+                let (a, n, _) = crate::tags::split(&o.tag);
+                (a, n, o.tag.clone())
+            });
+            let rows = objs
+                .into_iter()
+                .map(|o| {
+                    let views: Vec<&Item> = p.items.iter().filter(|i| i.obj == o.id).collect();
+                    let mut sheets: Vec<String> = views.iter().map(|i| sheet_no(p, i.sheet)).collect();
+                    sheets.dedup();
+                    let cells = specs
+                        .iter()
+                        .map(|&(k, _, _, _)| match k {
+                            "tag" => o.tag.clone(),
+                            "class" => crate::classes::get(&o.class).map_or(o.class.clone(), |c| c.label.clone()),
+                            "status" => crate::register::status(p, o, keeps).to_string(),
+                            "sheet" => sheets.join(", "),
+                            "area" => p.node_path(o.node),
+                            _ => val(&o.data, k, "", us),
+                        })
+                        .collect();
+                    Row { ids: vec![views.first().map_or(o.id, |i| i.id)], sheet: views.first().map_or(0, |i| i.sheet), cells, status: (!views.is_empty() && keeps && !o.data.contains_key("~reg")).then_some(1) }
+                })
+                .collect();
+            (cols(&specs, us), rows)
         }
         "datasheets" => {
             let specs: Vec<Spec> = vec![("tag", "Tag", "", false), ("kind", "Type", "", false), ("rev", "Rev", "", false), ("status", "Status", "", false), ("date", "Date", "", false), ("by", "By", "", false), ("changed", "Changed since issue", "", false), ("area", "Area", "", false), ("sheet", "Sheet", "", false)];

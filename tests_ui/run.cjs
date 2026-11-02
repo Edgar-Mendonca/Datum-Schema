@@ -784,6 +784,24 @@ const shots = process.env.SHOTS;
     const r = await project(); const n = r.objects.find(o => o.id === l.id);
     check("each case keeps its own flow", Math.abs(Number(n.data.flow) - 30 / 3600) < 1e-9 && Math.abs(Number(n.data["~case:Maximum:flow"]) - 0.0125) < 1e-12, JSON.stringify(n.data)); }
 
+  // 59. The tag register: a tag added before it is drawn, then drawn as the same object.
+  await openEx("Pump transfer");
+  await p.click(".tabs button:text-is('Lists')"); await p.click(".ribbon button:has-text('Tag Register')"); await p.waitForTimeout(300);
+  await p.click(".cfilter button:has-text('Add tags')"); await p.waitForSelector(".dlg .regtext");
+  await p.fill(".dlg .regtext", "P-201\t\tTransfer pump\nFT-201\t\tFeed flow"); await p.click(".dlg button:has-text('Preview')"); await p.waitForTimeout(300);
+  check("the preview lists the new tags", (await p.$$(".dlg .regtbl tbody tr.new")).length === 2);
+  await p.click(".dlg footer button:has-text('Add 2 tags')"); await p.waitForTimeout(500);
+  { const q = await project(); const o = q.objects.find(x => x.tag === "P-201");
+    check("the tag is registered, not drawn", !!o && o.data.service === "Transfer pump" && !q.items.some(i => i.obj === o.id));
+    await p.fill(".lsearch", "P-201"); await p.waitForTimeout(300);
+    const shown = await p.$$eval(".lists tbody tr.f", els => els.map(e => e.textContent));
+    check("the register lists it as not drawn", shown.length === 1 && shown[0].includes("Not drawn"), JSON.stringify(shown));
+    await p.locator(".lists tbody tr.f td:nth-child(4)").first().click(); await p.waitForTimeout(200);
+    await p.click(".bcollapse"); await p.waitForTimeout(200);
+    { const [x, y] = await scr(200, 150); await p.mouse.click(x, y); await p.waitForTimeout(400); }
+    const r = await project(); check("the registered tag is drawn as the same object", r.items.some(i => i.obj === o.id), await p.textContent(".status")); }
+  await p.keyboard.press("Escape");
+
   // 56. A PFD made from the pump transfer's P&ID.
   await openEx("Pump transfer");
   await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title^='A process flow diagram made from the P&IDs']"); await p.waitForTimeout(800);

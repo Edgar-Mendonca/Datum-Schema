@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.5 — 2026-11-02
+
+The tag register.
+
+**Every tag, drawn or not yet.** Lists › **Tag Register** lists every tagged item in the project (equipment, instruments, valves and the rest) with its class, service, sheets, area and status: *Drawn*, *Not drawn*, or, once the project keeps a register, *Drawn, not in the register*. It prints and exports to Excel and CSV like every list, and can be the source of your own reports.
+
+**Tags before drawings.** *Add tags…* takes tags typed or pasted straight from a spreadsheet (tag, class, service; a header row with a Tag column is understood), or read from an Excel or CSV file. A preview says what happens to each before anything changes: added, already in the project (marked as registered), or left out and why. The class is guessed from the tag's letters when it is left out (P-101 a centrifugal pump, V-101 a vessel, FT-101 a field instrument, FV-101 a control valve, PSV-101 a safety valve), or given by a class or symbol name.
+
+**Drawn later as the same object.** Click a tag that is not drawn in the register, then click on the sheet: it becomes a symbol of that object, with its tag and data, exactly as from the Plant panel.
+
+This completes the 0.6 series: standard arrangements, a P&ID developed from the PFD and a PFD made from the P&IDs, the two kept in step, process cases, and the tag register.
+
 ## 0.6.4 — 2026-11-02
 
 Process cases.
