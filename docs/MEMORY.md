@@ -229,9 +229,17 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.5.4 | Report templates (columns, filters, grouping saved and exported) | ✅ |
 | — | Brainstorm again after 0.5.4 (the user asked for 0.5.1–0.5.4 first): review the gaps, re-plan 0.6 | 🔜 |
 | — | Family plan (agreed in chat, 2026-11-02): 3D layout becomes a separate app, **Datum Site** (being planned in its own chat; nothing built until planned); isometrics go to Datum Pipe. Schema's part: export a "plant package" (equipment with datasheet values and nozzles; lines with from/to, size, spec, components in order, stable IDs), likely 0.6.0 | 💭 |
-| 0.6.0 | Document status (IFR, IFA, IFC) and transmittals | ⬜ |
-| 0.6.1 | Shared projects (several people, claims, merge) | ⬜ |
-| 0.6.2 | Scripting; more CAD drawing formats | ⬜ |
+| 0.6.0 | Standard arrangements by equipment class (company-editable, built on assemblies) | ⬜ |
+| 0.6.1 | Develop a P&ID from the PFD (same equipment objects; streams → line numbers with data; sizes and classes suggested; arrangements placed; routed draft) | ⬜ |
+| 0.6.2 | Make a PFD from the P&IDs (equipment kept as the same objects; process runs between equipment collapsed into streams; valves and instruments left out) | ⬜ |
+| 0.6.3 | PFD ↔ P&ID kept in step both ways (changes on either side in To do; take the other side's value) | ⬜ |
+| 0.6.4 | Process cases (Normal, Maximum, Minimum, Design) on streams, lines, datasheets; sizing and hydraulics on a chosen case | ⬜ |
+| 0.6.5 | Tag register (create and import tags before drawing; registered-not-drawn and drawn-not-registered lists) | ⬜ |
+| 0.7.0 | Document status (IFR, IFA, IFC) and transmittals | ⬜ |
+| 0.7.1 | Shared projects (several people, claims, merge) | ⬜ |
+| 0.7.2 | Old DXF P&IDs converted into live sheets (blocks → symbols, polylines → lines, texts → tags), with a review | ⬜ |
+| 0.7.3 | Scripting; more CAD drawing formats | ⬜ |
+| 0.8.0 | Plant package export for 3D modelling (open, documented format; the family's 3D app reads it) | ⬜ |
 | 1.0 | DEXPI tested with other programs' files; hydraulics validation note; tested at 100+ sheets; signed installer | ⬜ |
 | 0.5 | Company templates; project reports (valve and fitting take-off); review comments | ⬜ |
 | 1.0 | User guide, a validation note for the hydraulics, signed installer | ⬜ |
@@ -388,3 +396,6 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 ### 2026-11-02: Session 1, public-text cleanup
 - The repo is public, so its docs are public text (FAMILY §13): CLAUDE.md, MEMORY, PLAN-0.1 and PLAN-0.2 reworded to describe Datum Schema's own goals, without naming commercial products or framing the app against them; the DXF reader detects a binary DXF by its "Binary DXF" signature words. README and NOTICE carry the trademark sentence. The UI test (and an engine test over the help, guide, glossary and examples) fails if a product name appears in the window's text. No functional change; it ships in the next release.
 - Decision: comparisons with other products are held in chat only and are not recorded here; the memory records our own gaps and goals.
+
+### 2026-11-02: Session 1, roadmap 0.6–0.8
+- The user's direction: first make the existing apps strong; PFD → P&ID **and** P&ID → PFD with the two kept in step; the 3D link comes last, but the export for 3D modelling must not be forgotten (0.8.0). Roadmap 0.6 "From PFD to P&ID and back" (0.6.0–0.6.5), 0.7 Teams, 0.8 Ready for 3D, in MEMORY and site.json.

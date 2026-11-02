@@ -86,12 +86,34 @@
     },
     {
       "v": "0.6",
+      "title": "From PFD to P&ID and back",
+      "when": "Next",
+      "items": [
+        "0.6.0: standard arrangements by equipment type (a pump's valves, strainer and gauge; a vessel's relief and level loop), editable by your company",
+        "0.6.1: develop a P&ID from the PFD: the same equipment, streams become line numbers with their data, sizes and classes suggested, arrangements placed, routed as a draft",
+        "0.6.2: make a PFD from the P&IDs: main equipment and process streams, valves and instruments left out",
+        "0.6.3: PFD and P&ID kept in step both ways: a change on either side shows on the other's to-do list",
+        "0.6.4: process cases (normal, maximum, minimum, design) on streams, lines and datasheets",
+        "0.6.5: a tag register: tags created and imported before they are drawn"
+      ]
+    },
+    {
+      "v": "0.7",
       "title": "Teams",
       "when": "Later",
       "items": [
-        "0.6.0: document status (for review, approval, construction) and transmittals",
-        "0.6.1: shared projects: several people, items claimed, work merged",
-        "0.6.2: scripting; more CAD drawing formats"
+        "0.7.0: document status (for review, approval, construction) and transmittals",
+        "0.7.1: shared projects: several people, items claimed, work merged",
+        "0.7.2: old DXF P&IDs turned into live drawings",
+        "0.7.3: scripting; more CAD drawing formats"
+      ]
+    },
+    {
+      "v": "0.8",
+      "title": "Ready for 3D",
+      "when": "Later",
+      "items": [
+        "0.8.0: a plant package for 3D modelling: equipment with its datasheet values and nozzles, each line with its ends, size, spec and components in order, in an open, documented format"
       ]
     },
     {
