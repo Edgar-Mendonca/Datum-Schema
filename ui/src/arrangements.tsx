@@ -2,7 +2,7 @@
 // one step. The ribbon applies them; Options › Arrangements edits them.
 import { For, Show, createMemo } from "solid-js";
 import { Arrangement, ArrangementPart } from "./api";
-import { act, lib, proj, sel, toast } from "./store";
+import { act, lib, proj, sel, sheet, setSheetId, toast } from "./store";
 
 const KINDS: [string, string][] = [["inline", "In the line"], ["branch", "Tapped on"], ["controller", "Controller beside it"], ["bypass", "Bypass round it"]];
 
@@ -52,4 +52,16 @@ export const ArrangementsSec = () => {
       </p>
     </div>
   );
+};
+
+/** Develops the current PFD sheet into a new P&ID sheet (engine: develop.rs) and opens it. */
+export const developPid = async () => {
+  const s = sheet();
+  if (!s?.pfd) return toast("Open a process flow diagram sheet first (Sheets › PFD Sheet).");
+  const o = await act({ Develop: { sheet: s.id } });
+  if (!o?.created.length) return;
+  const sid = o.created[0];
+  const n = o.p.items.filter(i => i.sheet === sid).length;
+  setSheetId(sid);
+  toast(`Developed ${o.p.sheets.find(x => x.id === sid)?.number}: ${n} symbols, each stream a line number with its data. A draft to tidy; Undo takes it back.`, true);
 };

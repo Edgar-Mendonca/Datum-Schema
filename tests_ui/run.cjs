@@ -751,6 +751,13 @@ const shots = process.env.SHOTS;
   check("Options lists the starter arrangements", (await p.$$eval(".arrsec summary", els => els.map(e => e.textContent))).some(t => t.startsWith("Centrifugal pump")));
   await p.click(".bs .back"); await p.waitForTimeout(200);
 
+  // 55. A P&ID developed from the PFD: a new sheet with the same equipment and its lines.
+  await openEx("Crude preheat (PFD)");
+  await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title^='A new P&ID sheet from this process']"); await p.waitForTimeout(800);
+  { const q = await project(); const pid = q.sheets.find(s => s.number === "PID-300");
+    check("the P&ID is developed from the PFD", !!pid && q.items.filter(i => i.sheet === pid.id).length > 20 && q.objects.filter(o => o.class === "PipingNetworkSystem" && o.data["~stream"] !== undefined).length >= 8, JSON.stringify(q.sheets.map(s => s.number)));
+    check("the new sheet opens", (await p.textContent(".stabs")).includes("PID-300")); }
+
   // 53. No commercial product name anywhere in the window (FAMILY §13): the built bundle, and the
   // text shown on each ribbon tab. The names are kept in ROT13 so this file does not name them.
   { const rot = s => s.replace(/[a-z]/gi, c => String.fromCharCode((c <= "Z" ? 65 : 97) + ((c.toUpperCase().charCodeAt(0) - 65 + 13) % 26)));

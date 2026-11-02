@@ -46,7 +46,8 @@ fn part(nozzle: &str, kind: &str, sym: &str, tag: &str) -> Part {
 /// station and a compressor.
 pub fn starter() -> Vec<Arrangement> {
     let top = "top|roof|top right|top left|gas out";
-    let bottom = "bottom|bottom right|bottom left|boot|outlet";
+    let bottom = "bottom|boot|bottom left|bottom right|outlet";
+    let side = "right upper|right|right end|right middle|left upper|bottom right";
     vec![
         Arrangement {
             name: "Centrifugal pump".into(),
@@ -56,7 +57,7 @@ pub fn starter() -> Vec<Arrangement> {
         Arrangement {
             name: "Vessel".into(),
             class: "Vessel".into(),
-            parts: vec![part(top, "branch", "psv", "PSV"), part(top, "branch", "vent", ""), part(top, "branch", "inst_field", "PI"), part("right upper|right|right end|right middle|left upper", "branch", "inst_field", "LT"), part("right upper|right|right end|right middle|left upper", "controller", "inst_dcs", "LIC"), part(bottom, "branch", "drain", "")],
+            parts: vec![part(top, "branch", "psv", "PSV"), part(top, "branch", "vent", ""), part(top, "branch", "inst_field", "PI"), part(side, "branch", "inst_field", "LT"), part(side, "controller", "inst_dcs", "LIC"), part(bottom, "branch", "drain", "")],
         },
         Arrangement {
             name: "Shell-and-tube exchanger".into(),
@@ -386,6 +387,23 @@ fn place(p: &mut Project, it: &Item, sym: &symbols::Sym, arr: &Arrangement, tag:
                 let c = centre_for(s, ck, rot, at);
                 let id = cx.item(p, sheet, &part.sym, c, rot, ptag)?;
                 let l = cx.line(p, sheet, End::Port { item: it.id, port: k as u8 }, End::Port { item: id, port: ck as u8 }, kind_b, 0)?;
+                // A new line number: its fluid, class and schedule from the equipment's other lines.
+                if !instrument {
+                    let sib = p.lines.iter().filter(|x| x.id != l && x.kind.process() && x.obj != 0 && [&x.a, &x.b].iter().any(|e| e.item().is_some_and(|(i, _)| i == it.id))).map(|x| x.obj).next();
+                    let lobj = p.line(l).map_or(0, |x| x.obj);
+                    if let (Some(sib), true) = (sib, lobj != 0) {
+                        let from = p.data_of(sib).clone();
+                        if let Some(o) = p.obj_mut(lobj) {
+                            for key in ["fluid", "class", "sched"] {
+                                if let Some(v) = from.get(key) {
+                                    o.data.entry(key.to_string()).or_insert_with(|| v.clone());
+                                }
+                            }
+                            let what = if part.sym == "psv" { "relief" } else if part.sym == "drain" { "drain" } else { "vent" };
+                            o.data.entry("service".to_string()).or_insert_with(|| Val::Text(format!("{} {what}", if tag.is_empty() { "Equipment" } else { tag })));
+                        }
+                    }
+                }
                 tap_line = Some(l);
                 tap_path = vec![pos, at];
                 if instrument {

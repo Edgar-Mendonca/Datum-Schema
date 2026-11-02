@@ -8,6 +8,7 @@ pub mod cause;
 pub mod checks;
 pub mod calc;
 pub mod classes;
+pub mod develop;
 pub mod dexpi;
 pub mod datasheets;
 pub mod doc;

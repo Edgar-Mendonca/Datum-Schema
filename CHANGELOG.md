@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.6.1 — 2026-11-02
+
+Develop a P&ID from the process flow diagram.
+
+**Sheets › Develop P&ID.** On a PFD sheet, one command makes a first P&ID on a new A1 sheet (PFD-300 becomes PID-300):
+- **The same equipment**: each pump, exchanger, heater and vessel is the same object on both sheets, so its tag and data are never copied and cannot drift apart. The layout follows the PFD, spread out to make room.
+- **Streams become line numbers**: each stream's number, name, phase, mass and volume flow, operating pressure and temperature and density go onto its line. A size is suggested from the flow and the project's velocity limits for the stream's phase (the smallest common size that keeps within them), with a fluid code from the phase and the project's first pipe class.
+- **The standard arrangements are placed** round the equipment: the pump's strainer, check valve, isolation valves and gauge; the exchanger's isolation valves and temperature transmitter; the vessel's relief valve, level loop, vent and drain.
+- **Checked**: the line-versus-stream check compares every line with its stream, and the To do tab lists what to look at.
+
+Developing again adds only what is new: equipment already on a P&ID and streams already made into lines are left alone. One Undo takes the whole development back. The result is a draft for the engineer to tidy and complete; check the suggested sizes as with every size.
+
+Also: arrangements fit more vessel shapes (a separator's boot and side nozzles), and a relief, vent or drain line on a free nozzle takes the fluid, pipe class and schedule of the equipment's other lines.
+
 ## 0.6.0 — 2026-11-02
 
 Standard arrangements.
