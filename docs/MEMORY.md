@@ -228,6 +228,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.5.3 | Equipment datasheets; simulator stream tables imported (Excel, CSV) | ✅ |
 | 0.5.4 | Report templates (columns, filters, grouping saved and exported) | ✅ |
 | — | Brainstorm again after 0.5.4 (the user asked for 0.5.1–0.5.4 first): compare with the commercial suites, re-plan 0.6 | 🔜 |
+| — | Family plan (agreed in chat, 2026-11-02): 3D layout becomes a separate app, **Datum Site** (being planned in its own chat; nothing built until planned); isometrics go to Datum Pipe. Schema's part: export a "plant package" (equipment with datasheet values and nozzles; lines with from/to, size, spec, components in order, stable IDs), likely 0.6.0 | 💭 |
 | 0.6.0 | Document status (IFR, IFA, IFC) and transmittals | ⬜ |
 | 0.6.1 | Shared projects (several people, claims, merge) | ⬜ |
 | 0.6.2 | Scripting, DWG | ⬜ |
@@ -380,3 +381,6 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 - Tests: engine 126 (filter, sort, group heads that count, Excel/CSV, unknown report; class source with attributes; hostile reports on every source); UI 52 (designed, previewed in groups, saved, shown as a tab with headings).
 - The 0.5.4 code commit went out without its docs (a quoting error in the docs script); they followed in the next commit, before the release was built.
 - 0.5.1 to 0.5.4 done as the user asked. Next: the brainstorm (compare with the commercial suites again, in chat) and re-plan 0.6.
+
+### 2026-11-02: Session 1, family plan for 3D
+- After seeing a commercial suite's PFD → P&ID → 3D → isometric workflow at an exhibition, the user chose separate apps: Schema (P&ID/PFD), **Datum Site** (3D layout of one plant), Pipe (isometrics and stress). A brainstorming brief was written for a new chat (standard parts from dimension tables + shape rules + ports, data plug-ins in three levels, candidate MIT/Apache libraries, the plant package file). Schema's future task: export the plant package.
