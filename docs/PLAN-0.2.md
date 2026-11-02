@@ -1,10 +1,10 @@
 # Datum Schema: the object core (agreed; releases 0.1.5 onwards)
 
-Written after 0.1.3, when the user changed course (session 1). Nothing here is built yet; the questions at the end are for the user. Commercial products are not named in this file (FAMILY §13); "the enterprise suites" means the commercial object-based plant engineering systems the user has worked with.
+Written after 0.1.3, when the user changed course (session 1). Nothing here is built yet; the questions at the end are for the user. It describes Datum Schema's own goals (FAMILY §13).
 
 ## 1. Feedback
 
-Datum Schema must not stay a drawing tool that knows its connections. The aim is an open-source, object-based plant engineering application in the class of the enterprise suites: easier, reliable, efficient, robust, for students, researchers and engineers, written from scratch in Rust with no proprietary content. The user's five points:
+Datum Schema must not stay a drawing tool that knows its connections. The aim is an open-source, object-based plant engineering application: easy, reliable, efficient, robust, for students, researchers and engineers, written from scratch in Rust with no proprietary content. The user's five points:
 
 1. **Objects are the master.** Every equipment item, line, valve and instrument is an object with a unique id; a symbol on a sheet is only a view of it. An object can appear on several sheets, in lists and in datasheets. Deleting a symbol asks: delete the object, or only remove it from this sheet?
 2. **Plant hierarchy.** Every object sits in a tree: project › plant › unit › area, with defaults so it can be ignored at first. A "Plant" panel beside the palette; lists group by it.
@@ -12,7 +12,7 @@ Datum Schema must not stay a drawing tool that knows its connections. The aim is
 4. **One file, a database inside.** The `.dschema` file becomes one SQLite database: objects, attributes, classes, hierarchy, sheets, views, and a history table recording every change (who, when, old value, new value). The base for revisions and, later, several people working on one plant.
 5. **DEXPI names.** Name classes and attributes after the open P&ID data standard (DEXPI) where it costs nothing, so import and export is a mapping, not a rewrite.
 
-## 2. What the enterprise suites do (public documentation)
+## 2. What object-based plant engineering needs (public documentation and open standards)
 
 - **One object database for the whole plant life.** Each component is one object holding all its data; drawings, lists, datasheets and documents are views linked to it. Library ("base") objects are templates; each plant object takes its defaults from one, and classes group them.
 - **A classified library.** A tree of base objects and classes (unit, location, device…) carries attributes and symbols; administration adds attributes and rules without code.
@@ -114,6 +114,6 @@ The old 0.2–0.5 roadmap (links to Pipe and Sim, PFD, instrument documents, tem
 | 0.1.8 | Instrument datasheets generated from the class attributes: one per instrument, editable, printable, exportable — the user's daily pain point in the oil and gas work |
 | next | History and revisions, DEXPI export and import, further datasheets (valves, equipment), loop diagrams |
 
-- **The user's aim**: a flexible, free, open-source plant engineering tool for students and engineers who cannot afford the enterprise suites; datasheets and every document from one place. Built from scratch in Rust in the Datum way; open-source libraries only where needed (SQLite).
-- **No reverse engineering** of any commercial product (the user suggested a reverse-engineering toolkit; it is not used on proprietary software). Only public documentation and open standards.
+- **The user's aim**: a flexible, free, open-source plant engineering tool for students and engineers, free to use; datasheets and every document from one place. Built from scratch in Rust in the Datum way; open-source libraries only where needed (SQLite).
+- **No reverse engineering** of other software (the user suggested a reverse-engineering toolkit; it is not used on proprietary software). Only public documentation and open standards.
 - **Defaults chosen** for the open questions (to revisit with the user): Save button kept (the database is written as a whole on Save, atomically; recovery as now); hierarchy levels Plant › Unit › Area with names the user edits; "who" in the history is the name in Options (default: the computer's user name); one person per file for now, with UUIDs and history so merging can come later.

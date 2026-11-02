@@ -7,7 +7,7 @@
 //! (through its fit or control points), SOLID and TRACE, HATCH with solid fill (polyline and line
 //! boundaries), TEXT, MTEXT (formatting removed), INSERT (nested blocks, scale, rotation, the
 //! attributes it carries). Everything else (dimensions, images, 3D entities) is skipped and
-//! counted. DWG files are not read: save them as DXF from any CAD program.
+//! counted. Other CAD formats are not read: save them as DXF from the CAD program.
 
 use crate::symbols::Prim;
 use std::collections::HashMap;
@@ -47,7 +47,8 @@ const MAX_ENTS: usize = 500_000;
 
 /// The pairs of a DXF file: (group code, value).
 fn pairs(text: &str) -> Result<Vec<(i32, &str)>, String> {
-    if text.starts_with("AutoCAD Binary DXF") {
+    // A binary DXF opens with a signature line ending in "Binary DXF".
+    if text.lines().next().is_some_and(|l| l.contains("Binary DXF")) {
         return Err("This is a binary DXF; save it as an ASCII DXF and import that.".into());
     }
     let mut v = vec![];
@@ -672,7 +673,7 @@ pub(crate) mod tests {
     #[test]
     fn anything_else_is_refused_politely() {
         assert!(read("hello").is_err());
-        assert!(read("AutoCAD Binary DXF\r\n\x1a\0").unwrap_err().contains("binary"));
+        assert!(read("Binary DXF\r\n\x1a\0").unwrap_err().contains("binary"));
         let mut r = 5u64;
         for n in [10usize, 2000, 50_000] {
             let s: String = (0..n).map(|_| { r ^= r << 13; r ^= r >> 7; r ^= r << 17; ["0\n", "SECTION\n", "10\n", "1.5\n", "LWPOLYLINE\n", "42\n", "INSERT\n", "2\n", "X\n", "ENDSEC\n", "BLOCK\n", "SEQEND\n", "66\n", "1\n"][(r % 14) as usize] }).collect();

@@ -739,6 +739,25 @@ const shots = process.env.SHOTS;
   check("the report is saved in the project", (await project()).settings.reports.some(r => r.name === "Valves by type" && r.source === "valves"));
   check("the report is a tab with group headings", (await p.$$(".btabs button:has-text('Valves by type')")).length === 1 && (await p.$$(".lists tr.ghead")).length > 0);
 
+  // 53. No commercial product name anywhere in the window (FAMILY §13): the built bundle, and the
+  // text shown on each ribbon tab. The names are kept in ROT13 so this file does not name them.
+  { const rot = s => s.replace(/[a-z]/gi, c => String.fromCharCode((c <= "Z" ? 65 : 97) + ((c.toUpperCase().charCodeAt(0) - 65 + 13) % 26)));
+    const names = ["NIRIN", "Vagretencu", "FznegCynag", "Fzneg C&VQ", "PBZBF", "Fvrzraf", "NhgbPNQ", "Nhgbqrfx", "Cynag 3Q", "Oragyrl", "BcraCynag", "R3Q", "CQZF", "Nfcra", "ULFLF", "HavFvz", "PURZPNQ", "CEB/VV", "Ivfvb", "ZvpebFgngvba", "PNRFNE VV", "NhgbCVCR", "EBUE2", "FC3Q", "Anivfjbexf", "PNQJbek", "VAgbbyf", "QJFVZ", "CVCR-SYB", "Cvcrarg"].map(rot);
+    const fs = require("fs");
+    const dist = path.join(root, "ui", "dist");
+    const files = [path.join(dist, "index.html"), ...fs.readdirSync(path.join(dist, "assets")).map(f => path.join(dist, "assets", f)).filter(f => /\.(js|css|html)$/.test(f))];
+    const bundle = files.map(f => fs.readFileSync(f, "utf8")).join("\n");
+    let shown = "";
+    await openEx("Pump transfer");
+    for (const t of await p.$$eval(".tabs button", els => els.map(e => e.textContent))) {
+      await p.locator(".tabs button", { hasText: t }).first().click().catch(() => {}); await p.waitForTimeout(150);
+      shown += await p.evaluate(() => document.body.innerText);
+      await p.keyboard.press("Escape").catch(() => {});
+    }
+    const hits = names.filter(n => bundle.includes(n) || shown.includes(n));
+    check("no product name in the window's text", hits.length === 0 && shown.length > 500, hits.join(", ") + ` (${shown.length} characters read)`);
+    check("the product-name check would see one", ["Datum Schema", ...names].every(n => rot(rot(n)) === n) && bundle.includes("Datum Schema") && shown.includes("Datum Schema")); }
+
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();
   await fetch(`${url}quit`).catch(() => {});

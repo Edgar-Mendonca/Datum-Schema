@@ -29,3 +29,5 @@ canvas and the orthogonal router from Datum Sim (all MIT, same author).
 The calculation sheets in crates/core/calcpacks (pump power, NPSH, compressor, exchanger LMTD,
 pressure vessel, tank, pipe pressure drop, pipe wall) are copied from Datum Calc's packs (MIT, same
 author), with the references they carry.
+
+Product and file-format names are trademarks of their owners and are used only to describe file compatibility.

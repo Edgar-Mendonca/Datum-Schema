@@ -15,6 +15,7 @@ User preferences:
 - The engine and the `.dschema` file use SI base units (m, kg, s, Pa, K). The engine sends display units (SI and US) from its unit table (`crates/core/src/units.rs`, copied from Datum Calc by way of Datum Pipe); `ui/src/units.ts` only applies them.
 - Symbols are our own vector drawings following the conventions of ISO 10628-2 (equipment, valves, lines) and ISA-5.1 (instruments). Never copy a symbol library from other software.
 - Public words (README, CHANGELOG, site.json, help, commits): never name, compare with, or say the app copies or replaces any commercial drawing, CAD or plant-design product (FAMILY §13). Standards may be named by number; file formats (DXF, CSV, Excel) may be named.
+- The repo is public, so CLAUDE.md, docs/MEMORY.md and docs/PLAN-*.md are public text too: describe this app's own goals; comparisons with other products stay in chat. Code comments never compare with a product ("…-style", "as … does"). File-format names only where they name a file the app reads or writes. The `no_product_names` tests (engine and UI) enforce it.
 - Hydraulic results are a sizing aid checked by the engineer; say so in the README and help.
 - Licences: MIT/BSD/Apache/MPL only. Record every dependency in `NOTICE`.
 

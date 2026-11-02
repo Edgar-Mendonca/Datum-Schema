@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Documents and help reworded to describe Datum Schema's own goals; a trademark notice in the README and NOTICE; an automatic check keeps product names out of the window's text. No change to how the app works.
+
 ## 0.5.4 — 2026-11-01
 
 Reports you design yourself.
@@ -162,7 +166,7 @@ Stream compositions with a component balance, the I/O summary, and three instrum
 
 A client's own symbols, old drawings to trace over, links to Datum Pipe and Datum Sim, process flow diagrams with heat and mass balances, and revision clouds.
 
-**A client's symbol library.** File › Libraries › **Import a legend (DXF)** reads a client's legend sheet (save a DWG as DXF from any CAD program first). Every block placed on the legend becomes a symbol, described by the text beside it. Datum Schema suggests what each one stands for (a gate valve, a centrifugal pump…) from its description and block name, and puts its connection points where lines meet the drawing. Check the suggestions in the review table, edit the connection points by clicking on the drawing, and save the library: it stays on this computer for every project, and **Save a copy** / **Add a library file** share it with colleagues. The palette's **Library** tab places its symbols one by one.
+**A client's symbol library.** File › Libraries › **Import a legend (DXF)** reads a client's legend sheet (save it as DXF from your CAD program first). Every block placed on the legend becomes a symbol, described by the text beside it. Datum Schema suggests what each one stands for (a gate valve, a centrifugal pump…) from its description and block name, and puts its connection points where lines meet the drawing. Check the suggestions in the review table, edit the connection points by clicking on the drawing, and save the library: it stays on this computer for every project, and **Save a copy** / **Add a library file** share it with colleagues. The palette's **Library** tab places its symbols one by one.
 
 **Drawing standard.** File › Options › **Drawing standard** draws a whole project with a library's symbols. The objects do not change: the same class, tag, data, checks and lists; lines stay on their nozzles (followed by name). Switching back to Datum Schema's symbols restores the drawing exactly. A project keeps its own copies of the library symbols it uses, so it opens on any computer, and DXF export keeps the client's block names.
 

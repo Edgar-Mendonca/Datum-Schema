@@ -125,7 +125,7 @@ export const LibrariesPage = () => {
     <div class="libraries">
       <Show when={editing()} fallback={<>
         <h1>Symbol libraries <Help k="libraries" /></h1>
-        <p class="muted">A client's own symbols, read from their legend sheet. Save a DWG legend as DXF from any CAD program, then import it here. Libraries are kept on this computer; send one to a colleague as a file.</p>
+        <p class="muted">A client's own symbols, read from their legend sheet. Save the legend as DXF from your CAD program, then import it here. Libraries are kept on this computer; send one to a colleague as a file.</p>
         <p class="libbtns"><button class="btn pri" onClick={scan}>Import a legend (DXF)…</button><button class="btn" onClick={add}>Add a library file…</button></p>
         <Show when={libs().length} fallback={<p class="muted">No libraries yet.</p>}>
           <div class="libcards"><For each={libs()}>{v => <div class="libcard">

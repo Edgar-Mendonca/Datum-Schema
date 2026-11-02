@@ -399,3 +399,49 @@ mod review {
         assert!(!block.contains("TEXT"));
     }
 }
+
+/// Names of commercial drawing, CAD, simulation and plant-design products that must never appear
+/// in the window's text, the engine's messages or the shipped data (FAMILY §13). Kept in ROT13 so
+/// that this public file does not name them itself.
+pub(crate) const PRODUCTS_ROT13: [&str; 30] = [
+    "NIRIN", "Vagretencu", "FznegCynag", "Fzneg C&VQ", "PBZBF", "Fvrzraf", "NhgbPNQ", "Nhgbqrfx", "Cynag 3Q", "Oragyrl", "BcraCynag", "R3Q", "CQZF", "Nfcra", "ULFLF", "HavFvz", "PURZPNQ", "CEB/VV", "Ivfvb", "ZvpebFgngvba", "PNRFNE VV", "NhgbCVCR", "EBUE2", "FC3Q", "Anivfjbexf", "PNQJbek", "VAgbbyf", "QJFVZ", "CVCR-SYB", "Cvcrarg"
+];
+
+pub(crate) fn products() -> Vec<String> {
+    let rot = |c: char| match c {
+        'a'..='z' => (((c as u8 - b'a' + 13) % 26) + b'a') as char,
+        'A'..='Z' => (((c as u8 - b'A' + 13) % 26) + b'A') as char,
+        c => c,
+    };
+    PRODUCTS_ROT13.iter().map(|s| s.chars().map(rot).collect()).collect()
+}
+
+/// No product name in anything the window shows: the engine's sources (messages, help-like text,
+/// examples), the class library, the calculation packs, and the window's own sources.
+#[test]
+fn no_product_names_in_the_window_text() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut files: Vec<std::path::PathBuf> = vec![root.join("classes.json")];
+    for dir in [root.join("src"), root.join("src/checks"), root.join("calcpacks"), root.join("../../ui/src"), root.join("../../src-tauri/src")] {
+        if let Ok(rd) = std::fs::read_dir(&dir) {
+            files.extend(rd.flatten().map(|e| e.path()).filter(|p| p.is_file()));
+        }
+    }
+    files.push(root.join("../../ui/index.html"));
+    // The repo is public: its documents are public text too.
+    for doc in ["README.md", "CHANGELOG.md", "CLAUDE.md", "NOTICE", "docs/MEMORY.md", "docs/PLAN-0.1.md", "docs/PLAN-0.2.md", "docs/VISION.md", "docs/site.json", "tests_ui/run.cjs", "deny.toml"] {
+        files.push(root.join("../..").join(doc));
+    }
+    let names = products();
+    let mut found = vec![];
+    for f in files.iter().filter(|f| !f.ends_with("hardening.rs")) {
+        let Ok(text) = std::fs::read_to_string(f) else { continue };
+        for n in &names {
+            if text.contains(n.as_str()) {
+                found.push(format!("{} in {}", n, f.display()));
+            }
+        }
+    }
+    assert!(files.len() > 40, "the sources were not found: {}", files.len());
+    assert!(found.is_empty(), "{found:?}");
+}

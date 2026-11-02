@@ -86,4 +86,7 @@ Checks before every push: `cargo clippy --workspace --all-targets -- -D warnings
 
 ## Licence
 
+Product and file-format names are trademarks of their owners and are used only to describe file compatibility.
+
+
 MIT © 2026 Edgar Mendonca. See [NOTICE](NOTICE) for the fonts and crates it uses.
