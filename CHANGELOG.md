@@ -1,8 +1,21 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 — 2026-11-02
 
-- Documents and help reworded to describe Datum Schema's own goals; a trademark notice in the README and NOTICE; an automatic check keeps product names out of the window's text. No change to how the app works.
+Standard arrangements.
+
+**Apply Arrangement.** Select a piece of equipment (or several, or a control valve) and choose Format › **Apply Arrangement**. The valves, fittings and instruments your company puts round that kind of equipment are placed in one step:
+- **Centrifugal pump**: suction strainer and isolation valve, discharge check valve and isolation valve, pressure gauge, drain.
+- **Vessel**: relief valve, vent, pressure gauge, level transmitter with its controller, drain.
+- **Shell-and-tube exchanger**: isolation valves, temperature transmitter, drain.
+- **Control valve station**: block valves on both sides, a drain, and a bypass with a globe valve.
+- **Compressor**: discharge check valve, relief valve, pressure and temperature transmitters.
+
+Valves and fittings go into the line on each nozzle in order from the nozzle outward and take the line's size and pipe class; branches are tapped onto it. Instruments take the equipment's number where it is free (PI-101 on P-101), and a controller its transmitter's loop number. Applying twice adds nothing, and Undo takes the whole arrangement back. The result is a draft to tidy; the checks and To do say what still needs a value.
+
+**Your own arrangements.** Options › **Arrangements** edits them: the class each is for (its subclasses too), and each part's nozzle (alternatives separated by |, so one arrangement fits several vessel shapes), how it goes on (in the line, tapped on, a controller beside it, a bypass round it), its symbol and its tag letters. The starter set comes with every project.
+
+**Public text.** Documents and help describe Datum Schema's own goals; a trademark notice is in the README and NOTICE; an automatic check keeps product names out of the window's text.
 
 ## 0.5.4 — 2026-11-01
 

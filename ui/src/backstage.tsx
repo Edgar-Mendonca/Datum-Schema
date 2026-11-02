@@ -7,6 +7,7 @@ import { GuidePage } from "./guide";
 import { SpecsSec } from "./specs";
 import { AssembliesSec, LabelsSec } from "./assemblies";
 import { RulesSec, TagsSec } from "./rules";
+import { ArrangementsSec } from "./arrangements";
 import { For, Show, createSignal, createResource, onMount, JSX } from "solid-js";
 import { PrintPage } from "./print";
 import { RoadmapPage } from "./roadmap";
@@ -169,6 +170,9 @@ const ProjectSettings = () => {
     <ClassesSec />
     <Sec t="Pipe specs" about="The pipe classes lines are built to: their sizes and limits, and the valves and fittings each allows, by size, with a description and commodity code. Checks 21–23 hold the drawing to them; the take-off names each component from its class.">
       <SpecsSec />
+    </Sec>
+    <Sec t="Arrangements" about="What goes round each kind of equipment: in-line valves and fittings from the nozzle outward, branches tapped on (instruments, relief valves, vents, drains), a controller beside its transmitter, a bypass round a control valve. Format › Apply Arrangement places them.">
+      <ArrangementsSec />
     </Sec>
     <Sec t="Company rules" about="Your company's own checks (check 24): an attribute every object of a kind must have, or a value it must be, at least or at most, with the level and words of your choosing.">
       <RulesSec />

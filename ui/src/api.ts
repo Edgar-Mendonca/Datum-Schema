@@ -34,7 +34,7 @@ export interface Line { id: number; sheet: number; kind: Kind; a: End; b: End; p
 export type NoteKind = "note" | "leader" | "hold";
 export interface Note { id: number; sheet: number; kind: NoteKind; x: number; y: number; w: number; h: number; text: string; to: Pt }
 export interface Limit { service: string; name: string; vmin: number; vmax: number; dp: number }
-export interface Settings { line_format: string; off: number[]; limits: Limit[]; roughness: number; grid: number; hidden: string[]; user_attrs: UserAttr[]; ds_layout: DsLayout; standard: Standard; title_block: TitleBlock; specs: PipeSpec[]; tag_format: TagFormat; rules: UserRule[]; reports: Report[]; assemblies: Assembly[]; labels: LabelRule[]; components: string[] }
+export interface Settings { line_format: string; off: number[]; limits: Limit[]; roughness: number; grid: number; hidden: string[]; user_attrs: UserAttr[]; ds_layout: DsLayout; standard: Standard; title_block: TitleBlock; specs: PipeSpec[]; tag_format: TagFormat; rules: UserRule[]; reports: Report[]; arrangements: Arrangement[]; assemblies: Assembly[]; labels: LabelRule[]; components: string[] }
 /** A pipe class: limits in SI (Pa, K, m), sizes as NPS text, and the components it allows by size. */
 /** A saved group of symbols, lines and notes round (0, 0), with copies of their objects. */
 export interface Assembly { name: string; items: Item[]; lines: Line[]; notes: Note[]; objs: Obj[] }
@@ -96,6 +96,8 @@ export interface Example { id: string; name: string; what: string }
 export interface Col { key: string; label: string; q: string; edit: boolean; num: boolean }
 export interface Row { ids: number[]; sheet: number; cells: string[]; status: number | null }
 export interface List { kind: string; title: string; cols: Col[]; rows: Row[]; heads?: number[] }
+export interface ArrangementPart { nozzle: string; kind: string; sym: string; tag: string }
+export interface Arrangement { name: string; class: string; parts: ArrangementPart[] }
 export interface ReportFilter { col: string; test: string; value: string }
 export interface Report { name: string; source: string; cols: string[]; filters: ReportFilter[]; group: string; sort: string; desc: boolean }
 export interface Options { autosave: number; beta: boolean; theme: string; openLast: boolean; units: "SI" | "US"; grid: boolean; paper: string; company: string; user: string; defaults: Settings | null }

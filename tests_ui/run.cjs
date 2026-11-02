@@ -739,6 +739,18 @@ const shots = process.env.SHOTS;
   check("the report is saved in the project", (await project()).settings.reports.some(r => r.name === "Valves by type" && r.source === "valves"));
   check("the report is a tab with group headings", (await p.$$(".btabs button:has-text('Valves by type')")).length === 1 && (await p.$$(".lists tr.ghead")).length > 0);
 
+  // 54. A standard arrangement placed round a pump from the ribbon, and the editor in Options.
+  await openEx("Pump transfer");
+  { const q = await project(); const pa = q.items.find(i => tagOf(q, i) === "P-101A"); const n0 = q.items.length;
+    const [x, y] = await scr(pa.x, pa.y); await p.mouse.click(x, y); await p.waitForTimeout(300);
+    await p.click(".ctxgrp button:has-text('Format')"); await p.click(".ribbon button[title^='Place the standard']"); await p.waitForTimeout(500);
+    const r = await project();
+    check("the pump's arrangement is placed", r.items.length > n0 && r.objects.some(o => o.tag === "PI-101A"), `${n0} → ${r.items.length}`); }
+  await p.keyboard.press("Escape");
+  await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Options')"); await p.waitForTimeout(300);
+  check("Options lists the starter arrangements", (await p.$$eval(".arrsec summary", els => els.map(e => e.textContent))).some(t => t.startsWith("Centrifugal pump")));
+  await p.click(".bs .back"); await p.waitForTimeout(200);
+
   // 53. No commercial product name anywhere in the window (FAMILY §13): the built bundle, and the
   // text shown on each ribbon tab. The names are kept in ROT13 so this file does not name them.
   { const rot = s => s.replace(/[a-z]/gi, c => String.fromCharCode((c <= "Z" ? 65 : 97) + ((c.toUpperCase().charCodeAt(0) - 65 + 13) % 26)));

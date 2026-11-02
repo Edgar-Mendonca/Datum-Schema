@@ -46,6 +46,7 @@
     "Lines route themselves at right angles, hop over each other and carry flow arrows",
     "A valve dropped on a line splits it and joins both halves",
     "Off-page connectors pair across sheets; click one to jump to its partner",
+    "Standard arrangements round equipment placed in one step, editable by your company",
     "Live line list, equipment list, instrument index, valve list and datasheet index, and reports you design yourself",
     "Twenty-five checks, including balances, instrument ranges, pipe specs, wiring and your own rules, each with a click to the problem",
     "Line hydraulics: velocity, Reynolds number, Colebrook friction factor and pressure drop against limits",
@@ -75,7 +76,7 @@
     {
       "v": "0.5",
       "title": "Instruments and calculations",
-      "when": "Now",
+      "when": "Done",
       "items": [
         "0.5.0: instrument wiring: cables, junction boxes, terminals, I/O cards, cable schedule; loop diagrams from them (done)",
         "0.5.1: calculation sheets in Datum Calc from an object's data (pump power and NPSH, line pressure drop, exchanger, vessel wall) (done)",
@@ -87,9 +88,9 @@
     {
       "v": "0.6",
       "title": "From PFD to P&ID and back",
-      "when": "Next",
+      "when": "Now",
       "items": [
-        "0.6.0: standard arrangements by equipment type (a pump's valves, strainer and gauge; a vessel's relief and level loop), editable by your company",
+        "0.6.0: standard arrangements by equipment type (a pump's valves, strainer and gauge; a vessel's relief and level loop), editable by your company (done)",
         "0.6.1: develop a P&ID from the PFD: the same equipment, streams become line numbers with their data, sizes and classes suggested, arrangements placed, routed as a draft",
         "0.6.2: make a PFD from the P&IDs: main equipment and process streams, valves and instruments left out",
         "0.6.3: PFD and P&ID kept in step both ways: a change on either side shows on the other's to-do list",

@@ -40,6 +40,7 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
         "datasheet" => serde_json::to_value(datum_core::datasheets::build(&s.doc.p, a["id"].as_u64().unwrap_or(0) as u32)?).unwrap(),
         "datasheets_all" => serde_json::to_value(datum_core::datasheets::all(&s.doc.p)).unwrap(),
         "derived" => serde_json::to_value(api::derived(&s.doc.p, a["sheet"].as_u64().unwrap_or(0) as u32)).unwrap(),
+        "arrangement_starter" => serde_json::to_value(datum_core::arrange::starter()).unwrap(),
         "report_sources" => serde_json::to_value(datum_core::reports::sources(&s.doc.p)).unwrap(),
         "report_preview" => {
             let r: datum_core::reports::Report = serde_json::from_value(a["report"].clone()).map_err(|e| e.to_string())?;

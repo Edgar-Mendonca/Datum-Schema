@@ -106,6 +106,8 @@ pub enum Op {
     SaveAssembly { name: String, ids: Vec<u32> },
     /// Place an assembly with its centre at (x, y): new objects with the next free tags.
     PlaceAssembly { name: String, sheet: u32, x: f64, y: f64 },
+    /// Place the standard arrangement `name` (empty: each one's class's) around equipment symbols.
+    Arrange { ids: Vec<u32>, #[serde(default)] name: String },
     DeleteSheet { id: u32 },
     MoveSheet { id: u32, to: usize },
     SetTitle { title: Title },
@@ -374,6 +376,11 @@ fn line_obj_for(p: &mut Project, line: &Line) -> u32 {
     o
 }
 
+/// One edit on a project without normalizing it (for engine modules that build on the edits).
+pub(crate) fn exec_op(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
+    exec(p, op, created)
+}
+
 fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
     match op {
         Op::AddItem { mut item, on, tag, obj } => {
@@ -615,6 +622,9 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
         Op::PlaceAssembly { name, sheet, x, y } => {
             let a = p.settings.assemblies.iter().find(|a| a.name.eq_ignore_ascii_case(name.trim())).cloned().ok_or_else(|| format!("There is no assembly called {name}."))?;
             paste(p, sheet, a.items, a.lines, a.notes, x, y, created, &a.objs)?;
+        }
+        Op::Arrange { ids, name } => {
+            crate::arrange::apply(p, &ids, &name, created)?;
         }
         Op::Link { a, b } => {
             for id in [a, b].into_iter().filter(|x| *x != 0) {

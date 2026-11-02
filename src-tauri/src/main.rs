@@ -222,6 +222,12 @@ fn list(st: State<St>, kind: String) -> R<lists::List> {
     guard(|| lists::build(&st.lock().doc.p, &kind))
 }
 
+/// The starter set of arrangements (pump, vessel, exchanger, control valve station, compressor).
+#[tauri::command]
+fn arrangement_starter() -> Vec<datum_core::arrange::Arrangement> {
+    datum_core::arrange::starter()
+}
+
 /// What a report can be made from: the lists and the classes with objects.
 #[tauri::command]
 fn report_sources(st: State<St>) -> Vec<(String, String)> {
@@ -774,7 +780,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, import_streams, report_sources, report_preview, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, title_preview, title_standard, spec_starter, specs_csv, todo, calc_sheets, sizing, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
+            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, import_streams, report_sources, report_preview, arrangement_starter, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, title_preview, title_standard, spec_starter, specs_csv, todo, calc_sheets, sizing, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
             options, set_options, autosave, recovery, recover, recent, startup_file, open_url, version, quit, check_update, install_update
         ])
         .run(tauri::generate_context!())

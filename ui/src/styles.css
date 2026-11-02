@@ -1198,3 +1198,9 @@ tr.behind td { background: var(--err-bg); }
 .repf select, .repf input { min-width: 0; flex: 1; }
 .repprev { max-height: 220px; overflow: auto; }
 @media (max-width: 720px) { .repgrid { grid-template-columns: 1fr; } }
+
+/* Arrangements (0.6.0) */
+.arrbox { border: 1px solid var(--line2); border-radius: 4px; padding: 4px 8px; margin: 4px 0; }
+.arrbox summary { cursor: pointer; }
+.arrhead { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+.arrtbl input, .arrtbl select { width: 100%; min-width: 0; }
