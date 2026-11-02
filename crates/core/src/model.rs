@@ -1094,6 +1094,7 @@ impl Project {
         }
         self.streams();
         crate::propagate::run(self);
+        crate::sync::mark(self);
         crate::review::normalize(self);
         // Issued revisions belong to their object and go with it.
         self.issues.retain(|i| objs.contains(&i.obj));

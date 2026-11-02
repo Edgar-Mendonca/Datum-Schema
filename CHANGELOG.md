@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.3 — 2026-11-02
+
+The PFD and the P&ID kept in step.
+
+**Linked both ways.** A P&ID line developed from a stream, or a stream made from a line, stays linked to it. After every change their service, phase, mass and volume flow, operating pressure and temperature and density are compared, and each remembers what they last agreed on, so the **To do** tab says which side changed:
+- **The stream changed** (a new simulator run imported, say): *Take the stream's value* puts it on the P&ID line.
+- **The line changed** on the P&ID: *Take the line's value to the stream* puts it on the PFD.
+- **Both changed differently**: both buttons are offered.
+- **Equipment on one side only**: a piece of equipment on the PFD but on no P&ID (or on a P&ID but on no PFD) is listed, with *Develop again* or *Make the PFD again*.
+
+Each item has *Go to*; taking a value is one edit that Undo takes back.
+
 ## 0.6.2 — 2026-11-02
 
 A PFD from the P&IDs.

@@ -80,7 +80,8 @@ pub fn run(p: &mut Project) {
 /// One thing to look at after a change.
 #[derive(Clone, Debug, Serialize, PartialEq)]
 pub struct Todo {
-    /// "override", "datasheet" or "sheet".
+    /// "override", "datasheet", "sheet"; between the PFD and the P&ID: "stream" (the stream
+    /// changed), "line" (the line changed), "differ" (both did), "pfd" (equipment on one side only).
     pub kind: &'static str,
     pub what: String,
     /// The symbols it is about (an override's), else empty.
@@ -127,6 +128,7 @@ pub fn todo(p: &Project) -> Vec<Todo> {
     for ds in sheets.into_iter().filter(|d| !d.rev.is_empty() && d.changed > 0) {
         v.push(Todo { kind: "datasheet", what: format!("{}'s datasheet has {} change{} since revision {}: issue it again.", ds.tag, ds.changed, if ds.changed == 1 { "" } else { "s" }, ds.rev), ids: vec![ds.item], sheet: ds.sheet, key: String::new(), value: String::new(), rev: ds.rev.clone(), obj: ds.obj });
     }
+    v.extend(crate::sync::todo(p));
     for s in &p.sheets {
         let Some(last) = s.snaps.last() else { continue };
         let Ok(c) = crate::revs::compare(p, s, &last.rev) else { continue };

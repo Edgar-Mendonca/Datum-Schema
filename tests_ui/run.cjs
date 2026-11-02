@@ -758,6 +758,22 @@ const shots = process.env.SHOTS;
     check("the P&ID is developed from the PFD", !!pid && q.items.filter(i => i.sheet === pid.id).length > 20 && q.objects.filter(o => o.class === "PipingNetworkSystem" && o.data["~stream"] !== undefined).length >= 8, JSON.stringify(q.sheets.map(s => s.number)));
     check("the new sheet opens", (await p.textContent(".stabs")).includes("PID-300")); }
 
+  // 57. PFD and P&ID in step: a stream changed, taken onto its line from To do.
+  await openEx("Crude preheat (PFD)");
+  await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title^='A new P&ID sheet from this process']"); await p.waitForTimeout(800);
+  { const q = await project(); const st = q.objects.find(o => o.class === "Stream" && String(o.data.number) === "2");
+    await p.click(".btabs button:has-text('Streams')"); await p.waitForTimeout(400);
+    { const heads = await p.$$eval(".lists thead th", els => els.map(e => e.textContent));
+      const col = heads.findIndex(h => h.startsWith("Pressure")) + 1;
+      const row = p.locator(".lists tbody tr.f").nth(1);
+      const inp = row.locator(`td:nth-child(${col}) input`); await inp.fill("13"); await inp.press("Tab"); await p.waitForTimeout(400); }
+    void st;
+    await p.click(".btabs button:has-text('To do')"); await p.waitForTimeout(400);
+    check("To do says the stream changed", (await p.$$eval(".todo .tw", els => els.map(e => e.textContent))).some(t => t.includes("Stream 2's operating pressure is now 13 bar")));
+    await p.click(".todo:has-text('Stream 2') button:has-text(\"Take the stream's value\")"); await p.waitForTimeout(400);
+    const r = await project(); const line = r.objects.find(o => o.class === "PipingNetworkSystem" && String(o.data.stream) === "2");
+    check("the line takes the stream's pressure", Math.abs(Number(line.data.oper_p) - 1300000) < 1e-3, JSON.stringify(line.data)); }
+
   // 56. A PFD made from the pump transfer's P&ID.
   await openEx("Pump transfer");
   await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title^='A process flow diagram made from the P&IDs']"); await p.waitForTimeout(800);

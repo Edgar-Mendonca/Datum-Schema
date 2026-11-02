@@ -94,7 +94,7 @@
         "0.6.0: standard arrangements by equipment type (a pump's valves, strainer and gauge; a vessel's relief and level loop), editable by your company (done)",
         "0.6.1: develop a P&ID from the PFD: the same equipment, streams become line numbers with their data, sizes and classes suggested, arrangements placed, routed as a draft (done)",
         "0.6.2: make a PFD from the P&IDs: main equipment and process streams, valves and instruments left out (done)",
-        "0.6.3: PFD and P&ID kept in step both ways: a change on either side shows on the other's to-do list",
+        "0.6.3: PFD and P&ID kept in step both ways: a change on either side shows on the other's to-do list (done)",
         "0.6.4: process cases (normal, maximum, minimum, design) on streams, lines and datasheets",
         "0.6.5: a tag register: tags created and imported before they are drawn"
       ]
