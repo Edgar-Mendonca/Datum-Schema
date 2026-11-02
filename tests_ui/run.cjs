@@ -758,6 +758,12 @@ const shots = process.env.SHOTS;
     check("the P&ID is developed from the PFD", !!pid && q.items.filter(i => i.sheet === pid.id).length > 20 && q.objects.filter(o => o.class === "PipingNetworkSystem" && o.data["~stream"] !== undefined).length >= 8, JSON.stringify(q.sheets.map(s => s.number)));
     check("the new sheet opens", (await p.textContent(".stabs")).includes("PID-300")); }
 
+  // 56. A PFD made from the pump transfer's P&ID.
+  await openEx("Pump transfer");
+  await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title^='A process flow diagram made from the P&IDs']"); await p.waitForTimeout(800);
+  { const q = await project(); const s = q.sheets.find(x => x.pfd);
+    check("a PFD is made from the P&IDs", !!s && q.lines.filter(l => l.sheet === s.id).length >= 4 && q.items.some(i => i.sheet === s.id && tagOf(q, i) === "V-101"), JSON.stringify(q.sheets.map(x => [x.number, x.pfd]))); }
+
   // 53. No commercial product name anywhere in the window (FAMILY §13): the built bundle, and the
   // text shown on each ribbon tab. The names are kept in ROT13 so this file does not name them.
   { const rot = s => s.replace(/[a-z]/gi, c => String.fromCharCode((c <= "Z" ? 65 : 97) + ((c.toUpperCase().charCodeAt(0) - 65 + 13) % 26)));

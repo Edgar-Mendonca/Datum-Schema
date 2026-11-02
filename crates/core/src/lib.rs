@@ -24,6 +24,7 @@ pub mod instruments;
 pub mod lists;
 pub mod links;
 pub mod loops;
+pub mod makepfd;
 pub mod model;
 pub mod pfd;
 pub mod pipes;

@@ -110,6 +110,8 @@ pub enum Op {
     Arrange { ids: Vec<u32>, #[serde(default)] name: String },
     /// Develop a P&ID sheet from a PFD sheet (its id is the first id created).
     Develop { sheet: u32 },
+    /// Make a PFD sheet from P&ID sheets (empty: all of them); its id is the first id created.
+    MakePfd { #[serde(default)] sheets: Vec<u32> },
     DeleteSheet { id: u32 },
     MoveSheet { id: u32, to: usize },
     SetTitle { title: Title },
@@ -624,6 +626,9 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
         Op::PlaceAssembly { name, sheet, x, y } => {
             let a = p.settings.assemblies.iter().find(|a| a.name.eq_ignore_ascii_case(name.trim())).cloned().ok_or_else(|| format!("There is no assembly called {name}."))?;
             paste(p, sheet, a.items, a.lines, a.notes, x, y, created, &a.objs)?;
+        }
+        Op::MakePfd { sheets } => {
+            crate::makepfd::make(p, &sheets, created)?;
         }
         Op::Develop { sheet } => {
             crate::develop::develop(p, sheet, created)?;

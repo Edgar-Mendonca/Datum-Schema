@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.2 — 2026-11-02
+
+A PFD from the P&IDs.
+
+**Sheets › PFD from P&IDs.** For a plant drawn as P&IDs first, one command makes its process flow diagram:
+- **The main equipment**, as the same objects (tags and data shared, never copied), laid out from the P&IDs at half scale, side by side.
+- **One stream for each process path** between two pieces of equipment or a battery limit, found by following the piping through valves, fittings, tees and off-page connectors in the drawn flow direction. Instruments, vents, drains, relief valves and bypasses are left out.
+- **Each stream takes its line's conditions**: service, flows (mass flow from volume flow and density where needed), operating pressure and temperature, density. The stream table is on the sheet and the heat and mass balance checks run on it.
+- **Linked both ways**: every line on a path knows its stream, as a developed P&ID does, so the line-versus-stream check compares them.
+
+Making it again adds only the paths not yet linked; one Undo takes it back. Developing a P&ID from a PFD and making a PFD from that P&ID gives the same streams between the same equipment.
+
 ## 0.6.1 — 2026-11-02
 
 Develop a P&ID from the process flow diagram.

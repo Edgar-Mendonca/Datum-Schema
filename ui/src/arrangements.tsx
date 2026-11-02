@@ -54,6 +54,16 @@ export const ArrangementsSec = () => {
   );
 };
 
+/** Makes a PFD sheet from every P&ID sheet (engine: makepfd.rs) and opens it. */
+export const makePfd = async () => {
+  const o = await act({ MakePfd: { sheets: [] } });
+  if (!o?.created.length) return;
+  const sid = o.created[0];
+  const n = o.p.lines.filter(l => l.sheet === sid).length;
+  setSheetId(sid);
+  toast(`Made ${o.p.sheets.find(x => x.id === sid)?.number} from the P&IDs: ${n} streams between the main equipment, each linked to its lines. Undo takes it back.`, true);
+};
+
 /** Develops the current PFD sheet into a new P&ID sheet (engine: develop.rs) and opens it. */
 export const developPid = async () => {
   const s = sheet();
