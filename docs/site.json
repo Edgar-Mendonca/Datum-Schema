@@ -47,6 +47,7 @@
     "A valve dropped on a line splits it and joins both halves",
     "Off-page connectors pair across sheets; click one to jump to its partner",
     "A first P&ID developed from the process flow diagram, and a process flow diagram made from P&IDs drawn first",
+    "Process cases (normal, maximum, minimum and your own) that the hydraulics, sizing and datasheets follow",
     "Standard arrangements round equipment placed in one step, editable by your company",
     "Live line list, equipment list, instrument index, valve list and datasheet index, and reports you design yourself",
     "Twenty-five checks, including balances, instrument ranges, pipe specs, wiring and your own rules, each with a click to the problem",
@@ -95,7 +96,7 @@
         "0.6.1: develop a P&ID from the PFD: the same equipment, streams become line numbers with their data, sizes and classes suggested, arrangements placed, routed as a draft (done)",
         "0.6.2: make a PFD from the P&IDs: main equipment and process streams, valves and instruments left out (done)",
         "0.6.3: PFD and P&ID kept in step both ways: a change on either side shows on the other's to-do list (done)",
-        "0.6.4: process cases (normal, maximum, minimum, design) on streams, lines and datasheets",
+        "0.6.4: process cases (normal, maximum, minimum, design) on streams, lines and datasheets (done)",
         "0.6.5: a tag register: tags created and imported before they are drawn"
       ]
     },

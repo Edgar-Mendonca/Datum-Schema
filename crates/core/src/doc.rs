@@ -114,6 +114,10 @@ pub enum Op {
     MakePfd { #[serde(default)] sheets: Vec<u32> },
     /// Take one value between a P&ID line and its stream (`from_stream`: the stream's to the line).
     Sync { line: u32, key: String, from_stream: bool },
+    /// Make a process case the active one (every object's process values swap to it).
+    SetCase { case: String },
+    /// The project's process cases (renamed, added or removed).
+    SetCases { cases: Vec<String> },
     DeleteSheet { id: u32 },
     MoveSheet { id: u32, to: usize },
     SetTitle { title: Title },
@@ -225,6 +229,7 @@ impl Doc {
             Op::Resolve { uid, resolved, by } if by.trim().is_empty() => Op::Resolve { uid, resolved, by: self.user.clone() },
             op => op,
         };
+        let is_case = matches!(op, Op::SetCase { .. });
         exec(&mut q, op, &mut created)?;
         let w = q.normalize();
         if let Some(first) = w.first() {
@@ -233,7 +238,14 @@ impl Doc {
         if q == self.p {
             return Ok(created);
         }
-        self.record(&self.p.clone(), &q, "");
+        if is_case {
+            let c = q.settings.case.clone();
+            let seq = self.history.last().map_or(0, |c| c.seq) + 1;
+            let time = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
+            self.history.push(Change { seq, time, user: self.user.clone(), what: "case".into(), key: "case".into(), old: self.p.settings.case.clone(), new: c, ..Change::default() });
+        } else {
+            self.record(&self.p.clone(), &q, "");
+        }
         self.undo.push(std::mem::replace(&mut self.p, q));
         if self.undo.len() > UNDO_LIMIT {
             self.undo.remove(0);
@@ -628,6 +640,12 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
         Op::PlaceAssembly { name, sheet, x, y } => {
             let a = p.settings.assemblies.iter().find(|a| a.name.eq_ignore_ascii_case(name.trim())).cloned().ok_or_else(|| format!("There is no assembly called {name}."))?;
             paste(p, sheet, a.items, a.lines, a.notes, x, y, created, &a.objs)?;
+        }
+        Op::SetCase { case } => {
+            crate::cases::switch(p, &case)?;
+        }
+        Op::SetCases { cases } => {
+            crate::cases::set_cases(p, cases)?;
         }
         Op::Sync { line, key, from_stream } => {
             crate::sync::take(p, line, &key, from_stream)?;

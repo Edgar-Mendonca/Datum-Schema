@@ -75,3 +75,15 @@ export const developPid = async () => {
   setSheetId(sid);
   toast(`Developed ${o.p.sheets.find(x => x.id === sid)?.number}: ${n} symbols, each stream a line number with its data. A draft to tidy; Undo takes it back.`, true);
 };
+
+/** Options › Process cases: their names (the values of a removed case go with it). */
+export const CasesSec = () => {
+  const cs = () => proj()!.settings.cases;
+  const save = (v: string[]) => act({ SetCases: { cases: v } });
+  return (
+    <div class="casesec">
+      <For each={cs()}>{(c, i) => <div class="iprow"><input value={c} onChange={e => save(cs().map((x, j) => (j === i() ? e.currentTarget.value : x)))} />{c === proj()!.settings.case ? <span class="muted small">active</span> : <button class="x" title="Remove this case and its values" onClick={() => save(cs().filter((_, j) => j !== i()))}>×</button>}</div>}</For>
+      <p><button class="btn sm" onClick={() => save([...cs(), ["Design", "Start-up", "Turndown", "Winter", "Summer"].find(x => !cs().includes(x)) ?? `Case ${cs().length + 1}`])}>Add a case</button></p>
+    </div>
+  );
+};

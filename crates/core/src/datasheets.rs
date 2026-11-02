@@ -345,6 +345,16 @@ fn sheet(p: &Project, net: &Net, id: u32, us: bool) -> Result<Datasheet, String>
             if !v.is_empty() {
                 process.push(derived(label, v, u, src));
             }
+            // The other process cases' values, where they differ from this one's.
+            if crate::cases::KEYS.contains(&k) {
+                for c in p.settings.cases.iter().filter(|c| **c != p.settings.case) {
+                    let other = crate::cases::value(p, *lo, c, k);
+                    if other.is_some() && other != d.get(k) {
+                        let (v, u) = show(other, q, us);
+                        process.push(derived(&format!("{} ({c})", label.trim_end_matches(", normal")), v, u, src));
+                    }
+                }
+            }
         }
     }
     // The class's attributes, by group: the class sections, then Specification, then the project's.

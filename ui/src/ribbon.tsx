@@ -145,6 +145,7 @@ export const Ribbon = () => {
         <G l="Checks" h="checks"><B big i="check" l="Checks Panel" run={() => C.panel("checks")} /><S><span class="rcount err">{counts().e} errors</span><span class="rcount warn">{counts().w} warnings</span><span class="rcount">{counts().n} notes</span></S></G>
         <G l="Rules" h="rules"><B big i="opts" l="Check Rules" run={() => setBackstage("options")} title="Switch rules on or off (Options › Checks)" /><B big i="gauge" l="Hydraulic Limits" run={() => setBackstage("options")} /></G>
         <G l="Tags" h="tags"><B big i="renum" l="Renumber" run={C.renumber} /></G>
+        <G l="Process Case" h="cases"><B big i="gauge" l={`Case: ${proj()?.settings.case ?? "Normal"}`} title="The process case whose values are on the drawing: hydraulics, sizing, lists and datasheets follow it" dd={e => openMenu(e, [...(proj()?.settings.cases ?? []).map(c => ({ label: c === proj()?.settings.case ? `${c} ✓` : c, run: () => act({ SetCase: { case: c } }) })), { label: "Edit the cases…", run: () => setBackstage("options") }])} /></G>
         <G l="Review" h="review"><B big i="note" l="Comment" on={tool().k === "comment"} title="Pin a review comment to the sheet (select what it is about first)" run={() => setTool({ k: "comment" })} /><S><B i="list" l="Comments" run={() => C.panel("comments")} /><B i="import" l="Import Review…" title="Take in the comments, replies and resolutions of a reviewer's copy of this project" run={() => import("./review").then(m => m.importComments())} /></S></G>
       </Show>
       <Show when={tab() === "lists"}>

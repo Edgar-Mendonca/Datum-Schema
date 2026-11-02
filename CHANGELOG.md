@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.4 — 2026-11-02
+
+Process cases.
+
+**One set of process values per case.** Every stream, line and piece of equipment keeps its process values for each case: Normal, Maximum and Minimum to start with, and any you add (start-up, turndown, winter…). The values kept per case are flows, pressures, temperatures, densities, viscosities, vapour fraction, enthalpy flow, heads, power and duty, a control valve's design drop and a relief valve's rate and temperature.
+
+**Check › Process Case** chooses the active case, and everything follows it: the hydraulics and their checks, the sizing of control valves, orifices and relief valves (which now names its case), the lists, the stream table and the balances. A case used for the first time starts as a copy of the one before, so you type or import only what differs. A simulator import fills the active case: switch case and import each run.
+
+**Datasheets** show the other cases' values beside the active one where they differ ("Flow (Maximum)"), so one datasheet carries normal, maximum and minimum conditions.
+
+**Options › Process cases** names, adds and removes cases. Switching case is one entry in the history and one Undo.
+
 ## 0.6.3 — 2026-11-02
 
 The PFD and the P&ID kept in step.

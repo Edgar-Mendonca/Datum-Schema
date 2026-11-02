@@ -55,6 +55,7 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Values passed along and To do**: valves and fittings take their line's size and pipe class; overrides, and datasheets and sheets changed since issue, are listed to look at.
 - **Pipe specs**: the project's pipe classes with their limits and the valves and fittings each allows by size, read from a CSV table or started from a typical class; three checks hold the drawing to them.
 - **Valve and fitting take-off**: every piping component counted by type, size, pipe class and rating, with its tags, for a material requisition.
+- **Process cases**: normal, maximum, minimum and your own; the drawing, hydraulics, sizing, lists and datasheets follow the active case, and datasheets show the others.
 - **PFD and P&ID in step**: a change to a stream or its P&ID line shows in To do, with one click to take it across; equipment on one side only is listed.
 - **PFD from the P&IDs**: make a process flow diagram from P&IDs drawn first: the main equipment and a stream for each process path, with its line's conditions.
 - **P&ID from the PFD**: develop a first P&ID from a process flow diagram in one step: the same equipment, every stream a line number with its data and a suggested size, the standard arrangements placed.

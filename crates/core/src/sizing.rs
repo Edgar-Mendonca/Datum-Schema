@@ -141,7 +141,10 @@ fn show(x: f64, q: &str, us: bool) -> String {
 
 /// Sizes a control valve, an orifice plate or a relief valve from its data and its lines.
 pub fn size(p: &Project, item: u32) -> Result<Sizing, String> {
-    let s = size_raw(p, item)?;
+    let mut s = size_raw(p, item)?;
+    if p.settings.cases.len() > 1 {
+        s.inputs.insert(0, ("Process case".into(), p.settings.case.clone()));
+    }
     // Data that make no physical sense (a negative drop, a zero density) give no result.
     let bad = s.writes.iter().any(|(_, v)| match v {
         Val::Num(x) => !x.is_finite() || *x <= 0.0,

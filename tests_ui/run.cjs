@@ -774,6 +774,16 @@ const shots = process.env.SHOTS;
     const r = await project(); const line = r.objects.find(o => o.class === "PipingNetworkSystem" && String(o.data.stream) === "2");
     check("the line takes the stream's pressure", Math.abs(Number(line.data.oper_p) - 1300000) < 1e-3, JSON.stringify(line.data)); }
 
+  // 58. Process cases: the maximum case keeps its own flow; the drawing follows the active case.
+  await openEx("Pump transfer");
+  await p.click(".tabs button:text-is('Check')"); await p.click(".ribbon button:has-text('Case: Normal')"); await p.click(".menu button:has-text('Maximum')"); await p.waitForTimeout(400);
+  { const q = await project(); check("the maximum case is active", q.settings.case === "Maximum");
+    const l = q.objects.find(o => o.class === "PipingNetworkSystem" && o.data.seq === "1003");
+    await inv("apply", { op: { SetData: { ids: [l.id], key: "flow", val: 0.0125 } } });
+    await inv("apply", { op: { SetCase: { case: "Normal" } } });
+    const r = await project(); const n = r.objects.find(o => o.id === l.id);
+    check("each case keeps its own flow", Math.abs(Number(n.data.flow) - 30 / 3600) < 1e-9 && Math.abs(Number(n.data["~case:Maximum:flow"]) - 0.0125) < 1e-12, JSON.stringify(n.data)); }
+
   // 56. A PFD made from the pump transfer's P&ID.
   await openEx("Pump transfer");
   await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title^='A process flow diagram made from the P&IDs']"); await p.waitForTimeout(800);

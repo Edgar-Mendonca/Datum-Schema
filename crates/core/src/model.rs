@@ -518,6 +518,9 @@ pub struct Settings {
     pub tag_format: crate::tags::TagFormat,
     /// The company's own rules (check 24).
     pub rules: Vec<crate::rules::UserRule>,
+    /// The process cases, and the one whose values are on the drawing.
+    pub cases: Vec<String>,
+    pub case: String,
     /// Standard arrangements placed around equipment (Options › Arrangements).
     pub arrangements: Vec<crate::arrange::Arrangement>,
     /// Reports the user designed (columns, filters, grouping of a list or a class).
@@ -562,7 +565,7 @@ pub const MAX_LOGO: usize = 280_000;
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), specs: vec![], tag_format: crate::tags::TagFormat::default(), rules: vec![], reports: vec![], arrangements: crate::arrange::starter(), assemblies: vec![], labels: vec![], components: vec![] }
+        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), specs: vec![], tag_format: crate::tags::TagFormat::default(), rules: vec![], reports: vec![], arrangements: crate::arrange::starter(), cases: crate::cases::default_cases(), case: "Normal".into(), assemblies: vec![], labels: vec![], components: vec![] }
     }
 }
 
@@ -923,6 +926,7 @@ impl Project {
         crate::rules::normalize(&mut s.rules);
         crate::reports::normalize(&mut s.reports);
         crate::arrange::normalize(&mut s.arrangements);
+        crate::cases::normalize(&mut s.cases, &mut s.case);
         s.assemblies.truncate(200);
         let mut seen_a = HashSet::new();
         s.assemblies.retain(|a| !a.name.trim().is_empty() && seen_a.insert(a.name.trim().to_lowercase()));
