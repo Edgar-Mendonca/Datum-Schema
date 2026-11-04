@@ -64,6 +64,7 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Insulation and heat tracing**: on every line, in the line number if you like, passed to its valves, drawn and listed, with a check.
 - **Standard arrangements**: place the valves, instruments, vents and drains your company puts round a pump, vessel, exchanger, control valve or compressor in one step, in the right lines with their sizes and classes; edit them in Options.
 - **Reports you design**: start from any list or from every object of a class, choose columns, filters, sort and grouping (with counts and totals), save it in the project, export and print it.
+- **Lists read back from Excel**: edit any list or report in Excel and read it back, with a preview of every changed value first.
 - **Lists**: line list, stream list, I/O summary, take-off, equipment list, instrument index, valve list and datasheet index, always in step with the drawing; edit them, export to Excel or CSV, print them.
 - **Print and export**: PDF (sheets at their size or fitted to A3, lists, legend), SVG, DXF (R12) that opens in any CAD program, and the DEXPI P&ID exchange format (XML), which it also opens.
 - **User guide**: in the app (Help › User Guide), searchable and printable, with every feature step by step.

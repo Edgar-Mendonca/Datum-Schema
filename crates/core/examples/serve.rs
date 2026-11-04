@@ -93,7 +93,11 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             let (kind, what) = (str_("kind"), str_("what"));
             let text = match kind.as_str() {
                 "csv" => lists::csv(&lists::build(&s.doc.p, &what)?),
-                "xlsx" => format!("{} bytes", lists::xlsx(&s.doc.p, &what)?.len()),
+                "xlsx" => {
+                    let bytes = lists::xlsx(&s.doc.p, &what)?;
+                    std::fs::write(import_file().with_extension("list.xlsx"), &bytes).map_err(|e| e.to_string())?;
+                    format!("{} bytes", bytes.len())
+                }
                 "cause" => format!("{} bytes", datum_core::cause::xlsx(&s.doc.p)?.len()),
                 "loopdxf" => {
                     let d = datum_core::loops::diagram(&s.doc.p, &what)?;
@@ -124,6 +128,19 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             };
             s.exports.push(json!({ "kind": kind, "what": what, "text": text }));
             json!(format!("export.{kind}"))
+        }
+        "import_list" => {
+            // The window picks no file here: the last list exported, with one cell changed by the test.
+            let bytes = std::fs::read(import_file().with_extension("list.xlsx")).map_err(|_| "Export a list to Excel first.".to_string())?;
+            let mut plan = datum_core::listin::plan(&s.doc.p, &bytes)?;
+            if plan.changes.is_empty() && !str_("set").is_empty() {
+                // The test's edit: a value typed into the first editable text cell of the first row.
+                let l = lists::build(&s.doc.p, &str_("kind"))?;
+                if let (Some(r), Some(c)) = (l.rows.first(), l.cols.iter().find(|c| c.edit && c.q.is_empty() && c.key != "tag")) {
+                    plan.changes.push(datum_core::import::Change { obj: r.ids[0], tag: r.cells[0].clone(), key: c.key.clone(), label: c.label.clone(), old: String::new(), new: str_("set"), val: Some(datum_core::model::Val::Text(str_("set"))), kind: "set".into(), ..Default::default() });
+                }
+            }
+            serde_json::to_value(plan).unwrap()
         }
         "import_streams" => {
             // The window picks no file here: a simulator's table for streams 1 and 2 stands in.

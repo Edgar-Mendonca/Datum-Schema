@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.2 — 2026-11-04
+
+Every list read back from Excel.
+
+**Edit in Excel, read back.** Every list and report exported to Excel can now be edited there and read back with **Read back…** on the same list: the line list, equipment list, instrument index, valve list, stream list, take-off, cable schedule, I/O lists, tag register, datasheet index and your own reports.
+- **A preview first**: each changed cell is listed with what the project has now; untick what you do not want. Nothing changes until you read it back, and Undo takes it all back.
+- **Only what the list lets you edit** is read: values the drawing works out (velocity, From/To, a sheet number) are left alone. Tags can be changed too.
+- **Units**: numbers are in the column's unit as exported (the header says it), or in the unit typed with them (12 bar, 150 psi). A value that is not a number is listed with why.
+- **Rows** keep their objects through a last, hidden column in the workbook; a row whose object is gone is listed, and rows added or deleted in the workbook make or delete nothing.
+
 ## 0.7.1 — 2026-11-04
 
 Fixes for the checks, and problems marked on the sheet.

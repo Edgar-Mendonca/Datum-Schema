@@ -7,7 +7,7 @@ import { panel, setPanel, panelOpen, setPanelOpen, derived, call, out, act, proj
 import { fromU } from "./units";
 import { C } from "./cmds";
 import { Help } from "./help";
-import { openDatasheet, issueDialog, importDatasheets, importStreams } from "./datasheet";
+import { openDatasheet, issueDialog, importDatasheets, importStreams, importList } from "./datasheet";
 import { CommentsPanel } from "./review";
 import { ADD, WIRING_TABS, addWiring } from "./wiring";
 import { TodoPanel, todos } from "./todo";
@@ -89,7 +89,7 @@ const ListView = (p: { kind: string }) => {
         <Show when={p.kind === "streams"}><button class="btn sm" title="Import a simulator's stream results (Excel or CSV), with a preview first" onClick={importStreams}>Import results…</button></Show>
         <Show when={ADD[p.kind]}><button class="btn sm" onClick={() => addWiring(ADD[p.kind])}>Add {p.kind === "jbs" ? "a junction box" : p.kind === "cables" ? "a cable" : "an I/O card"}…</button></Show>
         <Show when={p.kind === "datasheets" && rows().length}><button class="btn sm" title="Issue every datasheet shown (use the filter to choose), each with its next revision" onClick={() => issueDialog(rows().map(r => r.ids[0]))}>Issue {rows().length} shown…</button></Show>
-        <button class="btn sm" onClick={() => C.exportList(p.kind, "xlsx")}>Excel</button><button class="btn sm" onClick={() => C.exportList(p.kind, "csv")}>CSV</button><button class="btn sm" onClick={C.print}>Print</button>
+        <button class="btn sm" onClick={() => C.exportList(p.kind, "xlsx")}>Excel</button><button class="btn sm" title="Read this list back after editing it in Excel (export it first): the changes are shown before anything changes" onClick={() => importList({ kind: p.kind })}>Read back…</button><button class="btn sm" onClick={() => C.exportList(p.kind, "csv")}>CSV</button><button class="btn sm" onClick={C.print}>Print</button>
       </div>
       <div class="lscroll">
         <Show when={list()} fallback={<div class="cempty"><span class="muted">{list.error ? String(list.error) : "…"}</span></div>}>{l => <table class="egrid">

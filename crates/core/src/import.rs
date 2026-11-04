@@ -20,7 +20,7 @@ use serde::Serialize;
 use std::collections::{BTreeSet, HashMap};
 
 /// One value of the plan.
-#[derive(Clone, Debug, Serialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, PartialEq, Default)]
 pub struct Change {
     pub obj: u32,
     pub tag: String,

@@ -824,6 +824,16 @@ const shots = process.env.SHOTS;
   check("problems are marked on the sheet", (await p.$$(".dsvg .issuemarks .imark")).length > 0);
   await p.click(".ribbon label:has-text('Problems on the sheet') input"); await p.waitForTimeout(100);
 
+  // 62. A list edited in Excel and read back: the change previewed, then made.
+  await openEx("Pump transfer");
+  await p.click(".tabs button:text-is('Lists')"); await p.click(".ribbon button:has-text('Equipment')"); await p.waitForTimeout(300);
+  await p.click(".cfilter button:has-text('Excel')"); await p.waitForTimeout(300);
+  { const plan = await inv("import_list", { kind: "equipment", set: "Edited in Excel" });
+    check("an exported list reads back with its change", plan.changes.length === 1 && plan.changes[0].new === "Edited in Excel", JSON.stringify(plan).slice(0, 200)); }
+  await p.click(".cfilter button:has-text('Read back')"); await p.waitForTimeout(400);
+  check("reading back without an edit shows a preview", (await p.$$(".dlg")).length > 0);
+  await p.keyboard.press("Escape");
+
   // 56. A PFD made from the pump transfer's P&ID.
   await openEx("Pump transfer");
   await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title^='A process flow diagram made from the P&IDs']"); await p.waitForTimeout(800);

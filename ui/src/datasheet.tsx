@@ -117,6 +117,13 @@ export const importDatasheets = async () => {
   if (plan) planDialog(plan, { title: "Import datasheets from Excel", help: "import", what: "worksheets matched a datasheet", unmatched: "Tags with no datasheet in this project", unknownHint: "add them as attributes in Options › Classes, then import again", footer: "Values that come from the line, the vessel or the drawing are never imported: change them there. Blank cells change nothing." });
 };
 
+/** Read a list or report back from Excel (exported from Datum Schema, then edited): the changed
+ *  cells, previewed first. `args` lets the test server stand in for the file picker. */
+export const importList = async (args: object = {}) => {
+  const plan = await call<ImportPlan | null>("import_list", args);
+  if (plan) planDialog(plan, { title: "Read a list back from Excel", help: "listin", what: "worksheets were lists from Datum Schema", unmatched: "Rows whose objects are no longer in the project", unknownHint: "columns the list does not have", footer: "Only the columns the list lets you edit are read; rows added or deleted in the workbook are not made or deleted. Numbers are in the column's unit unless one is typed with them." });
+};
+
 /** Import a simulator's stream results (Excel or CSV) into the PFD streams, with the same preview. */
 export const importStreams = async () => {
   const plan = await call<ImportPlan | null>("import_streams");
@@ -134,7 +141,7 @@ const planDialog = (plan: ImportPlan, t: PlanText) => {
     const others = plan.changes.filter(c => c.kind === "conflict" || c.kind === "bad");
     const same = plan.changes.filter(c => c.kind === "same").length;
     const ok = async () => {
-      const ops = sets.filter((_, i) => on()[i]).map(c => ({ SetData: { ids: [c.obj], key: c.key, val: c.val } }));
+      const ops = sets.filter((_, i) => on()[i]).map(c => (c.key === "tag" ? { SetTag: { id: c.obj, tag: String(c.val ?? "") } } : { SetData: { ids: [c.obj], key: c.key, val: c.val } }));
       if (!ops.length) return true;
       const r = await act({ Batch: { ops } });
       if (r) toast(`Imported ${ops.length} ${ops.length === 1 ? "value" : "values"}. Undo takes ${ops.length === 1 ? "it" : "them all"} back.`, true);

@@ -533,6 +533,16 @@ pub fn xlsx(p: &Project, kind: &str) -> Result<Vec<u8>, String> {
             };
         }
     }
+    // The last column names the list and each row's objects, so the workbook can be read back
+    // (lists read back from Excel); it is hidden, not to be edited.
+    let idc = l.cols.len() as u16;
+    ws.write_string_with_format(2, idc, crate::listin::id_header(&l.kind), &head).map_err(e)?;
+    for (r, row) in l.rows.iter().enumerate() {
+        if !row.ids.is_empty() && !l.heads.contains(&r) {
+            ws.write_string(r as u32 + 3, idc, row.ids.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(" ")).map_err(e)?;
+        }
+    }
+    ws.set_column_hidden(idc).map_err(e)?;
     ws.set_freeze_panes(3, 0).map_err(e)?;
     wb.save_to_buffer().map_err(e)
 }
