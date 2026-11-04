@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.7.5 — 2026-11-04
+
+The electrical load list and data completeness.
+
+**Lists › Loads.** Every piece of equipment that draws electrical power (pumps, compressors, fans, motors, agitators, electric heaters, air coolers) with its driver, rated power, absorbed power, voltage, operation and load, and a total row:
+- The rated power is the driver's rating, else the equipment's power; the absorbed power is its power, else 80 % of the rating.
+- The load is the absorbed power for continuous operation, half of it for intermittent and none for standby (set the spare of a pair to Standby); equipment driven by a steam turbine or an engine draws none.
+- Edit the driver, powers, operation and voltage in the list, in the Inspector (new Electrical section: Operation, Voltage) or in Excel (Read back…). It prints and exports like every list.
+
+**Lists › Completeness.** For each class with objects: how much of the data its own section asks for is filled in (for line numbers, their size, fluid, sequence and class), how many objects are complete, and the fields most often empty.
+
+This completes the 0.7 series: insulation and heat tracing, fixes for the checks, every list read back from Excel, loops in one step, the safety analysis, and the load list.
+
 ## 0.7.4 — 2026-11-04
 
 Safety analysis.

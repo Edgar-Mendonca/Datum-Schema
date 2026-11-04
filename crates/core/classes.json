@@ -79,6 +79,32 @@
      "label": "Safety, not needed",
      "type": "text",
      "group": "Safety"
+    },
+    {
+     "key": "operation",
+     "label": "Operation",
+     "type": "choice",
+     "choices": [
+      "Continuous",
+      "Intermittent",
+      "Standby"
+     ],
+     "group": "Electrical"
+    },
+    {
+     "key": "voltage",
+     "label": "Voltage",
+     "type": "choice",
+     "choices": [
+      "230 V",
+      "400 V",
+      "480 V",
+      "690 V",
+      "3.3 kV",
+      "6.6 kV",
+      "11 kV"
+     ],
+     "group": "Electrical"
     }
    ]
   },

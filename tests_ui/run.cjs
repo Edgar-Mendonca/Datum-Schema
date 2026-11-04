@@ -853,6 +853,14 @@ const shots = process.env.SHOTS;
   if (!(await p.$(".ctbl"))) { await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300); }
   check("check 27 notes the missing protections", (await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("V-101 has no PSH (high pressure)")));
 
+  // 65. The electrical load list with its total, and the data completeness.
+  await openEx("Pump transfer");
+  await p.click(".tabs button:text-is('Lists')"); await p.click(".ribbon button:has-text('Loads')"); await p.waitForTimeout(400);
+  { const rows = await p.$$eval(".lists tbody tr", els => els.map(e => e.textContent));
+    check("the load list has the pumps and a total", rows.length === 3 && rows.some(t => t.startsWith("Total (2 consumers)")), rows.join(" | ").slice(0, 300)); }
+  await p.click(".ribbon button:has-text('Completeness')"); await p.waitForTimeout(400);
+  check("data completeness lists the classes", (await p.$$eval(".lists tbody tr.f", els => els.length)) >= 4);
+
   // 56. A PFD made from the pump transfer's P&ID.
   await openEx("Pump transfer");
   await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title^='A process flow diagram made from the P&IDs']"); await p.waitForTimeout(800);

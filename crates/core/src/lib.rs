@@ -25,6 +25,7 @@ pub mod import;
 pub mod instruments;
 pub mod insulation;
 pub mod listin;
+pub mod loads;
 pub mod lists;
 pub mod links;
 pub mod loopplace;

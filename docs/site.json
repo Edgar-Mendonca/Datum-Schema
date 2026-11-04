@@ -104,20 +104,20 @@
     {
       "v": "0.7",
       "title": "Deeper P&IDs",
-      "when": "Now",
+      "when": "Done",
       "items": [
         "0.7.0: insulation and heat tracing on every line: type, thickness, tracing medium, breaks, in the line number and lists, with checks (done)",
         "0.7.1: fixes offered for the checks (insert the missing check valve or reducer, take a neighbour's size, renumber a duplicate) and the problems clouded on the sheet (done)",
         "0.7.2: every list and report edited in Excel and read back, with a preview first (done)",
         "0.7.3: control loops placed in one step (flow, level, pressure, temperature) and valves drawn open or closed (done)",
         "0.7.4: safety analysis: the protections each kind of equipment needs (high and low pressure and level, relief), checked and tabulated (done)",
-        "0.7.5: an electrical load list from the equipment, and how complete every class's data is"
+        "0.7.5: an electrical load list from the equipment, and how complete every class's data is (done)"
       ]
     },
     {
       "v": "0.8",
       "title": "Teams",
-      "when": "Later",
+      "when": "Next",
       "items": [
         "0.8.0: document status (for review, approval, construction), approvals and transmittals",
         "0.8.1: shared projects: several people, items claimed, tag numbers reserved, work merged",

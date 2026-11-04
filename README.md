@@ -61,6 +61,7 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **PFD and P&ID in step**: a change to a stream or its P&ID line shows in To do, with one click to take it across; equipment on one side only is listed.
 - **PFD from the P&IDs**: make a process flow diagram from P&IDs drawn first: the main equipment and a stream for each process path, with its line's conditions.
 - **P&ID from the PFD**: develop a first P&ID from a process flow diagram in one step: the same equipment, every stream a line number with its data and a suggested size, the standard arrangements placed.
+- **Electrical load list and data completeness**: every electrical consumer with its power, voltage, operation and the total; how complete each class's data is.
 - **Safety analysis**: the protections each kind of equipment needs (pressure, level and temperature switches and alarms, flame failure, relief), what on the drawing provides each, and what is missing.
 - **Insulation and heat tracing**: on every line, in the line number if you like, passed to its valves, drawn and listed, with a check.
 - **Loops in one step**: a flow, pressure, temperature or level control loop placed whole on a line or vessel, with one loop number; valve positions (NC, LO, LC) drawn.
