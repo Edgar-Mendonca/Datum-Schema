@@ -101,6 +101,20 @@ pub struct SheetView {
 }
 
 /// The layer a line type is drawn on.
+/// A tracer beside a line's path: each segment offset 1.2 mm to its left, dashed.
+fn tracer(path: &[[f64; 2]]) -> Vec<Prim> {
+    path.windows(2)
+        .filter_map(|w| {
+            let (dx, dy) = (w[1][0] - w[0][0], w[1][1] - w[0][1]);
+            let len = (dx * dx + dy * dy).sqrt();
+            (len > 3.0).then(|| {
+                let (nx, ny) = (-dy / len * 1.2, dx / len * 1.2);
+                Prim::Poly { pts: vec![[w[0][0] + nx, w[0][1] + ny], [w[1][0] + nx, w[1][1] + ny]], closed: false, fill: false, dash: true, w: 0.18 }
+            })
+        })
+        .collect()
+}
+
 pub fn line_layer(k: Kind) -> &'static str {
     match k {
         Kind::Major | Kind::Minor => "process",
@@ -417,6 +431,10 @@ pub fn sheet(p: &Project, s: &Sheet, net: &Net, hyd: &[Option<Hyd>]) -> SheetVie
         .zip(&paths)
         .map(|(l, (_, _, path))| {
             let mut marks = line_marks(l.kind, path, !l.flip);
+            // A traced line: its tracer drawn as a thin dashed line beside it.
+            if l.kind.process() && l.obj != 0 && !crate::insulation::trace(p.data_of(l.obj)).is_empty() {
+                marks.extend(tracer(path));
+            }
             let number = net.numbers.get(&l.id).cloned().unwrap_or_default();
             let run = net.run_of.get(&l.id).copied();
             let badge = run.and_then(|r| hyd.get(r)).and_then(|x| x.as_ref()).map(|x| x.status);

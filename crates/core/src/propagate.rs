@@ -11,7 +11,7 @@ use crate::symbols;
 use serde::Serialize;
 
 /// The keys a component takes from its line: its size, and its pipe class (from the line's "class").
-pub const KEYS: [&str; 2] = ["size", "pipe_class"];
+pub const KEYS: [&str; 3] = ["size", "pipe_class", "insulation"];
 
 /// Whether a data key is the engine's own bookkeeping (never shown, listed or recorded).
 pub fn hidden(k: &str) -> bool {
@@ -20,10 +20,10 @@ pub fn hidden(k: &str) -> bool {
 
 /// The values a component's line gives it: the largest size of the lines it sits in (a vent,
 /// drain or sample point takes no size: it is a small branch) and the first pipe class.
-fn from_line(p: &Project, net: &Net, it: &crate::model::Item) -> [Option<String>; 2] {
+fn from_line(p: &Project, net: &Net, it: &crate::model::Item) -> [Option<String>; 3] {
     let txt = |d: &crate::model::Data, k: &str| d.get(k).map(|v| v.text().trim().to_string()).filter(|s| !s.is_empty());
-    let Some(s) = symbols::get(&it.sym) else { return [None, None] };
-    let (mut size, mut class): (Option<String>, Option<String>) = (None, None);
+    let Some(s) = symbols::get(&it.sym) else { return [None, None, None] };
+    let (mut size, mut class, mut ins): (Option<String>, Option<String>, Option<String>) = (None, None, None);
     for k in (0..s.ports.len()).filter(|k| !s.ports[*k].signal) {
         for &(l, _) in net.on_port(it.id, k as u8) {
             let Some(line) = net.lines.get(&l).filter(|x| x.kind.process() && x.obj != 0) else { continue };
@@ -37,6 +37,9 @@ fn from_line(p: &Project, net: &Net, it: &crate::model::Item) -> [Option<String>
             if class.is_none() {
                 class = txt(d, "class");
             }
+            if ins.is_none() {
+                ins = Some(crate::insulation::tag(d)).filter(|x| !x.is_empty());
+            }
         }
     }
     // Sized on their own: control and relief valves (often below line size), reducers (two
@@ -44,13 +47,13 @@ fn from_line(p: &Project, net: &Net, it: &crate::model::Item) -> [Option<String>
     if s.terminal || s.cat == crate::symbols::Cat::Control || it.base_key().starts_with("reducer") {
         size = None;
     }
-    [size, class]
+    [size, class, ins]
 }
 
 /// Writes each component's line values where the component has not been given its own.
 pub fn run(p: &mut Project) {
     let pfd: std::collections::HashSet<u32> = p.sheets.iter().filter(|s| s.pfd).map(|s| s.id).collect();
-    let mut todo: Vec<(u32, [Option<String>; 2])> = vec![];
+    let mut todo: Vec<(u32, [Option<String>; 3])> = vec![];
     {
         let net = Net::new(p);
         let mut seen = std::collections::HashSet::new();
@@ -116,7 +119,7 @@ pub fn todo(p: &Project) -> Vec<Todo> {
             if !same {
                 let tag = p.tag_of(it).trim().to_string();
                 let who = if tag.is_empty() { symbols::get(&it.sym).map_or("A component".to_string(), |s| format!("A {}", s.name.to_lowercase())) } else { tag };
-                let what = if *k == "size" { "size" } else { "pipe class" };
+                let what = match *k { "size" => "size", "pipe_class" => "pipe class", _ => "insulation" };
                 v.push(Todo { kind: "override", what: format!("{who}'s {what} is {own}, its line's is {line}."), ids: vec![it.id], sheet: it.sheet, key: k.to_string(), value: line, rev: String::new(), obj: it.obj });
             }
         }

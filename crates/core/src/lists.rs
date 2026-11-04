@@ -91,6 +91,7 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
                 ("flow", "Flow", "flow", true), ("v", "Velocity", "velocity", false), ("dp100", "ΔP", "dp100", false), ("dp", "ΔP total", "dp", false), ("status", "Hydraulics", "", false),
                 ("design_p", "Design P", "press", true), ("design_t", "Design T", "temp", true), ("oper_p", "Oper P", "press", true), ("oper_t", "Oper T", "temp", true),
                 ("density", "Density", "density", true), ("viscosity", "Viscosity", "visc", true), ("length", "Length", "length", true),
+                ("ins_type", "Insulation", "", true), ("ins_thk", "Ins. thickness", "thk", true), ("tracing", "Tracing", "", true),
                 ("ins_type", "Insulation", "", true), ("ins_thk", "Ins. thk", "thk", true), ("tracing", "Tracing", "", true), ("test_p", "Test P", "press", true), ("area", "Area", "", false), ("sheet", "Sheet", "", false),
             ];
             let hyd: Vec<Option<Hyd>> = hydraulics::all(p, &net);
@@ -212,7 +213,7 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
             (cols(&specs, us), rows)
         }
         "valves" => {
-            let specs: Vec<Spec> = vec![("tag", "Tag", "", true), ("kind", "Type", "", false), ("size", "Size", "", true), ("pipe_class", "Pipe class", "", false), ("class", "Rating", "", true), ("operator", "Operator", "", true), ("position", "Position", "", true), ("fail", "Fail", "", true), ("on", "Line", "", false), ("service", "Service", "", true), ("area", "Area", "", false), ("sheet", "Sheet", "", false)];
+            let specs: Vec<Spec> = vec![("tag", "Tag", "", true), ("kind", "Type", "", false), ("size", "Size", "", true), ("pipe_class", "Pipe class", "", false), ("class", "Rating", "", true), ("insulation", "Insulation", "", false), ("operator", "Operator", "", true), ("position", "Position", "", true), ("fail", "Fail", "", true), ("on", "Line", "", false), ("service", "Service", "", true), ("area", "Area", "", false), ("sheet", "Sheet", "", false)];
             let rows = items(&|c| c.valve())
                 .into_iter()
                 .map(|(o, it)| {

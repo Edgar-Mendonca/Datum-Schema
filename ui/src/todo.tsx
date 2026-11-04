@@ -19,7 +19,7 @@ export const TodoPanel = () => (
         <span class="tk">{t.kind === "override" ? "Line value" : t.kind === "datasheet" ? "Datasheet" : t.kind === "sheet" ? "Sheet" : t.kind === "pfd" ? "PFD and P&ID" : "Stream and line"}</span>
         <span class="tw">{t.what}</span>
         <Show when={t.kind === "override"}>
-          <button class="btn sm" onClick={() => act({ SetData: { ids: t.ids, key: t.key, val: t.value } })}>Take the line's {t.key === "size" ? "size" : "class"}</button>
+          <button class="btn sm" onClick={() => act({ SetData: { ids: t.ids, key: t.key, val: t.value } })}>Take the line's {t.key === "size" ? "size" : t.key === "insulation" ? "insulation" : "class"}</button>
           <button class="btn sm" onClick={() => C.goTo(t.ids, t.sheet)}>Go to</button>
         </Show>
         <Show when={t.kind === "stream" || t.kind === "differ"}><button class="btn sm" onClick={() => act({ Sync: { line: t.obj, key: t.key, from_stream: true } })}>Take the stream's value</button></Show>

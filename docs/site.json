@@ -18,7 +18,7 @@
     },
     {
       "title": "Check it as you go",
-      "text": "Twenty-five rules run on every change: duplicate tags, open ends, size and class changes, check valves, relief paths, control loops, velocities and pressure drops, heat, mass and component balances on process flow diagrams, instrument ranges, loop wiring pipe specs, instrument wiring and your company's own rules. Click an issue to go to it."
+      "text": "Twenty-six rules run on every change: duplicate tags, open ends, size and class changes, check valves, relief paths, control loops, velocities and pressure drops, heat, mass and component balances on process flow diagrams, instrument ranges, loop wiring pipe specs, instrument wiring and your company's own rules. Click an issue to go to it."
     },
     {
       "title": "Print the drawings and lists",
@@ -51,7 +51,7 @@
     "Process cases (normal, maximum, minimum and your own) that the hydraulics, sizing and datasheets follow",
     "Standard arrangements round equipment placed in one step, editable by your company",
     "Live line list, equipment list, instrument index, valve list and datasheet index, and reports you design yourself",
-    "Twenty-five checks, including balances, instrument ranges, pipe specs, wiring and your own rules, each with a click to the problem",
+    "Twenty-six checks, including balances, instrument ranges, pipe specs, wiring and your own rules, each with a click to the problem",
     "Line hydraulics: velocity, Reynolds number, Colebrook friction factor and pressure drop against limits",
     "SI and US units; DXF, SVG, PDF, Excel, CSV and the DEXPI P&ID exchange format (export and import)",
     "Automatic tags and loop numbers, renumbering, a legend sheet",
@@ -104,9 +104,9 @@
     {
       "v": "0.7",
       "title": "Deeper P&IDs",
-      "when": "Next",
+      "when": "Now",
       "items": [
-        "0.7.0: insulation and heat tracing on every line: type, thickness, tracing medium, breaks, in the line number and lists, with checks",
+        "0.7.0: insulation and heat tracing on every line: type, thickness, tracing medium, breaks, in the line number and lists, with checks (done)",
         "0.7.1: fixes offered for the checks (insert the missing check valve or reducer, take a neighbour's size, renumber a duplicate) and the problems clouded on the sheet",
         "0.7.2: every list and report edited in Excel and read back, with a preview first",
         "0.7.3: control loops placed in one step (flow, level, pressure, temperature) and valves drawn open or closed",

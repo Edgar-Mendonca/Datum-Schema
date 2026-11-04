@@ -601,7 +601,7 @@ const shots = process.env.SHOTS;
   { const n = await p.$$eval(".guide .gmain .gtopic", els => els.length);
     const helpBtns = await p.$$eval(".gtoc a", els => els.map(e => e.textContent));
     check("the guide has every chapter and many topics", n >= 40 && helpBtns.includes("Glossary") && helpBtns.some(t => t.includes("Process flow diagrams")), `${n} topics; ${helpBtns.join(" / ")}`);
-    check("the guide lists every check rule", (await p.$$eval(".guide .grules tr", els => els.length)) === 25);
+    check("the guide lists every check rule", (await p.$$eval(".guide .grules tr", els => els.length)) === 26);
     await p.fill(".gsearch", "revision cloud"); await p.waitForTimeout(200);
     const found = await p.$$eval(".guide .gmain .gtopic h3", els => els.map(e => e.textContent));
     check("search narrows the guide", found.length >= 1 && found.length < 6 && found.some(t => t.includes("Revisions")), JSON.stringify(found));
@@ -801,6 +801,16 @@ const shots = process.env.SHOTS;
     { const [x, y] = await scr(200, 150); await p.mouse.click(x, y); await p.waitForTimeout(400); }
     const r = await project(); check("the registered tag is drawn as the same object", r.items.some(i => i.obj === o.id), await p.textContent(".status")); }
   await p.keyboard.press("Escape");
+
+  // 60. Insulation and tracing: tracing typed in the line list without insulation gets check 26.
+  await openEx("Pump transfer");
+  await p.click(".tabs button:text-is('Lists')"); await p.click(".ribbon button:has-text('Line List')"); await p.waitForTimeout(300);
+  { const heads = await p.$$eval(".lists thead th", els => els.map(e => e.textContent));
+    check("the line list has insulation and tracing columns", heads.some(t => t.startsWith("Insulation")) && heads.some(t => t.startsWith("Tracing")));
+    const col = heads.findIndex(t => t.startsWith("Tracing")) + 1;
+    const inp = p.locator(`.lists tbody tr.f >> nth=0 >> td:nth-child(${col}) input`); await inp.fill("Steam"); await inp.press("Tab"); await p.waitForTimeout(400); }
+  await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
+  check("check 26 finds a traced line not insulated", (await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("traced (Steam) but not insulated")));
 
   // 56. A PFD made from the pump transfer's P&ID.
   await openEx("Pump transfer");

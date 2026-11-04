@@ -162,7 +162,7 @@ const ProjectSettings = () => {
     <Sec t="Checks" about="The rules the Checks panel runs on this project. Switch off any your company does not follow; the choice is saved in the project file.">
       <div class="rules"><For each={RULES}>{([n, t, lvl]) => <label class="chk rule"><input type="checkbox" checked={!s().off.includes(n)} onChange={e => set({ off: e.currentTarget.checked ? s().off.filter(x => x !== n) : [...s().off, n] })} /><span class="mono">{n}</span><span>{t}</span><span class={`lvl ${lvl}`}>{lvl}</span></label>}</For></div>
     </Sec>
-    <Sec t="Line numbers" about="How a line number is built from its data. Tokens: <size>, <fluid>, <seq>, <class>, <unit>.">
+    <Sec t="Line numbers" about="How a line number is built from its data. Tokens: <size>, <fluid>, <seq>, <class>, <unit>, <ins> (insulation code and thickness, such as H50), <trace> (tracing code, such as ST).">
       <Opt l="Format" hint={`Default <size>-<fluid>-<seq>-<class>, e.g. 3"-P-1001-A1A.`}><Text value={s().line_format} set={v => set({ line_format: v })} /></Opt>
       <Opt l="Pipe roughness" hint="For the friction factor; 0.045 mm is commercial steel."><span class="inline"><input type="number" step="0.005" style={{ width: "90px" }} value={num(s().roughness * 1000, 4)} onChange={e => { const x = parseNum(e.currentTarget.value); if (x !== null) set({ roughness: x / 1000 }); }} /> mm</span></Opt>
       <Opt l="Snap grid" hint="Symbols, bends and ends snap to it."><span class="inline"><input type="number" step="0.5" style={{ width: "90px" }} value={s().grid} onChange={e => set({ grid: Math.max(0.5, +e.currentTarget.value || 2.5) })} /> mm</span></Opt>

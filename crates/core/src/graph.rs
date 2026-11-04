@@ -58,7 +58,11 @@ pub fn obj_number(p: &Project, obj: u32) -> String {
     }
     let size = if size.is_empty() { "?".into() } else { format!("{}\"", size.trim_end_matches('"')) };
     let or = |s: String| if s.is_empty() { "?".to_string() } else { s };
-    p.settings.line_format.replace("<size>", &size).replace("<fluid>", &or(fluid)).replace("<seq>", &or(seq)).replace("<class>", &or(class)).replace("<unit>", &p.title.unit)
+    let (ins, trace) = (crate::insulation::tag(data), crate::insulation::trace(data));
+    let out = p.settings.line_format.replace("<size>", &size).replace("<fluid>", &or(fluid)).replace("<seq>", &or(seq)).replace("<class>", &or(class)).replace("<unit>", &p.title.unit).replace("<ins>", &ins).replace("<trace>", &trace);
+    // An empty insulation or tracing token leaves no dangling separator.
+    let out = out.trim_end_matches(['-', ' ', '/']).to_string();
+    out.replace("--", "-")
 }
 
 /// The piping network of a project.

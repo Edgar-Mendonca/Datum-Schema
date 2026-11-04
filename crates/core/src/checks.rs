@@ -21,7 +21,7 @@ pub struct Issue {
 }
 
 /// The number of rules.
-pub const RULES: u8 = 25;
+pub const RULES: u8 = 26;
 
 const ERROR: &str = "error";
 const WARNING: &str = "warning";
@@ -347,6 +347,11 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
     // 25. Instrument wiring: junction boxes, cables and I/O channels that add up.
     if on(25) {
         v.extend(crate::wiring::checks(p));
+    }
+
+    // 26. Insulation and heat tracing that do not add up.
+    if on(26) {
+        v.extend(crate::insulation::checks(p, net));
     }
 
     // 16. A P&ID line that names a PFD stream carries what the stream says.

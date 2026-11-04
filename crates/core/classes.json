@@ -689,6 +689,11 @@
      "key": "pipe_class",
      "label": "Pipe class (from its line)",
      "type": "text"
+    },
+    {
+     "key": "insulation",
+     "label": "Insulation",
+     "type": "text"
     }
    ]
   },
@@ -1500,8 +1505,16 @@
     {
      "key": "ins_type",
      "label": "Insulation type",
-     "type": "text",
-     "dexpi": "InsulationTypeSpecification"
+     "type": "choice",
+     "dexpi": "InsulationTypeSpecification",
+     "choices": [
+      "H (heat conservation)",
+      "C (cold)",
+      "PP (personnel protection)",
+      "A (acoustic)",
+      "F (fire protection)",
+      "N (none)"
+     ]
     },
     {
      "key": "ins_thk",
@@ -1513,8 +1526,26 @@
     {
      "key": "tracing",
      "label": "Tracing",
-     "type": "text",
-     "dexpi": "HeatTracingTypeSpecification"
+     "type": "choice",
+     "dexpi": "HeatTracingTypeSpecification",
+     "choices": [
+      "Steam",
+      "Electric",
+      "Hot water",
+      "Hot oil",
+      "Jacketed"
+     ]
+    },
+    {
+     "key": "ins_mat",
+     "label": "Insulation material",
+     "type": "text"
+    },
+    {
+     "key": "trace_t",
+     "label": "Tracing holds at",
+     "q": "temp",
+     "type": "number"
     },
     {
      "key": "number",

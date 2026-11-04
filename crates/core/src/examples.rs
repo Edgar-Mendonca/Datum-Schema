@@ -423,6 +423,7 @@ fn exchanger() -> Project {
     let steam = x.chain(E::P(bl3, "out"), &[s1, tv, s2], E::P(e, "shell in"), Kind::Utility);
     let st = |len: f64| -> Vec<(&'static str, Val)> { vec![("phase", t("Steam")), ("mflow", n(1100.0 / 3600.0)), ("density", n(5.1)), ("viscosity", n(1.5e-5)), ("length", n(len)), ("fittings", n(30.0)), ("design_p", bar(12.0)), ("design_t", degc(200.0)), ("oper_p", bar(9.0)), ("oper_t", degc(180.0))] };
     x.pipe(&steam, "3", "LS", "3003", "B1A", "Steam to E-301", &st(35.0));
+    x.data(&steam, &[("ins_type", t("H (heat conservation)")), ("ins_thk", n(0.05)), ("ins_mat", t("Mineral wool, aluminium jacket"))]);
     let psv = x.it("psv", 185.0, 50.0, 0, "PSV-301");
     x.data(&[psv], &[("set_p", bar(12.0))]);
     let vent = x.it("vent", 205.0, 38.0, 0, "");

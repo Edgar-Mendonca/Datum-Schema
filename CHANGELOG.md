@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.7.0 — 2026-11-04
+
+Insulation and heat tracing.
+
+**On every line.** A line's insulation is now a type from a list (H heat conservation, C cold, PP personnel protection, A acoustic, F fire protection, N none) with its thickness and material, and its heat tracing a kind (steam, electric, hot water, hot oil, jacketed) with the temperature it holds.
+- **In the line number**: two new tokens for Options › Line numbers, `<ins>` (the code and thickness, such as H50) and `<trace>` (ST, ET…), for example `<size>-<fluid>-<seq>-<class>-<ins>`.
+- **Passed along**: the valves and fittings in a line take its insulation, as they take its size and pipe class; a valve given its own is listed in To do.
+- **Drawn**: a traced line has its tracer beside it, a thin dashed line.
+- **Listed**: the line list has Insulation, Insulation thickness and Tracing columns (edit them there); the valve list has Insulation.
+
+**Check 26.** A traced line that is not insulated (a warning); an insulation with no thickness; a line at 60 °C or more, or 0 °C or less, that does not say its insulation (N for none).
+
+The exchanger example's steam line is insulated (H, 50 mm). The Excel reader is updated to its latest version (a fix in a part Datum Schema does not use).
+
 ## 0.6.5 — 2026-11-02
 
 The tag register.
