@@ -247,12 +247,19 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.6.3 | PFD ↔ P&ID kept in step both ways (changes on either side in To do; take the other side's value) | ✅ |
 | 0.6.4 | Process cases (Normal, Maximum, Minimum, Design) on streams, lines, datasheets; sizing and hydraulics on a chosen case | ✅ |
 | 0.6.5 | Tag register (create and import tags before drawing; registered-not-drawn and drawn-not-registered lists) | ✅ |
-| — | Brainstorm again after 0.6.5: review the gaps, re-plan 0.7 | 🔜 |
-| 0.7.0 | Document status (IFR, IFA, IFC) and transmittals | ⬜ |
-| 0.7.1 | Shared projects (several people, claims, merge) | ⬜ |
-| 0.7.2 | Old DXF P&IDs converted into live sheets (blocks → symbols, polylines → lines, texts → tags), with a review | ⬜ |
-| 0.7.3 | Scripting; more CAD drawing formats | ⬜ |
-| 0.8.0 | Plant package export for 3D modelling (open, documented format; the family's 3D app reads it) | ⬜ |
+| — | Brainstorm after 0.6.5: done (gap review in chat, 2026-11-04); 0.7 re-planned as deeper P&IDs, teams moved to 0.8, 3D to 0.9 | ✅ |
+| 0.7.0 | Insulation and heat tracing (line attributes, breaks, propagation, line-number token, list columns, checks) | ⬜ |
+| 0.7.1 | Fixes offered for checks (one click) and problems clouded on the sheet | ⬜ |
+| 0.7.2 | Excel round trip for every list and report (export, edit, read back with a preview) | ⬜ |
+| 0.7.3 | Control loops placed in one step; valves drawn open or closed | ⬜ |
+| 0.7.4 | Safety analysis (required protections per equipment type; check and table) | ⬜ |
+| 0.7.5 | Electrical load list; data completeness per class | ⬜ |
+| 0.8.0 | Document status (IFR, IFA, IFC), approvals, transmittals | ⬜ |
+| 0.8.1 | Shared projects (several people, claims, tag reservation, merge) | ⬜ |
+| 0.8.2 | Old DXF P&IDs converted into live sheets (blocks → symbols, polylines → lines, texts → tags), with a review | ⬜ |
+| 0.8.3 | Scripting; more CAD drawing formats | ⬜ |
+| 0.9.0 | Plant package export for 3D modelling (open, documented format) | ⬜ |
+| 0.9.1 | P&ID compared with a 3D model's or isometric's data | ⬜ |
 | 1.0 | DEXPI tested with other programs' files; hydraulics validation note; tested at 100+ sheets; signed installer | ⬜ |
 | 0.5 | Company templates; project reports (valve and fitting take-off); review comments | ⬜ |
 | 1.0 | User guide, a validation note for the hydraulics, signed installer | ⬜ |
@@ -444,3 +451,6 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 - Disk filled twice during the series: `target/debug/incremental` and `target/debug/examples` removed (rebuilt as needed).
 - Tests: engine 140; UI 59.
 - Next: the brainstorm (review the gaps in chat), then 0.7 (teams: document status and transmittals, shared projects, old DXF P&IDs made live, scripting).
+
+### 2026-11-04: Session 1, gap review and roadmap 0.7–0.9
+- The user asked where Datum Schema stands against the industry's P&ID tools and for a plan to close the gaps. Public material was reviewed (held in chat only, as always). For one engineer, Datum Schema already covers most of the drawing-and-data core and is ahead on process work (PFD both ways, cases, balances, sizing). The gaps chosen to close next, in Datum Schema's own way: insulation and heat tracing, fixes offered for checks, Excel round trip for every list, control loops in one step and valve positions drawn, a safety analysis of required protections, an electrical load list and data completeness. Then teams (0.8) and the 3D export and comparison (0.9). Roadmap updated in MEMORY and site.json.

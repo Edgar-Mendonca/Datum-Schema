@@ -103,21 +103,35 @@
     },
     {
       "v": "0.7",
-      "title": "Teams",
+      "title": "Deeper P&IDs",
       "when": "Next",
       "items": [
-        "0.7.0: document status (for review, approval, construction) and transmittals",
-        "0.7.1: shared projects: several people, items claimed, work merged",
-        "0.7.2: old DXF P&IDs turned into live drawings",
-        "0.7.3: scripting; more CAD drawing formats"
+        "0.7.0: insulation and heat tracing on every line: type, thickness, tracing medium, breaks, in the line number and lists, with checks",
+        "0.7.1: fixes offered for the checks (insert the missing check valve or reducer, take a neighbour's size, renumber a duplicate) and the problems clouded on the sheet",
+        "0.7.2: every list and report edited in Excel and read back, with a preview first",
+        "0.7.3: control loops placed in one step (flow, level, pressure, temperature) and valves drawn open or closed",
+        "0.7.4: safety analysis: the protections each kind of equipment needs (high and low pressure and level, relief), checked and tabulated",
+        "0.7.5: an electrical load list from the equipment, and how complete every class's data is"
       ]
     },
     {
       "v": "0.8",
+      "title": "Teams",
+      "when": "Later",
+      "items": [
+        "0.8.0: document status (for review, approval, construction), approvals and transmittals",
+        "0.8.1: shared projects: several people, items claimed, tag numbers reserved, work merged",
+        "0.8.2: old DXF P&IDs turned into live drawings: blocks mapped to symbols, lines traced and connected",
+        "0.8.3: scripting; more CAD drawing formats"
+      ]
+    },
+    {
+      "v": "0.9",
       "title": "Ready for 3D",
       "when": "Later",
       "items": [
-        "0.8.0: a plant package for 3D modelling: equipment with its datasheet values and nozzles, each line with its ends, size, spec and components in order, in an open, documented format"
+        "0.9.0: a plant package for 3D modelling: equipment with its datasheet values and nozzles, each line with its ends, size, spec, insulation and components in order, in an open, documented format",
+        "0.9.1: a P&ID compared with a 3D model's or isometric's data: missing items, sizes and order along each line"
       ]
     },
     {
