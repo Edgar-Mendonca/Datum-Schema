@@ -17,6 +17,7 @@ pub mod dxf;
 pub mod dxfin;
 pub mod examples;
 pub mod file;
+pub mod fixes;
 pub mod frame;
 pub mod graph;
 pub mod hydraulics;

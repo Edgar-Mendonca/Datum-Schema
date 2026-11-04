@@ -281,7 +281,7 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
             let meas = in_loop(&|ol, oc| oc.instrument() && tags::is_measurement(ol));
             let fin = insts.iter().any(|(o, ol, on_, _)| on_ == n && matches!(o.base_key().as_str(), "cv_pneu" | "cv_motor" | "cv_solenoid" | "regulator") && tags::is_final(ol));
             if !meas || !fin {
-                let what = match (meas, fin) { (false, false) => "a measurement or a final element", (false, true) => "a measurement (a transmitter or element)", _ => "a final element (a control valve)" };
+                let what = match (meas, fin) { (false, false) => "measurement or final element", (false, true) => "measurement (a transmitter or element)", _ => "final element (a control valve)" };
                 v.push(on_item(11, WARNING, it, format!("Controller {} has no {what} in loop {n}.", p.tag_of(it))));
             }
         }

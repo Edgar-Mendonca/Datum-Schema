@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.7.1 — 2026-11-04
+
+Fixes for the checks, and problems marked on the sheet.
+
+**Fix ▾ on every problem.** In the Checks panel each row has a Fix button. It lists the fixes for that problem; the one you choose is made as one edit that Undo takes back:
+- **Duplicate tags**: the others take their next free tags.
+- **An open end**: closed at a battery limit.
+- **A size or pipe class change** with no reducer or spec break: both sides take one side's value.
+- **Flow arrows against the rest of the line**: that piece turned round.
+- **A pump with no check valve**: one put in its discharge, the right way round.
+- **A vessel with no relief path**: its standard arrangement placed (relief valve, vent, gauge, level loop, drain), or its relief said to be elsewhere.
+- **A control valve with no isolation**: its station placed (block valves, drain, bypass).
+- **No fail position**: FC, FO or FL.
+- **A pipe class that is not a spec**: one of the project's specs chosen, or a new class added from the starter.
+- **A line too fast**: one common size up.
+- **Insulation and tracing (check 26)**: insulate it, give the thickness, or say N (none).
+
+A fix is worked out again when you choose it, so it never acts on a problem that has already changed. Problems without a fix go to the problem.
+
+**View › Problems on the sheet** marks every error (red) and warning (amber) where it is, with its rule number; hover a mark for the message.
+
+Also: the control-loop check's message reads properly ("has no final element").
+
 ## 0.7.0 — 2026-11-04
 
 Insulation and heat tracing.

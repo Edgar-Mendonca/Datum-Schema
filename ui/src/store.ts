@@ -81,6 +81,8 @@ export const [tab, setTab] = createSignal("home");
 export const [sel, setSel] = createSignal<number[]>([]);
 export type Tool = { k: "select" } | { k: "line"; kind: Kind } | { k: "place"; sym: string; tag?: string; obj?: number } | { k: "note"; kind: NoteKind } | { k: "comment" } | { k: "assembly"; name: string };
 export const [tool, setTool] = createSignal<Tool>({ k: "select" });
+/** Problems (errors and warnings) marked on the sheet, with their rule number. */
+export const [showIssues, setShowIssues] = createSignal(false);
 /** The line number highlighted on every sheet (Select › By line number). */
 export const [hiNumber, setHiNumber] = createSignal("");
 /** The bottom panel's tab, and whether it is open. */

@@ -5,7 +5,7 @@
 // draws it and sends edits.
 import { For, Show, JSX, createSignal, createMemo, createEffect, onMount, onCleanup, batch, on } from "solid-js";
 import { Pt, Prim, ItemView, LineView, End, Kind, Item, Line, Note } from "./api";
-import { derived, sel, setSel, act, proj, sheet, opts, tool, setTool, symOf, lib, openMenu, MenuItem, hiNumber, hidden, setSheetId, lineOf, onFit, bgs, loadBg, setPanel, setPanelOpen } from "./store";
+import { derived, sel, setSel, act, proj, sheet, opts, tool, setTool, symOf, lib, openMenu, MenuItem, hiNumber, hidden, setSheetId, lineOf, onFit, bgs, loadBg, setPanel, setPanelOpen, showIssues } from "./store";
 import { C } from "./cmds";
 import { focus, setFocus, newComment } from "./review";
 import { helpCard } from "./help";
@@ -422,6 +422,7 @@ export const Canvas = () => {
               <Show when={showPorts() || hover() === it.id || selSet().has(it.id)}><For each={it.ports}>{q => <circle cx={q.p[0]} cy={q.p[1]} r={0.9} class="port" classList={{ used: q.used, sig: q.signal }} />}</For></Show>
             </g>;
           }}</For></g>
+          <Show when={showIssues()}><g class="issuemarks"><For each={(derived()?.issues ?? []).filter(i => i.sheet === sv().id && i.level !== "note")}>{i => <g class={`imark ${i.level}`} transform={`translate(${i.at[0]} ${i.at[1]})`}><title>{i.msg}</title><circle r="5" /><text y="1.2">{i.rule}</text></g>}</For></g></Show>
           <Show when={sv().clouds.length}><g class="revclouds"><For each={sv().clouds}>{p => <PrimEl p={p} />}</For></g></Show>
           <g class="pins"><For each={sv().pins}>{pn => <g class="pin" classList={{ resolved: pn.resolved, on: focus() === pn.uid }} transform={`translate(${pn.x} ${pn.y})`} onMouseDown={e => { e.stopPropagation(); setFocus(pn.uid); setPanel("comments"); setPanelOpen(true); }}>
             <title>{proj()?.comments.find(c => c.uid === pn.uid)?.text ?? ""}</title>

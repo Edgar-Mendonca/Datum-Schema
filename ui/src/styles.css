@@ -1208,3 +1208,12 @@ tr.behind td { background: var(--err-bg); }
 /* Tag register (0.6.5) */
 .regtext { width: 100%; font-family: var(--mono); font-size: 12px; }
 .regtbl tr.bad td { color: var(--err, #b00020); }
+
+/* Fixes and problem marks (0.7.1) */
+.ctbl td.fixc { text-align: right; padding: 1px 4px; }
+.issuemarks .imark circle { fill: none; stroke-width: 0.5; stroke-dasharray: 1.2 0.8; }
+.issuemarks .imark.error circle { stroke: #c62828; }
+.issuemarks .imark.warning circle { stroke: #e08a00; }
+.issuemarks .imark text { font-size: 3px; text-anchor: middle; font-weight: 700; }
+.issuemarks .imark.error text { fill: #c62828; }
+.issuemarks .imark.warning text { fill: #e08a00; }

@@ -812,6 +812,18 @@ const shots = process.env.SHOTS;
   await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
   check("check 26 finds a traced line not insulated", (await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("traced (Steam) but not insulated")));
 
+  // 61. A fix chosen from the Checks panel puts a problem right; problems marked on the sheet.
+  await openEx("Find the faults");
+  await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
+  if (!(await p.$(".ctbl"))) { await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300); }
+  { const row = p.locator(".ctbl tbody tr", { hasText: "has no check valve on its discharge" }).first();
+    await row.locator("button.fixb").click(); await p.waitForTimeout(300);
+    await p.click(".menu button:has-text('Put a check valve in the discharge')"); await p.waitForTimeout(500);
+    check("a fix puts the problem right", !(await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("has no check valve on its discharge"))); }
+  await p.click(".tabs button:text-is('View')"); await p.click(".ribbon label:has-text('Problems on the sheet') input"); await p.waitForTimeout(300);
+  check("problems are marked on the sheet", (await p.$$(".dsvg .issuemarks .imark")).length > 0);
+  await p.click(".ribbon label:has-text('Problems on the sheet') input"); await p.waitForTimeout(100);
+
   // 56. A PFD made from the pump transfer's P&ID.
   await openEx("Pump transfer");
   await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title^='A process flow diagram made from the P&IDs']"); await p.waitForTimeout(800);

@@ -3,7 +3,7 @@
 // drawing, edit a cell and the drawing follows.
 import { For, Show, createSignal, createMemo, createResource, createEffect, on } from "solid-js";
 import { List, Col, Row, parseNum, Issue } from "./api";
-import { panel, setPanel, panelOpen, setPanelOpen, derived, call, out, act, proj, toast } from "./store";
+import { panel, setPanel, panelOpen, setPanelOpen, derived, call, out, act, proj, toast, openMenu } from "./store";
 import { fromU } from "./units";
 import { C } from "./cmds";
 import { Help } from "./help";
@@ -17,6 +17,13 @@ import { addTags, placeRegistered } from "./register";
 const TABS: [string, string][] = [...[["checks", "Checks"]] as [string, string][], ["todo", "To do"], ["comments", "Comments"], ["lines", "Line list"], ["streams", "Streams"], ["equipment", "Equipment"], ["instruments", "Instruments"], ["io", "I/O summary"], ["valves", "Valves"], ["takeoff", "Take-off"], ...WIRING_TABS, ["datasheets", "Datasheets"], ["register", "Tag register"]];
 
 const level = (l: string) => (l === "error" ? 0 : l === "warning" ? 1 : 2);
+
+/** The fixes the engine offers for a problem, as a menu; the one chosen is one undoable edit. */
+const offerFixes = async (e: MouseEvent, i: Issue) => {
+  const labels = (await call<string[]>("fixes", { rule: i.rule, ids: i.ids })) ?? [];
+  const items = labels.length ? labels.map((l, k) => ({ label: l, run: () => act({ Fix: { rule: i.rule, ids: i.ids, choice: k } }).then(o => o && toast(`Fixed: ${l}. Undo takes it back.`, true)) })) : [{ label: "No fix to offer: go to it and put it right by hand", run: () => C.goTo(i.ids, i.sheet) }];
+  openMenu(e, items);
+};
 
 const Checks = () => {
   const [show, setShow] = createSignal<Record<string, boolean>>({ error: true, warning: true, note: true });
@@ -32,8 +39,8 @@ const Checks = () => {
       </div>
       <div class="cscroll">
         <Show when={issues().length} fallback={<div class="cempty"><b>✓ Nothing to report</b><span class="muted">{(derived()?.issues.length ?? 0) ? "Nothing at the levels shown." : "Every check passes: no duplicate tags, no open ends, sizes and classes change where they should, pumps have check valves, vessels have relief."}</span></div>}>
-          <table class="tbl ctbl"><thead><tr><th style={{ width: "30px" }} /><th style={{ width: "42px" }}>Rule</th><th>What</th><th style={{ width: "90px" }}>Sheet</th></tr></thead><tbody>
-            <For each={issues()}>{i => <tr class={`f ${i.level}`} onClick={() => go(i)}><td class="lvl">{i.level === "error" ? "✗" : i.level === "warning" ? "!" : "i"}</td><td class="mono">{i.rule}</td><td>{i.msg}</td><td class="mono">{sheetNo(i.sheet)}</td></tr>}</For>
+          <table class="tbl ctbl"><thead><tr><th style={{ width: "30px" }} /><th style={{ width: "42px" }}>Rule</th><th>What</th><th style={{ width: "90px" }}>Sheet</th><th style={{ width: "60px" }} /></tr></thead><tbody>
+            <For each={issues()}>{i => <tr class={`f ${i.level}`} onClick={() => go(i)}><td class="lvl">{i.level === "error" ? "✗" : i.level === "warning" ? "!" : "i"}</td><td class="mono">{i.rule}</td><td>{i.msg}</td><td class="mono">{sheetNo(i.sheet)}</td><td class="fixc"><button class="btn sm fixb" title="The fixes for this problem" onClick={e => { e.stopPropagation(); offerFixes(e, i); }}>Fix ▾</button></td></tr>}</For>
           </tbody></table>
         </Show>
       </div>
