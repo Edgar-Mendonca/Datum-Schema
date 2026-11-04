@@ -518,6 +518,8 @@ pub struct Settings {
     pub tag_format: crate::tags::TagFormat,
     /// The company's own rules (check 24).
     pub rules: Vec<crate::rules::UserRule>,
+    /// The protections each class of equipment needs (the safety analysis, check 27).
+    pub safety: Vec<crate::safety::Need>,
     /// The process cases, and the one whose values are on the drawing.
     pub cases: Vec<String>,
     pub case: String,
@@ -565,7 +567,7 @@ pub const MAX_LOGO: usize = 280_000;
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), specs: vec![], tag_format: crate::tags::TagFormat::default(), rules: vec![], reports: vec![], arrangements: crate::arrange::starter(), cases: crate::cases::default_cases(), case: "Normal".into(), assemblies: vec![], labels: vec![], components: vec![] }
+        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), specs: vec![], tag_format: crate::tags::TagFormat::default(), rules: vec![], reports: vec![], arrangements: crate::arrange::starter(), safety: crate::safety::starter(), cases: crate::cases::default_cases(), case: "Normal".into(), assemblies: vec![], labels: vec![], components: vec![] }
     }
 }
 
@@ -927,6 +929,7 @@ impl Project {
         crate::reports::normalize(&mut s.reports);
         crate::arrange::normalize(&mut s.arrangements);
         crate::cases::normalize(&mut s.cases, &mut s.case);
+        crate::safety::normalize(&mut s.safety);
         s.assemblies.truncate(200);
         let mut seen_a = HashSet::new();
         s.assemblies.retain(|a| !a.name.trim().is_empty() && seen_a.insert(a.name.trim().to_lowercase()));

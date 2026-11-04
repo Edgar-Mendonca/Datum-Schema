@@ -73,6 +73,12 @@
      "label": "Model",
      "type": "text",
      "group": "Specification"
+    },
+    {
+     "key": "safety_na",
+     "label": "Safety, not needed",
+     "type": "text",
+     "group": "Safety"
     }
    ]
   },

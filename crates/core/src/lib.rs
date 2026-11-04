@@ -39,6 +39,7 @@ pub mod revs;
 pub mod register;
 pub mod reports;
 pub mod rules;
+pub mod safety;
 pub mod sizing;
 pub mod specs;
 pub mod streamsin;

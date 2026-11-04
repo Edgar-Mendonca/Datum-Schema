@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.7.4 — 2026-11-04
+
+Safety analysis.
+
+**What each piece of equipment needs.** A table by class says which protections each kind of equipment needs: a pressure vessel high and low pressure, high and low level, and relief; a tank high and low level; a pump low and high pressure; a compressor high and low pressure, high temperature and relief; an exchanger high pressure and relief; a fired heater high temperature, flame failure and relief. A class without a row takes its parent's (a separator takes the vessel's). Options › **Safety analysis** edits the table.
+
+**What provides it.** A protection counts when, on the equipment or a line on its nozzles, there is:
+- an instrument whose letters name it: a switch (PSH), an alarm (PAH), a trip (PSHH) or an interlock (PZHH);
+- an instrument of that variable whose setpoints name it (LIC-101 with "LAH 80 %, LAL 20 %");
+- for relief, a safety valve, rupture disc or breather, or a relief path said in the equipment's data.
+
+**Lists › Safety** tabulates every requirement of every piece of equipment with what provides it: Provided, Missing or Not needed. It prints and exports like every list. **Check 27** notes the equipment with something missing. Where a protection is not needed, say so in the equipment's *Safety, not needed* field (such as PSL, TSH).
+
+A safety analysis of the drawing, not a hazard study: the engineer decides what is needed.
+
 ## 0.7.3 — 2026-11-04
 
 Control loops in one step, and valve positions drawn.

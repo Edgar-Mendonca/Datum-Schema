@@ -284,6 +284,9 @@ fn faults() -> Project {
     let ok = |d: &mut Doc, op: Op| {
         d.apply(op).unwrap_or_else(|e| panic!("{e}"));
     };
+    // The safety analysis is not one of the planted faults: its protections are said not needed here.
+    let equipment: Vec<u32> = d.p.objects.iter().filter(|o| crate::classes::chain(&o.class).iter().any(|c| c.name == "Equipment")).map(|o| o.id).collect();
+    ok(&mut d, Op::SetData { ids: equipment, key: "safety_na".into(), val: Some(Val::Text("PSH, PSL, LSH, LSL, TSH, TSL, BSL, PSV".into())) });
     ok(&mut d, Op::SetTag { id: f.pb, tag: "P-101A".into() });
     ok(&mut d, Op::Delete { ids: vec![f.ckb], keep: false });
     ok(&mut d, Op::Delete { ids: vec![f.psv, f.ri, f.ro, f.vent], keep: false });

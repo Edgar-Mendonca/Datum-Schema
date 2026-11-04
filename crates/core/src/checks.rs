@@ -21,7 +21,7 @@ pub struct Issue {
 }
 
 /// The number of rules.
-pub const RULES: u8 = 26;
+pub const RULES: u8 = 27;
 
 const ERROR: &str = "error";
 const WARNING: &str = "warning";
@@ -352,6 +352,11 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
     // 26. Insulation and heat tracing that do not add up.
     if on(26) {
         v.extend(crate::insulation::checks(p, net));
+    }
+
+    // 27. The safety analysis: protections the equipment's class needs.
+    if on(27) {
+        v.extend(crate::safety::checks(p, net));
     }
 
     // 16. A P&ID line that names a PFD stream carries what the stream says.

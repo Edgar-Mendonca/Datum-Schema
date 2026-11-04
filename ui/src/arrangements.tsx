@@ -96,3 +96,24 @@ export const placeLoop = async (v: string, control: boolean) => {
   const o = await act({ PlaceLoop: { target: ids[0], var: v, control } });
   if (o) toast(`Placed ${(o.p.items.length - before)} symbols with one loop number. Undo takes them back.`, true);
 };
+
+const CODES: [string, string][] = [["PSH", "high pressure"], ["PSL", "low pressure"], ["LSH", "high level"], ["LSL", "low level"], ["TSH", "high temperature"], ["TSL", "low temperature"], ["BSL", "flame failure"], ["PSV", "relief"]];
+
+/** Options › Safety analysis: what each class of equipment needs. */
+export const SafetySec = () => {
+  const rows = () => proj()!.settings.safety;
+  const save = (v: { class: string; codes: string[] }[]) => act({ SetSettings: { settings: { ...proj()!.settings, safety: v } } });
+  const classes = createMemo(() => (lib()?.classes ?? []).map(c => [c.name, c.label] as [string, string]));
+  return (
+    <div class="safesec">
+      <table class="tbl small"><thead><tr><th>Class</th><For each={CODES}>{([c, w]) => <th title={w}>{c}</th>}</For><th /></tr></thead><tbody>
+        <For each={rows()}>{(r, i) => <tr>
+          <td><select value={r.class} onChange={e => save(rows().map((x, j) => (j === i() ? { ...x, class: e.currentTarget.value } : x)))}><For each={classes()}>{([k, l]) => <option value={k} selected={k === r.class}>{l}</option>}</For></select></td>
+          <For each={CODES}>{([c]) => <td class="c"><input type="checkbox" checked={r.codes.includes(c)} onChange={e => save(rows().map((x, j) => (j === i() ? { ...x, codes: e.currentTarget.checked ? [...x.codes, c] : x.codes.filter(y => y !== c) } : x)))} /></td>}</For>
+          <td><button class="x" title="Remove" onClick={() => save(rows().filter((_, j) => j !== i()))}>×</button></td>
+        </tr>}</For>
+      </tbody></table>
+      <p><button class="btn sm" onClick={() => save([...rows(), { class: "Separator", codes: ["PSH", "LSH", "LSL", "PSV"] }])}>Add a class</button></p>
+    </div>
+  );
+};

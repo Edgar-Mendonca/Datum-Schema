@@ -39,7 +39,7 @@ pub struct List {
     pub heads: Vec<usize>,
 }
 
-pub const KINDS: [(&str, &str); 13] = [("register", "Tag register"), ("lines", "Line list"), ("streams", "Stream list"), ("io", "I/O summary"), ("takeoff", "Valve and fitting take-off"), ("comments", "Review comments"), ("jbs", "Junction boxes"), ("cables", "Cable schedule"), ("ioalloc", "I/O allocation"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list"), ("datasheets", "Datasheet index")];
+pub const KINDS: [(&str, &str); 14] = [("register", "Tag register"), ("safety", "Safety analysis"), ("lines", "Line list"), ("streams", "Stream list"), ("io", "I/O summary"), ("takeoff", "Valve and fitting take-off"), ("comments", "Review comments"), ("jbs", "Junction boxes"), ("cables", "Cable schedule"), ("ioalloc", "I/O allocation"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list"), ("datasheets", "Datasheet index")];
 
 /// (key, label, quantity, editable)
 type Spec = (&'static str, &'static str, &'static str, bool);
@@ -60,6 +60,11 @@ fn val(data: &crate::model::Data, k: &str, q: &str, us: bool) -> String {
         Some(v) if !q.is_empty() => v.num().map(|x| crate::fmt_sig(units::to_display(x, q, us), 4)).unwrap_or_else(|| v.text()),
         Some(v) => v.text(),
     }
+}
+
+fn cap(s: &str) -> String {
+    let mut c = s.chars();
+    c.next().map_or(String::new(), |f| f.to_uppercase().chain(c).collect())
 }
 
 fn sheet_no(p: &Project, id: u32) -> String {
@@ -392,6 +397,24 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
             let mut cs = cols(&specs, us);
             cs[0].num = true;
             (cs, rows)
+        }
+        "safety" => {
+            let specs: Vec<Spec> = vec![("tag", "Equipment", "", false), ("code", "Protection", "", false), ("what", "Against", "", false), ("by", "Provided by", "", false), ("status", "Status", "", false), ("sheet", "Sheet", "", false)];
+            let rows = crate::safety::analysis(p, &net)
+                .into_iter()
+                .map(|r| {
+                    let cells = specs.iter().map(|&(k, _, _, _)| match k {
+                        "tag" => r.tag.clone(),
+                        "code" => r.code.clone(),
+                        "what" => r.what.clone(),
+                        "by" => r.by.join(", "),
+                        "status" => match r.status { "ok" => "Provided".to_string(), "missing" => "Missing".to_string(), s => cap(s) },
+                        _ => sheet_no(p, r.sheet),
+                    }).collect();
+                    Row { ids: vec![r.item], sheet: r.sheet, cells, status: Some(match r.status { "ok" => 0, "missing" => 2, _ => 1 }) }
+                })
+                .collect();
+            (cols(&specs, us), rows)
         }
         "register" => {
             let specs: Vec<Spec> = vec![("tag", "Tag", "", true), ("class", "Class", "", false), ("service", "Service", "", true), ("status", "Status", "", false), ("sheet", "Sheets", "", false), ("area", "Area", "", false)];

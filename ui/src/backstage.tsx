@@ -7,7 +7,7 @@ import { GuidePage } from "./guide";
 import { SpecsSec } from "./specs";
 import { AssembliesSec, LabelsSec } from "./assemblies";
 import { RulesSec, TagsSec } from "./rules";
-import { ArrangementsSec, CasesSec } from "./arrangements";
+import { ArrangementsSec, CasesSec, SafetySec } from "./arrangements";
 import { For, Show, createSignal, createResource, onMount, JSX } from "solid-js";
 import { PrintPage } from "./print";
 import { RoadmapPage } from "./roadmap";
@@ -170,6 +170,9 @@ const ProjectSettings = () => {
     <ClassesSec />
     <Sec t="Pipe specs" about="The pipe classes lines are built to: their sizes and limits, and the valves and fittings each allows, by size, with a description and commodity code. Checks 21–23 hold the drawing to them; the take-off names each component from its class.">
       <SpecsSec />
+    </Sec>
+    <Sec t="Safety analysis" about="The protections each class of equipment needs (check 27 and Lists › Safety). A class without a row takes its parent's.">
+      <SafetySec />
     </Sec>
     <Sec t="Process cases" about="The cases the process values are kept for (normal, maximum, minimum, start-up…). The values on the drawing are the active case's: choose it on Check › Process Case. Hydraulics, sizing, lists and datasheets follow it; a simulator import fills the active case.">
       <CasesSec />

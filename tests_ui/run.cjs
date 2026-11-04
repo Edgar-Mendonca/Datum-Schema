@@ -601,7 +601,7 @@ const shots = process.env.SHOTS;
   { const n = await p.$$eval(".guide .gmain .gtopic", els => els.length);
     const helpBtns = await p.$$eval(".gtoc a", els => els.map(e => e.textContent));
     check("the guide has every chapter and many topics", n >= 40 && helpBtns.includes("Glossary") && helpBtns.some(t => t.includes("Process flow diagrams")), `${n} topics; ${helpBtns.join(" / ")}`);
-    check("the guide lists every check rule", (await p.$$eval(".guide .grules tr", els => els.length)) === 26);
+    check("the guide lists every check rule", (await p.$$eval(".guide .grules tr", els => els.length)) === 27);
     await p.fill(".gsearch", "revision cloud"); await p.waitForTimeout(200);
     const found = await p.$$eval(".guide .gmain .gtopic h3", els => els.map(e => e.textContent));
     check("search narrows the guide", found.length >= 1 && found.length < 6 && found.some(t => t.includes("Revisions")), JSON.stringify(found));
@@ -843,6 +843,15 @@ const shots = process.env.SHOTS;
     await p.click(".tabs button:text-is('Instruments')"); await p.waitForTimeout(200);
     check("the ribbon offers loops in one step", (await p.$$eval(".ribbon button", els => els.map(e => e.title))).some(t => t.startsWith("Select a process line: flow")), (await p.$$eval(".ribbon button", els => els.map(e => e.title + "=" + e.textContent))).filter(t => /oop/.test(t)).join(" | "));
     check("a flow loop is placed whole", ["FE-", "FT-", "FIC-", "FV-"].every(t => tags.some(x => x.startsWith(t))), tags.join(", ")); }
+
+  // 64. The safety analysis: V-101 has its level alarms and relief, but no pressure switch.
+  await openEx("Pump transfer");
+  await p.click(".tabs button:text-is('Lists')"); await p.click(".ribbon button:has-text('Safety')"); await p.waitForTimeout(400);
+  { const rows = await p.$$eval(".lists tbody tr.f", els => els.map(e => e.textContent));
+    check("the safety analysis lists what V-101 has and lacks", rows.some(t => t.startsWith("V-101") && t.includes("PSV") && t.includes("PSV-101") && t.includes("Provided")) && rows.some(t => t.startsWith("V-101") && t.includes("PSH") && t.includes("Missing")), rows.slice(0, 6).join(" | ")); }
+  await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
+  if (!(await p.$(".ctbl"))) { await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300); }
+  check("check 27 notes the missing protections", (await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("V-101 has no PSH (high pressure)")));
 
   // 56. A PFD made from the pump transfer's P&ID.
   await openEx("Pump transfer");
