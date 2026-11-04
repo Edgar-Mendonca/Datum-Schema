@@ -834,6 +834,16 @@ const shots = process.env.SHOTS;
   check("reading back without an edit shows a preview", (await p.$$(".dlg")).length > 0);
   await p.keyboard.press("Escape");
 
+  // 63. A flow control loop placed on a selected line in one step.
+  await openEx("Pump transfer");
+  { const q = await project(); const l = q.lines.find(x => q.objects.find(o => o.id === x.obj)?.data.seq === "1007");
+    const n0 = q.items.length;
+    await inv("apply", { op: { PlaceLoop: { target: l.id, var: "F", control: true } } });
+    const r = await project(); const tags = r.items.slice(n0).map(i => tagOf(r, i));
+    await p.click(".tabs button:text-is('Instruments')"); await p.waitForTimeout(200);
+    check("the ribbon offers loops in one step", (await p.$$eval(".ribbon button", els => els.map(e => e.title))).some(t => t.startsWith("Select a process line: flow")), (await p.$$eval(".ribbon button", els => els.map(e => e.title + "=" + e.textContent))).filter(t => /oop/.test(t)).join(" | "));
+    check("a flow loop is placed whole", ["FE-", "FT-", "FIC-", "FV-"].every(t => tags.some(x => x.startsWith(t))), tags.join(", ")); }
+
   // 56. A PFD made from the pump transfer's P&ID.
   await openEx("Pump transfer");
   await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title^='A process flow diagram made from the P&IDs']"); await p.waitForTimeout(800);

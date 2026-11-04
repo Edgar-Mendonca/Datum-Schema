@@ -62,6 +62,7 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **PFD from the P&IDs**: make a process flow diagram from P&IDs drawn first: the main equipment and a stream for each process path, with its line's conditions.
 - **P&ID from the PFD**: develop a first P&ID from a process flow diagram in one step: the same equipment, every stream a line number with its data and a suggested size, the standard arrangements placed.
 - **Insulation and heat tracing**: on every line, in the line number if you like, passed to its valves, drawn and listed, with a check.
+- **Loops in one step**: a flow, pressure, temperature or level control loop placed whole on a line or vessel, with one loop number; valve positions (NC, LO, LC) drawn.
 - **Standard arrangements**: place the valves, instruments, vents and drains your company puts round a pump, vessel, exchanger, control valve or compressor in one step, in the right lines with their sizes and classes; edit them in Options.
 - **Reports you design**: start from any list or from every object of a class, choose columns, filters, sort and grouping (with counts and totals), save it in the project, export and print it.
 - **Lists read back from Excel**: edit any list or report in Excel and read it back, with a preview of every changed value first.

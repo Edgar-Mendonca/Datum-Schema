@@ -27,6 +27,7 @@ pub mod insulation;
 pub mod listin;
 pub mod lists;
 pub mod links;
+pub mod loopplace;
 pub mod loops;
 pub mod makepfd;
 pub mod model;

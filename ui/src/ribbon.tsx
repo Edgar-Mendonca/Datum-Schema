@@ -11,7 +11,7 @@ import { PRESETS } from "./palette";
 import { Cat, Kind } from "./api";
 import { importDatasheets } from "./datasheet";
 import { designReport } from "./reports";
-import { applyArrangement, arrangementNames, developPid, makePfd } from "./arrangements";
+import { applyArrangement, arrangementNames, developPid, makePfd, placeLoop } from "./arrangements";
 import { openLoops } from "./loops";
 import { openCause } from "./cause";
 
@@ -139,6 +139,7 @@ export const Ribbon = () => {
         <G l="Functions" h="isa"><B big i="inst" l="Common" dd={presetMenu} /><S><Sym k="inst_field" i="inst" l="PT" tag="PT" /><Sym k="inst_field" i="inst" l="FT" tag="FT" /><Sym k="inst_field" i="inst" l="LT" tag="LT" /></S><S><Sym k="inst_dcs" i="inst" l="LIC" tag="LIC" /><Sym k="inst_dcs" i="inst" l="FIC" tag="FIC" /><Sym k="inst_dcs" i="inst" l="PIC" tag="PIC" /></S></G>
         <G l="Primary Elements" h="cat:primary"><B big i="meter" l="Elements" dd={symMenu(["primary"])} /><S><Sym k="orifice" i="meter" /><Sym k="magmeter" i="meter" /><Sym k="thermowell" i="meter" /></S></G>
         <G l="Final Elements" h="cat:control"><Sym big k="cv_pneu" i="cv" l="Control Valve" /><S><Sym k="cv_motor" i="cv" l="Motor Valve" /><Sym k="cv_solenoid" i="cv" l="Solenoid Valve" /><Sym k="psv" i="cv" l="Safety Valve" /></S></G>
+        <G l="Loops" h="placeloop"><For each={[["F", "Flow"], ["P", "Pressure"], ["T", "Temperature"], ["L", "Level"]] as [string, string][]}>{([v, l]) => <B big i="sig" l={`${l} Loop`} title={v === "L" ? "Select a vessel: a level transmitter, its controller and a level valve in the outlet line" : `Select a process line: ${l.toLowerCase()} ${v === "F" ? "element, " : ""}transmitter, controller and control valve, one loop number`} run={() => placeLoop(v, true)} dd={e => openMenu(e, [{ label: "Control loop (with its valve)", run: () => placeLoop(v, true) }, { label: "Measurement and controller only", run: () => placeLoop(v, false) }])} />}</For></G>
         <G l="Signals" h="signals"><S><LineB k="electric" i="sig" /><LineB k="pneumatic" i="sig" /></S><S><LineB k="data" i="sig" /><LineB k="capillary" i="sig" /></S></G>
       </Show>
       <Show when={tab() === "check"}>

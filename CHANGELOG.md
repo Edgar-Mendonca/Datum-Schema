@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.7.3 — 2026-11-04
+
+Control loops in one step, and valve positions drawn.
+
+**Instruments › Loops.** Select a process line and choose **Flow Loop**, **Pressure Loop** or **Temperature Loop**, or select a vessel and choose **Level Loop**. The whole loop is placed with one loop number:
+- **Flow**: an orifice plate in the line and its flow transmitter beside it.
+- **Pressure, temperature**: the transmitter tapped onto the line.
+- **Level**: the transmitter on a free nozzle of the vessel.
+- The **controller** in the control system, above the transmitter, joined by a signal line.
+- The **control valve** in the line (for level, in the vessel's outlet line), with its signal from the controller.
+
+The arrow on each button places the measurement and controller only. The transmitter reads its line's conditions for its datasheet, and the loop checks find the loop complete. Then give the valve its fail position and its station (the fixes in the Checks panel offer both).
+
+**Valve positions drawn.** A manual valve's Normal position now shows on the sheet, in print and in DXF: normally closed (NC) and locked closed (LC) valves are drawn filled, and locked valves are labelled LO or LC beneath.
+
 ## 0.7.2 — 2026-11-04
 
 Every list read back from Excel.

@@ -87,3 +87,12 @@ export const CasesSec = () => {
     </div>
   );
 };
+
+/** Places a loop (F, P, T or L) on the selected line or vessel (engine: loopplace.rs). */
+export const placeLoop = async (v: string, control: boolean) => {
+  const ids = sel();
+  if (ids.length !== 1) return toast(v === "L" ? "Select one vessel first." : "Select one process line first.");
+  const before = proj()?.items.length ?? 0;
+  const o = await act({ PlaceLoop: { target: ids[0], var: v, control } });
+  if (o) toast(`Placed ${(o.p.items.length - before)} symbols with one loop number. Undo takes them back.`, true);
+};

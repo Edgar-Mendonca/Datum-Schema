@@ -344,6 +344,21 @@ pub fn sheet(p: &Project, s: &Sheet, net: &Net, hyd: &[Option<Hyd>]) -> SheetVie
             let bb = bbox(it);
             let mut texts: Vec<Prim> = sym.map(|s| pl.prims(&symbols::parse(s.draw).into_iter().filter(|x| matches!(x, Prim::Text { .. })).collect::<Vec<_>>())).unwrap_or_default();
             let cat = sym.map_or(Cat::Mark, |s| s.cat);
+            // A manual valve's position: normally or locked closed drawn filled; locked ones labelled.
+            if cat == Cat::Valve && it.obj != 0 {
+                let pos = p.data_of(it.obj).get("position").map(|v| v.text().trim().to_uppercase()).unwrap_or_default();
+                if pos == "NC" || pos == "LC" {
+                    if let Some(s) = sym {
+                        texts.extend(pl.prims(&symbols::parse(s.draw).into_iter().filter_map(|x| match x {
+                            Prim::Poly { pts, closed: true, w, .. } => Some(Prim::Poly { pts, closed: true, fill: true, dash: false, w }),
+                            _ => None,
+                        }).collect::<Vec<_>>()));
+                    }
+                }
+                if pos == "LO" || pos == "LC" {
+                    texts.push(text([it.x, bb[3] + 2.2], 1.8, pos.clone(), 1, true));
+                }
+            }
             let sc = it.scale;
             match cat {
                 Cat::Instrument => {

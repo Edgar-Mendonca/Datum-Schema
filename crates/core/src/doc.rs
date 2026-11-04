@@ -122,6 +122,8 @@ pub enum Op {
     Register { rows: Vec<crate::register::Row> },
     /// Apply fix `choice` of the ones offered for a problem (its rule and the ids it is about).
     Fix { rule: u8, ids: Vec<u32>, choice: usize },
+    /// Place a loop (var F, P, T or L) on a line piece or a vessel; `control` adds the control valve.
+    PlaceLoop { target: u32, var: String, #[serde(default)] control: bool },
     DeleteSheet { id: u32 },
     MoveSheet { id: u32, to: usize },
     SetTitle { title: Title },
@@ -644,6 +646,9 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
         Op::PlaceAssembly { name, sheet, x, y } => {
             let a = p.settings.assemblies.iter().find(|a| a.name.eq_ignore_ascii_case(name.trim())).cloned().ok_or_else(|| format!("There is no assembly called {name}."))?;
             paste(p, sheet, a.items, a.lines, a.notes, x, y, created, &a.objs)?;
+        }
+        Op::PlaceLoop { target, var, control } => {
+            crate::loopplace::place(p, target, &var, control, created)?;
         }
         Op::Fix { rule, ids, choice } => {
             crate::fixes::apply(p, rule, &ids, choice, created)?;
