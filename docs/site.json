@@ -116,22 +116,45 @@
     },
     {
       "v": "0.8",
-      "title": "Teams",
+      "title": "Drawing breadth",
       "when": "Next",
       "items": [
-        "0.8.0: document status (for review, approval, construction), approvals and transmittals",
-        "0.8.1: shared projects: several people, items claimed, tag numbers reserved, work merged",
-        "0.8.2: old DXF P&IDs turned into live drawings: blocks mapped to symbols, lines traced and connected",
-        "0.8.3: scripting; more CAD drawing formats"
+        "0.8.0: nozzles you add and place on equipment, with their size, rating and service",
+        "0.8.1: a symbol swapped for another keeping its tag, data and connections; copies of a spare take the next suffix (P-101A, P-101B)",
+        "0.8.2: a second built-in symbol set, chosen per project",
+        "0.8.3: a sheet manager: sheets listed with their status, batch printing, and deleted sheets recovered"
       ]
     },
     {
       "v": "0.9",
+      "title": "Beyond the drawing",
+      "when": "Later",
+      "items": [
+        "0.9.0: an isolation planner: the valves to close and the drains and vents to open to isolate a piece of equipment, shown and listed",
+        "0.9.1: the plant as one interactive web page anyone can open: click a tag to see its data",
+        "0.9.2: HAZOP support: nodes marked on the P&ID and worksheets linked to its lines and equipment, safeguards filled from the drawing",
+        "0.9.3: pressure test packs: test boundaries on the P&ID and the test pack list",
+        "0.9.4: a handover package: tags, classes, data and documents in a structured export"
+      ]
+    },
+    {
+      "v": "0.10",
+      "title": "Teams",
+      "when": "Later",
+      "items": [
+        "0.10.0: document status (for review, approval, construction), approvals and transmittals",
+        "0.10.1: shared projects: several people, items claimed, tag numbers reserved, work merged",
+        "0.10.2: old DXF P&IDs turned into live drawings: blocks mapped to symbols, lines traced and connected",
+        "0.10.3: scripting; more CAD drawing formats"
+      ]
+    },
+    {
+      "v": "0.11",
       "title": "Ready for 3D",
       "when": "Later",
       "items": [
-        "0.9.0: a plant package for 3D modelling: equipment with its datasheet values and nozzles, each line with its ends, size, spec, insulation and components in order, in an open, documented format",
-        "0.9.1: a P&ID compared with a 3D model's or isometric's data: missing items, sizes and order along each line"
+        "0.11.0: a plant package for 3D modelling: equipment with its datasheet values and nozzles, each line with its ends, size, spec, insulation and components in order, in an open, documented format",
+        "0.11.1: a P&ID compared with a 3D model's or isometric's data: missing items, sizes and order along each line"
       ]
     },
     {

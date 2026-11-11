@@ -266,13 +266,22 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.7.3 | Control loops placed in one step; valves drawn open or closed | ✅ |
 | 0.7.4 | Safety analysis (required protections per equipment type; check and table) | ✅ |
 | 0.7.5 | Electrical load list; data completeness per class | ✅ |
-| — | Review the gaps again after 0.7.5, then 0.8 (teams) | 🔜 |
-| 0.8.0 | Document status (IFR, IFA, IFC), approvals, transmittals | ⬜ |
-| 0.8.1 | Shared projects (several people, claims, tag reservation, merge) | ⬜ |
-| 0.8.2 | Old DXF P&IDs converted into live sheets (blocks → symbols, polylines → lines, texts → tags), with a review | ⬜ |
-| 0.8.3 | Scripting; more CAD drawing formats | ⬜ |
-| 0.9.0 | Plant package export for 3D modelling (open, documented format) | ⬜ |
-| 0.9.1 | P&ID compared with a 3D model's or isometric's data | ⬜ |
+| — | Gap review after 0.7.5: done (in chat, 2026-11-11); the user chose drawing breadth first (0.8), then ten new ideas beyond the drawing (0.9), then teams (0.10) and 3D (0.11) | ✅ |
+| 0.8.0 | Nozzles added and placed on equipment (size, rating, service) | ⬜ |
+| 0.8.1 | Symbol swap keeping tag, data and connections; copy with the next suffix | ⬜ |
+| 0.8.2 | A second built-in symbol set, per project | ⬜ |
+| 0.8.3 | Sheet manager (status, batch print, recover deleted sheets) | ⬜ |
+| 0.9.0 | Isolation planner (valves to close, drains and vents to open; shown and listed) | ⬜ |
+| 0.9.1 | The plant as one interactive web page | ⬜ |
+| 0.9.2 | HAZOP support (nodes on the P&ID, worksheets, safeguards from the drawing) | ⬜ |
+| 0.9.3 | Pressure test packs (boundaries, list) | ⬜ |
+| 0.9.4 | Handover package (tags, classes, data, documents) | ⬜ |
+| 0.10.0 | Document status (IFR, IFA, IFC), approvals, transmittals | ⬜ |
+| 0.10.1 | Shared projects (several people, claims, tag reservation, merge) | ⬜ |
+| 0.10.2 | Old DXF P&IDs converted into live sheets, with a review | ⬜ |
+| 0.10.3 | Scripting; more CAD drawing formats | ⬜ |
+| 0.11.0 | Plant package export for 3D modelling (open, documented format) | ⬜ |
+| 0.11.1 | P&ID compared with a 3D model's or isometric's data | ⬜ |
 | 1.0 | DEXPI tested with other programs' files; hydraulics validation note; tested at 100+ sheets; signed installer | ⬜ |
 | 0.5 | Company templates; project reports (valve and fitting take-off); review comments | ⬜ |
 | 1.0 | User guide, a validation note for the hydraulics, signed installer | ⬜ |
@@ -497,3 +506,6 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 - The 0.7 series went out as planned after the gap review: 0.7.0 insulation and tracing, 0.7.1 fixes and problem marks, 0.7.2 lists read back from Excel, 0.7.3 loops in one step and valve positions, 0.7.4 safety analysis, 0.7.5 load list and completeness. calamine updated for an advisory on the way.
 - Tests: engine 151; UI 65.
 - Next: review the gaps again (in chat), then 0.8 (teams).
+
+### 2026-11-11: Session 1, gap review after 0.7 and roadmap 0.8–0.11
+- A second review against the industry's P&ID tools (in chat). For one engineer or a small team the gap is mostly closed, and Datum Schema leads on process work; what remains is team and enterprise work (workflow, multi-user, legacy conversion, 3D, scale) and breadth (symbol sets, nozzles). The user chose to close the drawing gaps first and took all ten ideas: nozzles, symbol swap, copy with suffix, a second symbol set, a sheet manager (0.8); an isolation planner, an interactive web page, HAZOP support, test packs, a handover package (0.9); then teams (0.10) and 3D (0.11).
