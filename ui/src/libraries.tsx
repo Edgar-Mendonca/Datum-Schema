@@ -3,7 +3,7 @@
 // file. A project's drawing standard draws Datum Schema's symbols with a library's (engine:
 // symlib.rs; the window only edits and shows).
 import { For, Show, createMemo, createSignal } from "solid-js";
-import { CPort, CustomSym, LibView, SymLibrary } from "./api";
+import { CPort, CustomSym, LibView, SymLibrary, invoke } from "./api";
 import { call, act, proj, lib, libs, refreshLibs, openDialog, toast } from "./store";
 import { Dialog, Pick } from "./ui";
 import { Help } from "./help";
@@ -147,9 +147,12 @@ export const LibrariesPage = () => {
 export const StandardSec = () => {
   const st = () => proj()!.settings.standard;
   const [pick, setPick] = createSignal(st().library);
+  const [sets, setSets] = createSignal<LibView[]>([]);
+  invoke<LibView[]>("builtin_sets").then(setSets, () => {});
+  const all = () => [...sets(), ...libs()];
   const count = () => Object.keys(st().map).length;
   const apply = () => {
-    const v = libs().find(x => x.library.name === pick());
+    const v = all().find(x => x.library.name === pick());
     const map: Record<string, string> = {};
     for (const s of v?.library.symbols ?? []) if (s.like && !map[s.like]) map[s.like] = s.key;
     act({ SetSettings: { settings: { ...proj()!.settings, standard: { library: v ? v.library.name : "", map } } } }).then(o => o && toast(v ? `Drawn to ${v.library.name}: ${Object.keys(map).length} of our symbols use its drawings.` : "Drawn with Datum Schema's symbols again.", true));
@@ -158,7 +161,7 @@ export const StandardSec = () => {
     <div class="stdsec">
       <div class="form">
         <label>Draw with</label>
-        <div class="inline"><Pick value={pick()} set={setPick} options={[["", "Datum Schema's symbols"], ...libs().map(v => [v.library.name, v.library.name] as [string, string]), ...(st().library && !libs().some(v => v.library.name === st().library) ? [[st().library, `${st().library} (in this project)`] as [string, string]] : [])]} />
+        <div class="inline"><Pick value={pick()} set={setPick} options={[["", "Datum Schema's symbols"], ...sets().map(v => [v.library.name, `${v.library.name} (built in)`] as [string, string]), ...libs().map(v => [v.library.name, v.library.name] as [string, string]), ...(st().library && !all().some(v => v.library.name === st().library) ? [[st().library, `${st().library} (in this project)`] as [string, string]] : [])]} />
           <button class="btn sm pri" onClick={apply} disabled={pick() === st().library && !!st().library}>Apply</button></div>
       </div>
       <p class="muted small">{st().library ? `Now drawn to ${st().library}: ${count()} of our symbols use its drawings. Objects, tags, data, checks and lists stay the same; only the drawing changes.` : "Now drawn with Datum Schema's own symbols."}</p>

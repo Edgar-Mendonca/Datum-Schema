@@ -159,6 +159,7 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             s.doc.dirty = true;
             out(s, vec![], w)
         }
+        "builtin_sets" => serde_json::to_value(datum_core::symlib::builtin_views()).unwrap(),
         "libraries" => serde_json::to_value(datum_core::symlib::load_dir(&lib_dir())).unwrap(),
         "legend_scan" => {
             // The test cannot pick a file: it scans the pump example's legend sheet as DXF.

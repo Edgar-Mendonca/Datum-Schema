@@ -447,6 +447,17 @@ const shots = process.env.SHOTS;
   await p.selectOption(".stdsec select", ""); await p.click(".stdsec button:has-text('Apply')"); await p.waitForTimeout(400);
   check("back to our own symbols exactly", (await project()).items.map(i => i.sym).join(",") === syms0);
   await p.click(".bs .back"); await p.waitForTimeout(400);
+  // 68. The built-in second set of drawings: lines and checks unchanged, and back again.
+  await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Options')"); await p.waitForTimeout(200);
+  await p.selectOption(".stdsec select", "Datum Schema, second set"); await p.click(".stdsec button:has-text('Apply')"); await p.waitForTimeout(400);
+  { const q = await project();
+    check("the second set draws the valves and pumps", q.items.some(i => i.sym === "x.datum-alt.gate") && q.items.some(i => i.sym === "x.datum-alt.pump_cent") && tied(q) === tied0); }
+  await p.click(".bs .back"); await p.waitForTimeout(400);
+  check("drawn with the second set it still checks clean", (await p.textContent(".status")).includes("0 errors"));
+  await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Options')"); await p.waitForTimeout(200);
+  await p.selectOption(".stdsec select", ""); await p.click(".stdsec button:has-text('Apply')"); await p.waitForTimeout(400);
+  check("and back to the first set exactly", (await project()).items.map(i => i.sym).join(",") === syms0);
+  await p.click(".bs .back"); await p.waitForTimeout(400);
 
   // 33. An old drawing behind a sheet: faint, scaled to fit, moved in the Inspector, printed on request.
   await openEx("Compressor package");

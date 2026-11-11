@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.2 — 2026-11-11
+
+A second set of drawings.
+
+**Datum Schema, second set.** A second set of symbol drawings is built in, our own like the first: gate and globe valves with a handwheel, ball and butterfly valves drawn as circles, a boxed check valve, a plug valve with its plug, a control valve with a box actuator, shell-and-tube exchangers with a zigzag tube and a centrifugal pump with an arrow. Choose it for a project in **File › Options › Drawing standard**; every other symbol keeps its first-set drawing.
+
+Each drawing in the second set has the same size and the same connection points as the first, so a project drawn with it keeps every line where it was, and its checks, lists and data are the same. Switching back gives the first set exactly. A project keeps a copy of the drawings it uses, and DXF export writes them as blocks of their own.
+
 ## 0.8.1 — 2026-11-11
 
 Symbols swapped, and spares.

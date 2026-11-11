@@ -117,17 +117,80 @@ pub fn get(key: &str) -> Option<&'static Sym> {
     if !key.starts_with("x.") {
         return None;
     }
+    builtin_once();
     REG.read().unwrap_or_else(|e| e.into_inner()).iter().find(|e| e.def.key == key).map(|e| e.sym)
 }
 
 /// A registered library symbol's definition.
 pub fn definition(key: &str) -> Option<CustomSym> {
+    builtin_once();
     REG.read().unwrap_or_else(|e| e.into_inner()).iter().find(|e| e.def.key == key).map(|e| e.def.clone())
 }
 
 /// Every registered library symbol.
 pub fn registered() -> Vec<&'static Sym> {
+    builtin_once();
     REG.read().unwrap_or_else(|e| e.into_inner()).iter().map(|e| e.sym).collect()
+}
+
+// ---------------------------------------------------------------- built-in sets
+
+/// The name of the second built-in set of drawings.
+pub const ALT_SET: &str = "Datum Schema, second set";
+const ALT_PREFIX: &str = "x.datum-alt.";
+
+/// The second set's drawings, our own: (symbol it stands for, drawing). The same size and the same
+/// connection points as the first set's, so a project drawn with either keeps every line.
+const ALT: &[(&str, &str)] = &[
+    ("gate", "p -4 -2.5 0 0 -4 2.5; p 4 -2.5 0 0 4 2.5; l 0 0 0 -2.5; l -1.4 -2.5 1.4 -2.5"),
+    ("globe", "p -4 -2.5 0 0 -4 2.5; p 4 -2.5 0 0 4 2.5; c 0 0 1.4; l 0 -1.4 0 -2.5; l -1.4 -2.5 1.4 -2.5"),
+    ("ball", "l -4 0 -2.4 0; l 2.4 0 4 0; c 0 0 2.4; l -1.2 -1.2 -1.2 1.2; l 1.2 -1.2 1.2 1.2"),
+    ("butterfly", "l -4 0 -2.6 0; l 2.6 0 4 0; c 0 0 2.6; l -1.8 1.8 1.8 -1.8; fc 0 0 0.6"),
+    ("plug", "p -4 -2.5 0 0 -4 2.5; p 4 -2.5 0 0 4 2.5; r -1 -1.8 2 3.6"),
+    ("check", "l -4 0 -2.5 0; l 2.5 0 4 0; p -2.5 -2.5 2.5 -2.5 2.5 2.5 -2.5 2.5; l -2.5 2.5 2.5 -2.5; l 0.8 -1.2 2.5 0 0.8 1.2"),
+    ("cv_pneu", "p -4 -2.5 0 0 -4 2.5; p 4 -2.5 0 0 4 2.5; l 0 0 0 -5; r -3 -8 6 3"),
+    ("pump_cent", "c 0 0 6; l 0 -6 8 -6; p -2.5 -3.5 4 0 -2.5 3.5"),
+    ("hx_fixed", "r -16 -6 32 12; l -20 0 -16 0 -12 -4 -6 4 0 -4 6 4 12 -4 16 0 20 0"),
+    ("hx_u", "l -16 -6 12 -6; l -16 6 12 6; e 12 0 4 6 -90 90; l -16 -6 -16 6; l -20 -3 9 -3; a 9 0 3 -90 90; l 9 3 -20 3"),
+];
+
+/// The built-in sets of drawings beyond Datum Schema's own, as libraries (not files): chosen per
+/// project under the drawing standard like any library.
+pub fn builtin_sets() -> Vec<Library> {
+    let symbols = ALT
+        .iter()
+        .filter_map(|(base, draw)| {
+            let s = symbols::builtin(base)?;
+            Some(CustomSym {
+                key: format!("{ALT_PREFIX}{base}"),
+                name: s.name.to_string(),
+                library: ALT_SET.into(),
+                block: format!("ALT_{}", base.to_uppercase()),
+                like: base.to_string(),
+                class: crate::classes::for_symbol(base).map_or_else(|| base.to_string(), |c| c.name.clone()),
+                cat: s.cat,
+                w: s.w,
+                h: s.h,
+                draw: draw.to_string(),
+                ports: s.ports.iter().map(|q| CPort { x: q.x, y: q.y, dir: q.dir, name: q.name.to_string(), signal: q.signal }).collect(),
+                prefix: s.prefix.to_string(),
+                inline: s.inline,
+                terminal: s.terminal,
+            })
+        })
+        .collect();
+    vec![Library { format: LIB_FORMAT, name: ALT_SET.into(), source: String::new(), symbols }]
+}
+
+/// Registers the built-in sets once, so their symbols are always drawable.
+fn builtin_once() {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| builtin_sets().iter().flat_map(|l| l.symbols.iter()).for_each(register));
+}
+
+/// The built-in sets, each with its drawings as SVG.
+pub fn builtin_views() -> Vec<LibView> {
+    builtin_sets().into_iter().map(|l| view("", l, vec![])).collect()
 }
 
 // ---------------------------------------------------------------- drawing language
@@ -673,6 +736,33 @@ mod tests {
         assert_eq!(r.items, original.items);
         assert_eq!(r.lines, original.lines);
         assert!(r.custom_syms.is_empty());
+    }
+
+    #[test]
+    fn the_second_set_redraws_every_example_and_restores_exactly() {
+        let set = &builtin_sets()[0];
+        assert!(set.symbols.len() >= 10);
+        for c in &set.symbols {
+            let s = symbols::builtin(&c.like).unwrap();
+            assert_eq!((c.w, c.h, c.ports.len()), (s.w, s.h, s.ports.len()), "{}", c.key);
+            assert!(get(&c.key).is_some() && !symbols::parse(&c.draw).is_empty(), "{}", c.key);
+            assert_ne!(c.draw, s.draw, "{} is drawn differently", c.key);
+        }
+        assert_eq!(builtin_views()[0].svgs.len(), set.symbols.len());
+        let issues = |p: &crate::model::Project| { let net = crate::graph::Net::new(p); let h = crate::hydraulics::all(p, &net); let mut v: Vec<(u8, String)> = crate::checks::run(p, &net, &h).into_iter().map(|i| (i.rule, i.msg)).collect(); v.sort(); v };
+        for ex in ["pump", "compressor", "exchanger", "pfd", "faults"] {
+            let original = crate::examples::get(ex).unwrap();
+            let mut q = original.clone();
+            q.settings.standard = crate::model::Standard { library: set.name.clone(), map: set.symbols.iter().map(|c| (c.like.clone(), c.key.clone())).collect() };
+            assert!(q.normalize().is_empty(), "{ex}");
+            assert!(q.items.iter().any(|i| i.sym.starts_with(ALT_PREFIX)), "{ex} has symbols of the second set");
+            assert_eq!(q.lines, original.lines, "{ex}: every line on the same nozzle");
+            assert_eq!(issues(&q), issues(&original), "{ex}: the checks see the same plant");
+            crate::dxf::read_back(&crate::dxf::write(&q, &q.sheets[0])).unwrap();
+            q.settings.standard = Default::default();
+            assert!(q.normalize().is_empty());
+            assert_eq!((q.items, q.lines), (original.items, original.lines), "{ex} back exactly");
+        }
     }
 
     #[test]
