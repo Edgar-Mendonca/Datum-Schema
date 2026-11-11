@@ -201,6 +201,7 @@ export const Canvas = () => {
     if (t.k === "note") { C.addNote(t.kind, [snap(p[0]), snap(p[1])]); setTool({ k: "select" }); return; }
     // Opened once the click is over, so its mouse-up does not land on the dialog's backdrop.
     if (t.k === "assembly") { const s = sheet(); if (s) act({ PlaceAssembly: { name: t.name, sheet: s.id, x: snap(p[0]), y: snap(p[1]) } }).then(o => o && setSel(o.created)); if (!e.shiftKey) setTool({ k: "select" }); return; }
+    if (t.k === "nozzle") { act({ AddNozzle: { item: t.item, x: p[0], y: p[1], name: "" } }); if (!e.shiftKey) setTool({ k: "select" }); return; }
     if (t.k === "comment") { addEventListener("mouseup", () => setTimeout(() => newComment(p)), { once: true }); setTool({ k: "select" }); return; }
     // Ports start lines (the line tool also starts them anywhere).
     const po = portAt(p);
@@ -471,6 +472,7 @@ const toolText = () => {
   if (t.k === "place") return `Placing ${symOf(t.sym)?.name.toLowerCase() ?? "a symbol"}${t.tag ? ` (${t.tag})` : ""}: click the sheet (Shift keeps placing)`;
   if (t.k === "assembly") return `Placing the assembly “${t.name}”: click the sheet (Shift keeps placing)`;
   if (t.k === "comment") return "Click where the comment applies (select what it is about first)";
+  if (t.k === "nozzle") return "Click on the equipment's outline where the nozzle goes (Shift adds more)";
   if (t.k === "note") return t.kind === "hold" ? "Click where the Hold cloud goes" : "Click where the note goes";
   return "";
 };

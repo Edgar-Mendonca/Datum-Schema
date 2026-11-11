@@ -861,6 +861,20 @@ const shots = process.env.SHOTS;
   await p.click(".ribbon button:has-text('Completeness')"); await p.waitForTimeout(400);
   check("data completeness lists the classes", (await p.$$eval(".lists tbody tr.f", els => els.length)) >= 4);
 
+  // 66. A nozzle added to a vessel from the Inspector, then given a size.
+  await openEx("Pump transfer");
+  { const q = await project(); const v = q.items.find(i => tagOf(q, i) === "V-101");
+    const [x, y] = await scr(v.x, v.y); await p.mouse.click(x, y); await p.waitForTimeout(300);
+    const before = (await p.$$(".insp .noztbl tbody tr")).length;
+    await p.click(".insp button:has-text('Add a nozzle')"); await p.waitForTimeout(200);
+    const [nx, ny] = await scr(v.x - 25, v.y + 4); await p.mouse.click(nx, ny); await p.waitForTimeout(500);
+    const [x2, y2] = await scr(v.x, v.y); await p.mouse.click(x2, y2); await p.waitForTimeout(400);
+    const after = (await p.$$(".insp .noztbl tbody tr")).length;
+    check("a nozzle is added to the vessel", after === before + 1 && (await p.textContent(".insp .noztbl")).includes("N1"), `${before} → ${after}`);
+    const inp = p.locator(".insp .noztbl tbody tr", { hasText: "N1" }).locator("td:nth-child(2) input"); await inp.fill("2"); await inp.press("Tab"); await p.waitForTimeout(300);
+    const r = await project(); check("the nozzle's size is kept", r.objects.find(o => o.tag === "V-101").data["nz.N1.size"] === "2"); }
+  await p.keyboard.press("Escape");
+
   // 56. A PFD made from the pump transfer's P&ID.
   await openEx("Pump transfer");
   await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title^='A process flow diagram made from the P&IDs']"); await p.waitForTimeout(800);

@@ -1217,3 +1217,6 @@ tr.behind td { background: var(--err-bg); }
 .issuemarks .imark text { font-size: 3px; text-anchor: middle; font-weight: 700; }
 .issuemarks .imark.error text { fill: #c62828; }
 .issuemarks .imark.warning text { fill: #e08a00; }
+
+/* Nozzles (0.8.0) */
+.noztbl input { width: 100%; min-width: 0; }

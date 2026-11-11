@@ -124,6 +124,12 @@ pub enum Op {
     Fix { rule: u8, ids: Vec<u32>, choice: usize },
     /// Place a loop (var F, P, T or L) on a line piece or a vessel; `control` adds the control valve.
     PlaceLoop { target: u32, var: String, #[serde(default)] control: bool },
+    /// Add a nozzle to an equipment symbol where (x, y) is nearest its outline (empty name: N1, N2…).
+    AddNozzle { item: u32, x: f64, y: f64, #[serde(default)] name: String },
+    /// Remove an added nozzle with no line on it.
+    RemoveNozzle { item: u32, name: String },
+    /// A nozzle's size, rating or service.
+    SetNozzle { item: u32, name: String, field: String, value: String },
     DeleteSheet { id: u32 },
     MoveSheet { id: u32, to: usize },
     SetTitle { title: Title },
@@ -646,6 +652,15 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
         Op::PlaceAssembly { name, sheet, x, y } => {
             let a = p.settings.assemblies.iter().find(|a| a.name.eq_ignore_ascii_case(name.trim())).cloned().ok_or_else(|| format!("There is no assembly called {name}."))?;
             paste(p, sheet, a.items, a.lines, a.notes, x, y, created, &a.objs)?;
+        }
+        Op::AddNozzle { item, x, y, name } => {
+            crate::nozzles::add(p, item, x, y, &name)?;
+        }
+        Op::RemoveNozzle { item, name } => {
+            crate::nozzles::remove(p, item, &name)?;
+        }
+        Op::SetNozzle { item, name, field, value } => {
+            crate::nozzles::set(p, item, &name, &field, &value)?;
         }
         Op::PlaceLoop { target, var, control } => {
             crate::loopplace::place(p, target, &var, control, created)?;

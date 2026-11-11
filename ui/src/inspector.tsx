@@ -2,7 +2,7 @@
 // the hydraulics; with nothing selected, the sheet and the title block.
 import { For, Show, JSX, createMemo, createResource } from "solid-js";
 import { Field, Item, Line, Note, Rev, Val, Change, Underlay, num, parseNum } from "./api";
-import { sel, proj, sheet, itemOf, lineOf, objOf, symOf, lib, act, derived, setSel, toast, call } from "./store";
+import { sel, proj, sheet, itemOf, lineOf, objOf, symOf, lib, act, derived, setSel, toast, call, setTool } from "./store";
 import { toU, fromU, unit, fmt } from "./units";
 import { Help } from "./help";
 import { C } from "./cmds";
@@ -84,6 +84,7 @@ const ItemPanel = (p: { it: Item }) => {
     <Show when={["instrument", "primary", "control"].includes(s()?.cat ?? "")}>
       <div class="ibtns"><button class="btn sm" title="The datasheet: this object's data with the process conditions of its line, to print or export" onClick={() => openDatasheet(p.it.obj)}>Datasheet…</button><button class="btn sm" title="The loop diagram of this instrument's loop, with its wiring" onClick={() => openLoops(String(p.it.obj))}>Loop diagram…</button><Help k="datasheets" /></div>
     </Show>
+    <Show when={["vessel", "rotating", "heat"].includes(s()?.cat ?? "")}><Nozzles item={p.it.id} /></Show>
     <Show when={["vessel", "rotating", "heat"].includes(s()?.cat ?? "")}>
       <div class="ibtns"><button class="btn sm" title="The equipment datasheet: its data with its nozzles' lines and conditions, to print or export" onClick={() => openDatasheet(p.it.obj)}>Datasheet…</button><Help k="datasheets" /></div>
     </Show>
@@ -238,6 +239,27 @@ const Sizing = (p: { item: number }) => {
         }}>Write to the datasheet</button></div>
       </div>}</Show>
     </Show>
+  );
+};
+
+/** An equipment symbol's nozzles (engine: nozzles.rs): their size, rating and service; nozzles added and removed. */
+const Nozzles = (p: { item: number }) => {
+  const [list] = createResource(() => [p.item, proj()] as const, ([i]) => call<[number, string, string, string, string, boolean][]>("nozzles", { item: i }));
+  const setF = (name: string, field: string, value: string) => act({ SetNozzle: { item: p.item, name, field, value } });
+  return (
+    <>
+      <h4>Nozzles <Help k="nozzles" /></h4>
+      <table class="tbl small noztbl"><thead><tr><th>Nozzle</th><th>Size</th><th>Rating</th><th>Service</th><th /></tr></thead><tbody>
+        <For each={list() ?? []}>{([, name, size, rating, service, added]) => <tr>
+          <td class="mono">{name}</td>
+          <td><input value={size} placeholder="NPS" onChange={e => setF(name, "size", e.currentTarget.value)} /></td>
+          <td><input value={rating} placeholder="150#" onChange={e => setF(name, "rating", e.currentTarget.value)} /></td>
+          <td><input value={service} onChange={e => setF(name, "service", e.currentTarget.value)} /></td>
+          <td>{added ? <button class="x" title="Remove this added nozzle" onClick={() => act({ RemoveNozzle: { item: p.item, name } })}>×</button> : null}</td>
+        </tr>}</For>
+      </tbody></table>
+      <div class="ibtns"><button class="btn sm" title="Then click on the equipment's outline where the nozzle goes" onClick={() => setTool({ k: "nozzle", item: p.item })}>Add a nozzle</button></div>
+    </>
   );
 };
 

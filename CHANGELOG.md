@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.0 — 2026-11-11
+
+Nozzles you add.
+
+**Nozzles on equipment.** A piece of equipment's symbol comes with nozzles; now you add as many more as it needs, anywhere on its outline. Select the equipment, choose **Add a nozzle** in the Inspector's new **Nozzles** section, and click on its outline: the nozzle takes the nearest side and faces out (Shift adds more). Added nozzles are named N1, N2…; lines join them like any other.
+
+**Their data.** Every nozzle, the symbol's own and the added ones, has a size, a rating and a service, typed in the Inspector and shown on the equipment's datasheet beside the nozzle's line and its conditions. An added nozzle with no line on it can be removed.
+
+The equipment stays the same kind of equipment: its class, checks, lists, arrangements and datasheet are unchanged, and the project file keeps its nozzles (up to 60 per symbol).
+
 ## 0.7.5 — 2026-11-04
 
 The electrical load list and data completeness.

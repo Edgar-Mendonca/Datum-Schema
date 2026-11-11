@@ -212,7 +212,8 @@ fn clean(s: &mut CustomSym) {
     s.w = fix(s.w, 10.0);
     s.h = fix(s.h, 10.0);
     s.prefix = crate::clip(s.prefix.trim(), 8);
-    s.ports.truncate(16);
+    // Equipment with added nozzles can carry up to 60.
+    s.ports.truncate(64);
     for q in &mut s.ports {
         q.x = if q.x.is_finite() { q.x.clamp(-s.w / 2.0, s.w / 2.0) } else { 0.0 };
         q.y = if q.y.is_finite() { q.y.clamp(-s.h / 2.0, s.h / 2.0) } else { 0.0 };

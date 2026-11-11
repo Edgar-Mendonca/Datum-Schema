@@ -53,6 +53,8 @@ export const setSheetId = (id: number) => {
 
 export const setOut = (o: Out | null | undefined) => {
   if (!o) return;
+  // A symbol the window does not know yet (a nozzle just added, a project's own): read them again.
+  if (lib() && o.p.items.some(i => !symMap().has(i.sym))) void refreshLibs();
   batch(() => {
     setOutRaw(o);
     if (!o.p.sheets.some(s => s.id === sheetId())) setSheetIdRaw(o.p.sheets[0]?.id ?? 0);
@@ -79,7 +81,7 @@ export const [tab, setTab] = createSignal("home");
 // ---------- selection and tools ----------
 /** Selected items, lines and notes (ids are unique across all three). */
 export const [sel, setSel] = createSignal<number[]>([]);
-export type Tool = { k: "select" } | { k: "line"; kind: Kind } | { k: "place"; sym: string; tag?: string; obj?: number } | { k: "note"; kind: NoteKind } | { k: "comment" } | { k: "assembly"; name: string };
+export type Tool = { k: "select" } | { k: "line"; kind: Kind } | { k: "place"; sym: string; tag?: string; obj?: number } | { k: "note"; kind: NoteKind } | { k: "comment" } | { k: "assembly"; name: string } | { k: "nozzle"; item: number };
 export const [tool, setTool] = createSignal<Tool>({ k: "select" });
 /** Problems (errors and warnings) marked on the sheet, with their rule number. */
 export const [showIssues, setShowIssues] = createSignal(false);

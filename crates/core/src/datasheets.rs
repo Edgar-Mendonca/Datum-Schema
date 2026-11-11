@@ -431,6 +431,11 @@ fn equipment(p: &Project, net: &Net, obj: &crate::model::Obj, it: &Item, sym: &s
                         parts.push(format!("{v} {u}"));
                     }
                 }
+                for (fk, fl) in crate::nozzles::FIELDS {
+                    if let Some(v) = obj.data.get(&crate::nozzles::key(port.name, fk)).map(|v| v.text()).filter(|v| !v.trim().is_empty()) {
+                        parts.push(format!("{fl} {v}"));
+                    }
+                }
                 nozzles.push(derived(&cap(port.name), parts.join(" · "), String::new(), "drawing"));
             }
         }

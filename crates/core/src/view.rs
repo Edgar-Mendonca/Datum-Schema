@@ -523,7 +523,7 @@ fn note_view(n: &crate::model::Note) -> NoteView {
 
 /// The legend: every symbol the project uses (by category) and every line type, in columns.
 pub fn legend(p: &Project, s: &Sheet) -> Vec<LegendRow> {
-    let used: BTreeSet<&str> = p.items.iter().filter(|i| p.sheet(i.sheet).is_some_and(|x| !x.legend)).map(|i| i.sym.as_str()).collect();
+    let used: BTreeSet<String> = p.items.iter().filter(|i| p.sheet(i.sheet).is_some_and(|x| !x.legend)).map(|i| if i.sym.starts_with("x.nozzles.") { i.base_key() } else { i.sym.clone() }).collect();
     let kinds: BTreeSet<Kind> = p.lines.iter().map(|l| l.kind).collect();
     let mut by_cat: BTreeMap<Cat, Vec<&symbols::Sym>> = BTreeMap::new();
     for sym in symbols::all().iter().filter(|x| used.contains(x.key)) {
