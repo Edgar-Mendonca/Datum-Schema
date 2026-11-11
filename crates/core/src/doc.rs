@@ -130,6 +130,10 @@ pub enum Op {
     RemoveNozzle { item: u32, name: String },
     /// A nozzle's size, rating or service.
     SetNozzle { item: u32, name: String, field: String, value: String },
+    /// Swap an item's symbol for another of its kind, keeping its object and lines.
+    SwapSymbol { item: u32, sym: String },
+    /// A spare beside a tagged symbol: P-101 becomes P-101A, the spare P-101B.
+    AddSpare { item: u32 },
     DeleteSheet { id: u32 },
     MoveSheet { id: u32, to: usize },
     SetTitle { title: Title },
@@ -652,6 +656,12 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
         Op::PlaceAssembly { name, sheet, x, y } => {
             let a = p.settings.assemblies.iter().find(|a| a.name.eq_ignore_ascii_case(name.trim())).cloned().ok_or_else(|| format!("There is no assembly called {name}."))?;
             paste(p, sheet, a.items, a.lines, a.notes, x, y, created, &a.objs)?;
+        }
+        Op::SwapSymbol { item, sym } => {
+            crate::swap::swap(p, item, &sym)?;
+        }
+        Op::AddSpare { item } => {
+            crate::swap::spare(p, item, created)?;
         }
         Op::AddNozzle { item, x, y, name } => {
             crate::nozzles::add(p, item, x, y, &name)?;

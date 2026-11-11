@@ -875,6 +875,20 @@ const shots = process.env.SHOTS;
     const r = await project(); check("the nozzle's size is kept", r.objects.find(o => o.tag === "V-101").data["nz.N1.size"] === "2"); }
   await p.keyboard.press("Escape");
 
+  // 67. A gate valve swapped for a ball valve keeping its tag; a spare added to a pump.
+  await openEx("Pump transfer");
+  { const q = await project(); const hv = q.items.find(i => tagOf(q, i) === "HV-104");
+    const [x, y] = await scr(hv.x, hv.y); await p.mouse.click(x, y); await p.waitForTimeout(300);
+    await p.selectOption(".insp select.swapsym", "ball"); await p.waitForTimeout(400);
+    const r = await project(); const it = r.items.find(i => i.id === hv.id);
+    check("the valve is swapped and keeps its tag", it.sym === "ball" && tagOf(r, it) === "HV-104"); }
+  await p.keyboard.press("Escape");
+  { const q = await project(); const pa = q.items.find(i => tagOf(q, i) === "P-101A");
+    const [x, y] = await scr(pa.x, pa.y); await p.mouse.click(x, y); await p.waitForTimeout(300);
+    await p.click(".insp button:has-text('Add a spare')"); await p.waitForTimeout(400);
+    check("a spare takes the next free suffix", (await project()).objects.some(o => o.tag === "P-101C")); }
+  await p.keyboard.press("Escape");
+
   // 56. A PFD made from the pump transfer's P&ID.
   await openEx("Pump transfer");
   await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title^='A process flow diagram made from the P&IDs']"); await p.waitForTimeout(800);

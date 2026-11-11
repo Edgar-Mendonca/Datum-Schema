@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.1 — 2026-11-11
+
+Symbols swapped, and spares.
+
+**Swap a symbol, keep everything else.** In the Inspector, **Symbol** lists the other symbols of the same kind: a gate valve becomes a ball valve, one pump another, a field transmitter a panel one. The tag, the data and the lines stay: each line moves to the new symbol's nozzle of the same name, else the nearest of the same kind. The object's class follows when it was the old symbol's own. A swap that would leave a line with nowhere to go says which and changes nothing; Undo takes a swap back.
+
+**Add a spare.** For a piece of equipment, **Add a spare** places a copy beside it with the same data and the next suffix: P-101 becomes P-101A and the spare P-101B; P-101A gives P-101B, or the next free letter. Copies and duplicates of a suffixed tag take the next free letter too. Set the spare's Operation to Standby so the load list counts one of the pair.
+
 ## 0.8.0 — 2026-11-11
 
 Nozzles you add.

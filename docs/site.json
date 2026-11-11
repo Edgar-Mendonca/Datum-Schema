@@ -120,7 +120,7 @@
       "when": "Now",
       "items": [
         "0.8.0: nozzles you add and place on equipment, with their size, rating and service (done)",
-        "0.8.1: a symbol swapped for another keeping its tag, data and connections; copies of a spare take the next suffix (P-101A, P-101B)",
+        "0.8.1: a symbol swapped for another keeping its tag, data and connections; copies of a spare take the next suffix (P-101A, P-101B) (done)",
         "0.8.2: a second built-in symbol set, chosen per project",
         "0.8.3: a sheet manager: sheets listed with their status, batch printing, and deleted sheets recovered"
       ]

@@ -52,6 +52,9 @@ const History = (p: { id: number }) => {
   </Show>;
 };
 
+/** Symbols that can be swapped for each other: equipment, valves, instruments, else the same category. */
+const kindOf = (c: string) => (["vessel", "rotating", "heat"].includes(c) ? "equipment" : ["valve", "control"].includes(c) ? "valve" : ["instrument", "primary"].includes(c) ? "instrument" : c);
+
 const ItemPanel = (p: { it: Item }) => {
   const s = () => symOf(p.it.sym);
   const o = () => objOf(p.it.obj);
@@ -66,6 +69,14 @@ const ItemPanel = (p: { it: Item }) => {
   const partner = () => proj()?.items.find(i => i.id === p.it.link);
   return <>
     <div class="iwhat"><b>{s()?.name ?? p.it.sym}</b><span class="muted small"> · {lib()?.classes.find(c => c.name === o()?.class)?.label ?? o()?.class} · {s()?.cat_name}</span><Help k={`cat:${s()?.cat ?? "mark"}`} /></div>
+    <Show when={s() && !["mark", "connector"].includes(s()!.cat)}>
+      <Row label="Symbol" hint="Swap it for another of its kind: its tag, data and lines stay">
+        <select class="swapsym" value={p.it.sym.startsWith("x.") ? "" : p.it.sym} onChange={e => e.currentTarget.value && act({ SwapSymbol: { item: p.it.id, sym: e.currentTarget.value } })}>
+          <Show when={p.it.sym.startsWith("x.")}><option value="">{s()?.name}</option></Show>
+          <For each={(lib()?.symbols ?? []).filter(x => !x.key.startsWith("x.") && x.key !== "unknown" && kindOf(x.cat) === kindOf(s()!.cat))}>{x => <option value={x.key} selected={x.key === p.it.sym}>{x.name}</option>}</For>
+        </select>
+      </Row>
+    </Show>
     <Show when={s()?.cat !== "mark" || s()?.prefix}>
       <Row label="Tag" hint={s()?.cat === "instrument" || s()?.cat === "primary" ? "Letters and loop number, e.g. LIC-101 (ISA-5.1)." : undefined}>
         <input class="mono" value={o()?.tag ?? ""} onChange={e => act({ SetTag: { id: p.it.obj, tag: e.currentTarget.value } })} />
@@ -84,7 +95,7 @@ const ItemPanel = (p: { it: Item }) => {
     <Show when={["instrument", "primary", "control"].includes(s()?.cat ?? "")}>
       <div class="ibtns"><button class="btn sm" title="The datasheet: this object's data with the process conditions of its line, to print or export" onClick={() => openDatasheet(p.it.obj)}>Datasheet…</button><button class="btn sm" title="The loop diagram of this instrument's loop, with its wiring" onClick={() => openLoops(String(p.it.obj))}>Loop diagram…</button><Help k="datasheets" /></div>
     </Show>
-    <Show when={["vessel", "rotating", "heat"].includes(s()?.cat ?? "")}><Nozzles item={p.it.id} /></Show>
+    <Show when={["vessel", "rotating", "heat"].includes(s()?.cat ?? "")}><Nozzles item={p.it.id} /><div class="ibtns"><button class="btn sm" title="A spare beside it with its data: P-101 becomes P-101A and the spare P-101B" onClick={() => act({ AddSpare: { item: p.it.id } }).then(o => o && toast("Spare added beside it, with its data. Undo takes it back.", true))}>Add a spare</button></div></Show>
     <Show when={["vessel", "rotating", "heat"].includes(s()?.cat ?? "")}>
       <div class="ibtns"><button class="btn sm" title="The equipment datasheet: its data with its nozzles' lines and conditions, to print or export" onClick={() => openDatasheet(p.it.obj)}>Datasheet…</button><Help k="datasheets" /></div>
     </Show>
