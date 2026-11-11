@@ -145,6 +145,8 @@ pub struct Sheet {
     pub snaps: Vec<Snap>,
     /// Revision clouds round the changes since this issued revision ("" for none).
     pub clouds: String,
+    /// Its drawing status (`sheetman::STATUSES`; "" for Draft).
+    pub status: String,
 }
 
 /// The sheet as issued at a revision. Its contents are shared, not copied, by undo; kept in the
@@ -236,7 +238,7 @@ impl Underlay {
 
 impl Default for Sheet {
     fn default() -> Self {
-        Self { id: 0, number: "PID-001".into(), title: "Piping and instrument diagram".into(), size: "A3".into(), rev: "A".into(), date: String::new(), scale: "NTS".into(), revs: vec![], legend: false, underlay: None, pfd: false, snaps: vec![], clouds: String::new() }
+        Self { id: 0, number: "PID-001".into(), title: "Piping and instrument diagram".into(), size: "A3".into(), rev: "A".into(), date: String::new(), scale: "NTS".into(), revs: vec![], legend: false, underlay: None, pfd: false, snaps: vec![], clouds: String::new(), status: String::new() }
     }
 }
 
@@ -593,6 +595,9 @@ pub struct Project {
     /// Review comments pinned to the sheets, oldest first.
     pub comments: Vec<crate::review::Comment>,
     pub settings: Settings,
+    /// Sheets deleted, newest last, to bring back (kept in the file, not sent to the window).
+    #[serde(skip)]
+    pub bin: Vec<crate::sheetman::Binned>,
     /// The next id for anything (sheets, items, lines and notes share one sequence).
     pub next: u32,
 }
@@ -606,7 +611,7 @@ impl Default for Project {
 impl Project {
     /// A new project with one blank A3 sheet.
     pub fn new() -> Self {
-        let mut p = Self { format: FORMAT, name: "Project1".into(), units: "SI".into(), title: Title::default(), nodes: vec![], objects: vec![], sheets: vec![], items: vec![], lines: vec![], notes: vec![], issues: vec![], custom_syms: vec![], comments: vec![], settings: Settings::default(), next: 1 };
+        let mut p = Self { format: FORMAT, name: "Project1".into(), units: "SI".into(), title: Title::default(), nodes: vec![], objects: vec![], sheets: vec![], items: vec![], lines: vec![], notes: vec![], issues: vec![], custom_syms: vec![], comments: vec![], settings: Settings::default(), bin: vec![], next: 1 };
         let id = p.id();
         p.sheets.push(Sheet { id, ..Sheet::default() });
         p.default_nodes();
@@ -788,6 +793,10 @@ impl Project {
         for s in &mut self.sheets {
             if !SIZES.iter().any(|z| z.0 == s.size) {
                 s.size = "A3".into();
+            }
+            if !s.status.is_empty() && !crate::sheetman::STATUSES.contains(&s.status.as_str()) {
+                w.push(format!("A sheet's status is one of {}.", crate::sheetman::STATUSES.join(", ")));
+                s.status.clear();
             }
             s.revs.truncate(50);
             if let Some(u) = s.underlay.as_mut() {

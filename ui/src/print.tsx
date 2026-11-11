@@ -92,12 +92,14 @@ const [printing, setPrinting] = createSignal(false);
 export const [printOnly, setPrintOnly] = createSignal<number | null>(null);
 /** Set by the cause-and-effect matrix's Print button: print only the matrix. */
 export const [printCause, setPrintCause] = createSignal(false);
+/** Set by the sheet manager: print these sheets. */
+export const [printSheets, setPrintSheets] = createSignal<number[] | null>(null);
 /** Set by a loop diagram's Print button: print only that loop. */
 export const [printLoop, setPrintLoop] = createSignal<string | null>(null);
 
 export const PrintPage = () => {
   const [views] = createResource(viewsForPrint);
-  const [which, setWhich] = createSignal<"all" | "this">("all");
+  const [which, setWhich] = createSignal<"all" | "this" | "chosen">(printSheets() ? "chosen" : "all");
   const [fitA3, setFitA3] = createSignal(false);
   const [want, setWant] = createSignal<Record<string, boolean>>({ lines: true, streams: true, io: true, takeoff: true, comments: false, equipment: true, instruments: true, valves: true, datasheets: false, legend: true, sheets_ds: false, loops: false, cause: false });
   const [datasheets] = createResource(() => call<Datasheet[]>("datasheets_all"));
@@ -106,12 +108,12 @@ export const PrintPage = () => {
     return (await Promise.all(ls.map(l => call<LoopView>("loop_diagram", { key: l.key })))).filter(Boolean) as LoopView[];
   });
   const [cause] = createResource(() => call<CauseMatrix>("cause_effect"));
-  onCleanup(() => { setPrintOnly(null); setPrintLoop(null); setPrintCause(false); });
+  onCleanup(() => { setPrintOnly(null); setPrintLoop(null); setPrintCause(false); setPrintSheets(null); });
   // The lists, then the project's own reports.
   const allLists = createMemo((): [string, string][] => [...LISTS, ...(proj()?.settings.reports ?? []).map(r => [`report:${r.name}`, `Report: ${r.name}`] as [string, string])]);
   const [lists] = createResource(() => allLists().map(x => x[0]).join("\n"), async () => Promise.all(allLists().map(([k]) => call<List>("list", { kind: k }).then(l => l ?? null).catch(() => null))));
   const [zoomP, setZoomP] = createSignal(0.4);
-  const sheets = createMemo(() => (views() ?? []).filter(v => which() === "all" || v.id === sheet()?.id));
+  const sheets = createMemo(() => (views() ?? []).filter(v => which() === "all" || (which() === "chosen" ? (printSheets() ?? []).includes(v.id) : v.id === sheet()?.id)));
   /** Rows per A3 landscape list page. */
   const ROWS = 36;
   /** A datasheet on A4 portrait, with a header and the title block. */
@@ -199,7 +201,7 @@ export const PrintPage = () => {
         <Show when={printOnly() !== null || printLoop() !== null || printCause()}><p class="small">Printing {printCause() ? "the cause-and-effect matrix" : printLoop() !== null ? "one loop diagram" : "one datasheet"}. <button class="btn sm" onClick={() => { setPrintOnly(null); setPrintLoop(null); setPrintCause(false); }}>Choose what to print</button></p></Show>
         <Show when={printOnly() === null && printLoop() === null && !printCause()}>
         <h4>Sheets</h4>
-        <Pick value={which()} set={v => setWhich(v as any)} options={[["all", "Every sheet"], ["this", "This sheet only"]]} />
+        <Pick value={which()} set={v => setWhich(v as any)} options={[["all", "Every sheet"], ["this", "This sheet only"], ...(printSheets() ? [["chosen", `The ${printSheets()!.length} ticked in the sheet manager`] as [string, string]] : [])]} />
         <Check label="Fit every sheet to A3" value={fitA3()} set={setFitA3} />
         <h4>Lists</h4>
         <For each={allLists()}>{([k, l]) => <Check label={l} value={!!want()[k]} set={v => setWant({ ...want(), [k]: v })} />}</For>

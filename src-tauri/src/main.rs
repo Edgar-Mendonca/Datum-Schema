@@ -270,6 +270,12 @@ fn nozzles(st: State<St>, item: u32) -> Vec<(usize, String, String, String, Stri
     datum_core::nozzles::list(&st.lock().doc.p, item)
 }
 
+/// The sheet manager: every sheet's status, revision, contents and problems, and the bin.
+#[tauri::command]
+fn sheet_manager(st: State<St>) -> datum_core::sheetman::Manager {
+    datum_core::sheetman::manager(&st.lock().doc.p)
+}
+
 /// What a report can be made from: the lists and the classes with objects.
 #[tauri::command]
 fn report_sources(st: State<St>) -> Vec<(String, String)> {
@@ -828,7 +834,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, import_streams, import_list, fixes, nozzles, report_sources, report_preview, arrangement_starter, register_read, register_file, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, builtin_sets, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, title_preview, title_standard, spec_starter, specs_csv, todo, calc_sheets, sizing, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
+            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, import_streams, import_list, fixes, nozzles, sheet_manager, report_sources, report_preview, arrangement_starter, register_read, register_file, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, builtin_sets, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, title_preview, title_standard, spec_starter, specs_csv, todo, calc_sheets, sizing, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
             options, set_options, autosave, recovery, recover, recent, startup_file, open_url, version, quit, check_update, install_update
         ])
         .run(tauri::generate_context!())

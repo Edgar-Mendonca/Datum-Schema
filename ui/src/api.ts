@@ -16,7 +16,7 @@ export interface Title { company: string; project: string; client: string; unit:
 export interface TbCell { x: number; y: number; w: number; h: number; label: string; field: string; size: number; bold: boolean }
 export interface TitleBlock { on: boolean; name: string; w: number; h: number; cells: TbCell[] }
 export interface Rev { rev: string; date: string; desc: string; by: string; checked: string; approved: string }
-export interface Sheet { id: number; number: string; title: string; size: string; rev: string; date: string; scale: string; revs: Rev[]; legend: boolean; underlay: Underlay | null; pfd: boolean; snaps: Snap[]; clouds: string }
+export interface Sheet { id: number; number: string; title: string; size: string; rev: string; date: string; scale: string; revs: Rev[]; legend: boolean; underlay: Underlay | null; pfd: boolean; snaps: Snap[]; clouds: string; status: string }
 /** A sheet as issued at a revision (its contents stay in the engine). */
 export interface Snap { rev: string; date: string }
 export interface SheetChange { kind: "added" | "removed" | "changed"; what: string; ids: number[]; bbox: [number, number, number, number] }

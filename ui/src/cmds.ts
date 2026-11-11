@@ -100,7 +100,7 @@ export const C = {
     const o = await act({ AddSheet: { sheet: { id: 0, number: "", title: legend ? "Legend" : pfd ? "Process flow diagram" : "Piping and instrument diagram", size: s?.size ?? "A3", rev: "A", date: "", scale: "NTS", revs: [], legend, underlay: null, pfd, snaps: [], clouds: "" } } });
     if (o?.created.length) setSheetId(o.created[0]);
   },
-  deleteSheet: () => { const s = sheet(); if (s) D.confirm(`Delete sheet ${s.number} and everything on it?`, "Delete", () => act({ DeleteSheet: { id: s.id } })); },
+  deleteSheet: () => { const s = sheet(); if (s) D.confirm(`Delete sheet ${s.number} and everything on it? It is kept in the sheet manager's bin, to bring back.`, "Delete", () => act({ DeleteSheet: { id: s.id } })); },
   moveSheet: (by: number) => { const p = proj(), s = sheet(); if (!p || !s) return; const i = p.sheets.findIndex(x => x.id === s.id); act({ MoveSheet: { id: s.id, to: Math.max(0, i + by) } }); },
 
   // ---------- selection, layers, views ----------
@@ -153,7 +153,7 @@ export const ALL_CMDS: [string, () => void, string?][] = [
   ["Draw a pneumatic signal", () => C.lineTool("pneumatic")], ["Draw an electrical signal", () => C.lineTool("electric")], ["Draw a software or data link", () => C.lineTool("data")], ["Draw a capillary", () => C.lineTool("capillary")],
   ["Add a note", () => C.noteTool("note")], ["Add a leader note", () => C.noteTool("leader")], ["Add a Hold cloud", () => C.noteTool("hold")],
   ["Off-page connector", () => C.placeTool("offpage")], ["Renumber every tag", C.renumber],
-  ["New sheet", () => C.addSheet()], ["Legend sheet", () => C.addSheet(true)], ["Delete this sheet", C.deleteSheet],
+  ["New sheet", () => C.addSheet()], ["Legend sheet", () => C.addSheet(true)], ["Delete this sheet", C.deleteSheet], ["Sheet manager", () => import("./sheets").then(m => m.openSheetManager())],
   ["SI units", () => C.units("SI")], ["US units", () => C.units("US")], ["Fit the sheet", C.fit, "F"],
   ["Checks panel", () => C.panel("checks")], ["Line list", () => C.panel("lines")], ["Equipment list", () => C.panel("equipment")], ["Instrument index", () => C.panel("instruments")], ["Valve list", () => C.panel("valves")], ["Valve and fitting take-off", () => C.panel("takeoff")], ["Review comments", () => C.panel("comments")], ["User guide", () => setBackstage("guide")], ["Cable schedule", () => C.panel("cables")], ["I/O allocation", () => C.panel("ioalloc")], ["Junction boxes", () => C.panel("jbs")], ["Add a review comment", () => setTool({ k: "comment" })], ["Import a reviewer's copy (comments)", () => import("./review").then(m => m.importComments())], ["I/O summary", () => C.panel("io")], ["Stream list", () => C.panel("streams")], ["Datasheet index", () => C.panel("datasheets")], ["Loop diagrams", () => import("./loops").then(m => m.openLoops())], ["Cause and effect matrix", () => import("./cause").then(m => m.openCause())], ["Export DEXPI (P&ID exchange)", () => C.exportDexpi()], ["Import a DEXPI file", () => C.importDexpi()], ["Import datasheets from Excel", () => import("./datasheet").then(m => m.importDatasheets())],
   ["Export DXF", C.exportDxf], ["Save the sheet as SVG", C.exportSvg],

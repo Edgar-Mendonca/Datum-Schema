@@ -40,6 +40,7 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
         "datasheet" => serde_json::to_value(datum_core::datasheets::build(&s.doc.p, a["id"].as_u64().unwrap_or(0) as u32)?).unwrap(),
         "datasheets_all" => serde_json::to_value(datum_core::datasheets::all(&s.doc.p)).unwrap(),
         "derived" => serde_json::to_value(api::derived(&s.doc.p, a["sheet"].as_u64().unwrap_or(0) as u32)).unwrap(),
+        "sheet_manager" => serde_json::to_value(datum_core::sheetman::manager(&s.doc.p)).unwrap(),
         "nozzles" => serde_json::to_value(datum_core::nozzles::list(&s.doc.p, a["item"].as_u64().unwrap_or(0) as u32)).unwrap(),
         "fixes" => {
             let ids: Vec<u32> = a["ids"].as_array().map(|v| v.iter().filter_map(|x| x.as_u64()).map(|x| x as u32).collect()).unwrap_or_default();

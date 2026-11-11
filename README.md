@@ -38,6 +38,7 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Line hydraulics**: inside diameter from size and schedule, velocity, Reynolds number, Colebrook friction factor, pressure drop per 100 m and over the line, with a ✓ ! ✗ badge against the limits for its service.
 - **Plant objects**: every equipment item, valve, instrument and line number is an object in a plant › unit › area hierarchy (the Plant panel); symbols are views of it, so one object can be drawn on several sheets. Every change is recorded with who made it and when.
 - **Classes you can extend**: a class library (named after the open DEXPI data standard) defines what data each kind of object has; add your company's attributes in Options and mark them required.
+- **Sheet manager**: every sheet with its status, revision and problems; print a chosen set; bring back deleted sheets.
 - **A second set of drawings**: built in and chosen per project; the same objects, lines and checks, drawn differently.
 - **Symbols swapped and spares**: swap a symbol for another of its kind keeping its tag, data and lines; add a spare with the next suffix (P-101A, P-101B).
 - **Nozzles**: add nozzles anywhere on a piece of equipment, each with its size, rating and service.

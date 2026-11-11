@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.3 — 2026-11-11
+
+The sheet manager.
+
+**Every sheet in one table.** Sheets › **Sheet Manager** lists each sheet with its number, title, kind (P&ID, PFD or legend), size, revision, last issued revision, how many symbols and lines it holds, and its errors and warnings. Click a number to go to the sheet; ↑ and ↓ change the order.
+
+**A status for each sheet**: Draft, For review, Issued for approval, Issued for construction or As-built, kept with the sheet.
+
+**Print a chosen set.** Tick the sheets and **Print the ticked sheets**: the print page opens with just those.
+
+**Deleted sheets come back.** A deleted sheet waits in the manager's bin with its symbols, lines, notes and the objects only it held; **Restore** puts it back where it was. If one of its tags has been used again since, rename that first. The last 20 deleted sheets are kept in the project file; **Empty the bin** forgets them.
+
 ## 0.8.2 — 2026-11-11
 
 A second set of drawings.

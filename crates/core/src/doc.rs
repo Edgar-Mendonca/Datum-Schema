@@ -135,6 +135,10 @@ pub enum Op {
     /// A spare beside a tagged symbol: P-101 becomes P-101A, the spare P-101B.
     AddSpare { item: u32 },
     DeleteSheet { id: u32 },
+    /// Bring back a deleted sheet (0 is the most recent).
+    RestoreSheet { at: usize },
+    /// Forget the deleted sheets.
+    EmptyBin,
     MoveSheet { id: u32, to: usize },
     SetTitle { title: Title },
     SetProject { name: String, units: String },
@@ -772,9 +776,17 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
                 return Err("A project keeps at least one sheet.".into());
             }
             let ids: Vec<u32> = p.items.iter().filter(|i| i.sheet == id).map(|i| i.id).chain(p.lines.iter().filter(|l| l.sheet == id).map(|l| l.id)).chain(p.notes.iter().filter(|n| n.sheet == id).map(|n| n.id)).collect();
+            let kept = crate::sheetman::take(p, id);
             delete(p, &ids, false);
             p.sheets.retain(|s| s.id != id);
+            if let Some(b) = kept {
+                crate::sheetman::binned(p, b);
+            }
         }
+        Op::RestoreSheet { at } => {
+            created.push(crate::sheetman::restore(p, at)?);
+        }
+        Op::EmptyBin => p.bin.clear(),
         Op::MoveSheet { id, to } => {
             let i = p.sheets.iter().position(|s| s.id == id).ok_or("That sheet no longer exists.")?;
             let s = p.sheets.remove(i);

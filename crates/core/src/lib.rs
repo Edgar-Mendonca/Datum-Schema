@@ -46,6 +46,7 @@ pub mod sizing;
 pub mod specs;
 pub mod streamsin;
 pub mod route;
+pub mod sheetman;
 pub mod swap;
 pub mod symbols;
 pub mod sync;

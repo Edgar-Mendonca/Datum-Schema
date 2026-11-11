@@ -906,6 +906,23 @@ const shots = process.env.SHOTS;
   { const q = await project(); const s = q.sheets.find(x => x.pfd);
     check("a PFD is made from the P&IDs", !!s && q.lines.filter(l => l.sheet === s.id).length >= 4 && q.items.some(i => i.sheet === s.id && tagOf(q, i) === "V-101"), JSON.stringify(q.sheets.map(x => [x.number, x.pfd]))); }
 
+  // 69. The sheet manager: a status set, a sheet deleted and restored, the ticked sheets printed.
+  await p.keyboard.press("Escape");
+  await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title^='Every sheet: its status']"); await p.waitForSelector(".shtbl");
+  check("the sheet manager lists every sheet", (await p.$$(".shtbl tbody tr")).length === (await project()).sheets.length);
+  await p.selectOption(".shtbl tbody tr:first-child select.shstatus", "For review"); await p.waitForTimeout(300);
+  check("a sheet's status is kept", (await project()).sheets[0].status === "For review");
+  await p.click(".dlg button.x");
+  { const n0 = (await project()).items.length; const s0 = (await project()).sheets.length;
+    await p.click(".ribbon button:has-text('Delete Sheet')"); await p.click(".dlg footer .btn.pri"); await p.waitForTimeout(300);
+    await p.click(".ribbon button[title^='Every sheet: its status']"); await p.waitForSelector(".shbin");
+    await p.click(".shbin button:has-text('Restore')"); await p.waitForTimeout(400);
+    const q = await project();
+    check("a deleted sheet comes back from the bin", q.sheets.length === s0 && q.items.length === n0 && !(await p.$(".shbin")), `${q.sheets.length}/${s0} ${q.items.length}/${n0}`); }
+  await p.click(".shtbl tbody tr:first-child input[type=checkbox]"); await p.click(".dlg footer button:has-text('Print the ticked')"); await p.waitForTimeout(500);
+  check("the ticked sheets go to print", ((await p.textContent(".bs")) ?? "").includes("ticked in the sheet manager"));
+  await p.click(".bs .back"); await p.waitForTimeout(300);
+
   // 53. No commercial product name anywhere in the window (FAMILY §13): the built bundle, and the
   // text shown on each ribbon tab. The names are kept in ROT13 so this file does not name them.
   { const rot = s => s.replace(/[a-z]/gi, c => String.fromCharCode((c <= "Z" ? 65 : 97) + ((c.toUpperCase().charCodeAt(0) - 65 + 13) % 26)));
