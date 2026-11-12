@@ -134,6 +134,7 @@ export const C = {
     toast(`${u?.name ?? "The drawing"} is behind this sheet, faint, to trace over.${o.warnings.length ? " " + o.warnings.join(" ") : ""}`, true);
   },
   exportDexpi: async () => { const f = await call<string | null>("export", { kind: "dexpi", what: "", sheet: sid() }); if (f) toast(`Saved ${f}: this sheet in the DEXPI P&ID exchange format.`, true); },
+  exportWeb: async () => { const f = await call<string | null>("export", { kind: "html", what: new Date().toISOString().slice(0, 10), sheet: sid() }); if (f) toast(`Saved ${f}: one web page with every sheet, the data behind each tag and the lists. It opens in any browser.`, true); },
   exportDxf: async () => { const f = await call<string | null>("export", { kind: "dxf", what: "", sheet: sid() }); if (f) toast(`Saved ${f}. It opens in any CAD program.`, true); },
   exportSvg: async () => { const s = sheet(); if (!s) return; const svg = await sheetSvg(s.id); const f = await call<string | null>("save_file", { name: `${s.number}.svg`, data: svg }); if (f) toast(`Saved ${f}.`, true); },
   planned: (what: string, v: string) => toast(`${what} arrives in ${v}. File › Roadmap shows what comes when.`),
@@ -156,7 +157,7 @@ export const ALL_CMDS: [string, () => void, string?][] = [
   ["New sheet", () => C.addSheet()], ["Legend sheet", () => C.addSheet(true)], ["Delete this sheet", C.deleteSheet], ["Sheet manager", () => import("./sheets").then(m => m.openSheetManager())], ["Plan an isolation", () => import("./isolation").then(m => m.planIsolation())],
   ["SI units", () => C.units("SI")], ["US units", () => C.units("US")], ["Fit the sheet", C.fit, "F"],
   ["Checks panel", () => C.panel("checks")], ["Line list", () => C.panel("lines")], ["Equipment list", () => C.panel("equipment")], ["Instrument index", () => C.panel("instruments")], ["Valve list", () => C.panel("valves")], ["Valve and fitting take-off", () => C.panel("takeoff")], ["Review comments", () => C.panel("comments")], ["User guide", () => setBackstage("guide")], ["Cable schedule", () => C.panel("cables")], ["I/O allocation", () => C.panel("ioalloc")], ["Junction boxes", () => C.panel("jbs")], ["Add a review comment", () => setTool({ k: "comment" })], ["Import a reviewer's copy (comments)", () => import("./review").then(m => m.importComments())], ["I/O summary", () => C.panel("io")], ["Stream list", () => C.panel("streams")], ["Datasheet index", () => C.panel("datasheets")], ["Loop diagrams", () => import("./loops").then(m => m.openLoops())], ["Cause and effect matrix", () => import("./cause").then(m => m.openCause())], ["Export DEXPI (P&ID exchange)", () => C.exportDexpi()], ["Import a DEXPI file", () => C.importDexpi()], ["Import datasheets from Excel", () => import("./datasheet").then(m => m.importDatasheets())],
-  ["Export DXF", C.exportDxf], ["Save the sheet as SVG", C.exportSvg],
+  ["Export DXF", C.exportDxf], ["Save the plant as a web page", C.exportWeb], ["Save the sheet as SVG", C.exportSvg],
   ["Options", () => setBackstage("options")], ["Check for updates", () => setBackstage("about")], ["Roadmap", () => setBackstage("roadmap")],
   ["Keyboard shortcuts", () => D.shortcuts(), "F1"], ["Getting started", () => D.gettingStarted()], ["Glossary", () => D.glossary()],
 ];

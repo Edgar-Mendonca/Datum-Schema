@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.9.1 — 2026-11-12
+
+The plant as a web page, and two new examples.
+
+**One web page anyone can open.** File › Export › **Web page** (or Sheets › Web Page) saves the whole project as one HTML file that opens in any web browser, with nothing to install: for operators, the client, a contractor or a reviewer who reads the P&IDs but does not draw them. It works offline and can be emailed or put on a shared drive.
+- Every sheet, drawn as it prints; drag to pan, scroll or pinch to zoom.
+- Click a symbol or a line: its tag, class and data in the project's units, and every symbol of the same object highlighted.
+- Find a tag or line number: the page goes to it on whichever sheet it is.
+- Off-page connectors lead to the other sheet.
+- The line list, stream list, equipment list, instrument index and valve list as tables; a row leads to the drawing.
+
+The page is read-only, a snapshot of the project when it was saved; it fetches nothing and shows any text in the project as text.
+
+**Two new examples** (File › New):
+- **Pump transfer, worked up**: the pump transfer taken further. It is drawn with the second set of symbols, has a nozzle added to V-101 with its data, a normally closed drain on each pump's suction (select P-101A, Check › Plan Isolation: two valves to close, the drain to open, nothing left to decide), normal and maximum process cases, duty and standby pumps in the load list, a future pump in the tag register, and the sheet issued for approval.
+- **Crude preheat, PFD and P&ID**: the crude preheat PFD developed into its first P&ID and kept in step with it, with what the first P&ID leaves to do done as an engineer would: small lines sized, E-301's relief path, the level loop's control valve, viscosities and lengths added, and lines too fast for their limits made one size up from the Checks panel. Open the Sheet Manager to see both sheets.
+
+Both open with 0 errors and 0 warnings; the second keeps a few notes (insulation, the safety analysis, an unisolated control valve) to show what the checks ask for next.
+
 ## 0.9.0 — 2026-11-12
 
 The isolation planner.

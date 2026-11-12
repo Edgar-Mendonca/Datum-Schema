@@ -856,22 +856,28 @@ pub(crate) mod tests {
     fn every_example_comes_back_from_dexpi() {
         for id in crate::examples::list().iter().map(|e| e.id).filter(|id| *id != "pfd") {
             let p = crate::examples::get(id).unwrap();
-            let sheet = p.sheets.iter().find(|s| !s.legend).unwrap();
+            // The first P&ID sheet (a PFD is not a P&ID); the tags drawn on it (registered tags not
+            // drawn yet are on no sheet).
+            let sheet = p.sheets.iter().find(|s| !s.legend && !s.pfd).unwrap();
             let (q, warn) = read(&write(&p, sheet)).unwrap();
             assert!(warn.is_empty(), "{id}: {warn:?}");
-            let tags = |p: &Project| { let mut t: Vec<String> = p.objects.iter().filter(|o| !o.tag.is_empty()).map(|o| o.tag.clone()).collect(); t.sort(); t };
+            let tags = |p: &Project| { let mut t: Vec<String> = p.objects.iter().filter(|o| !o.tag.is_empty() && p.items.iter().any(|i| i.obj == o.id && p.sheet(i.sheet).is_some_and(|s| !s.pfd))).map(|o| o.tag.clone()).collect(); t.sort(); t };
             assert_eq!(tags(&q), tags(&p), "{id}: the same tags");
             let numbers = |p: &Project| { let mut n: Vec<String> = p.objects.iter().filter(|o| o.class == crate::model::LINE_CLASS).map(|o| obj_number(p, o.id)).filter(|n| !n.is_empty()).collect(); n.sort(); n.dedup(); n };
             assert_eq!(numbers(&q), numbers(&p), "{id}: the same line numbers");
-            assert_eq!(joins(&q), joins(&p), "{id}: the same connections");
+            let mut only = p.clone();
+            only.lines.retain(|l| l.sheet == sheet.id);
+            assert_eq!(joins(&q), joins(&only), "{id}: the same connections");
             // The items sit where they were, turned and mirrored the same.
-            // (Matched by tag and place: "Find the faults" has a duplicate tag on purpose.)
+            // (Matched by tag and place, to a micron as the file writes it: "Find the faults" has a
+            // duplicate tag on purpose.)
             let mut pairs = vec![];
-            for it in &p.items {
+            for it in p.items.iter().filter(|i| i.sheet == sheet.id) {
                 let t = p.tag_of(it);
                 if t.is_empty() { continue; }
-                let o = q.items.iter().find(|x| q.tag_of(x) == t && (x.x - it.x).abs() < 1e-6 && (x.y - it.y).abs() < 1e-6).unwrap_or_else(|| panic!("{id}: {t} moved"));
-                assert!(o.rot == it.rot && o.flip == it.flip && o.sym == it.sym, "{id}: {t}");
+                let o = q.items.iter().find(|x| q.tag_of(x) == t && (x.x - it.x).abs() < 1e-3 && (x.y - it.y).abs() < 1e-3).unwrap_or_else(|| panic!("{id}: {t} moved"));
+                // (What it stands for: a drawing standard's own drawing comes back as the symbol it shows.)
+                assert!(o.rot == it.rot && o.flip == it.flip && o.base_key() == it.base_key(), "{id}: {t}");
                 pairs.push((it.obj, o.obj));
             }
             // Data comes back in SI.
@@ -885,8 +891,9 @@ pub(crate) mod tests {
                     }
                 }
             }
-            // The checks find what they found before.
-            let issues = |p: &Project| { let net = crate::graph::Net::new(p); let h = crate::hydraulics::all(p, &net); let mut v: Vec<(u8, String)> = crate::checks::run(p, &net, &h).into_iter().map(|i| (i.rule, i.msg)).collect(); v.sort(); v };
+            // The checks find what they found before (but a P&ID's links to its PFD's streams, rule
+            // 16: one sheet travels, its PFD does not).
+            let issues = |p: &Project| { let net = crate::graph::Net::new(p); let h = crate::hydraulics::all(p, &net); let mut v: Vec<(u8, String)> = crate::checks::run(p, &net, &h).into_iter().filter(|i| i.rule != 16).map(|i| (i.rule, i.msg)).collect(); v.sort(); v };
             assert_eq!(issues(&q), issues(&p), "{id}");
         }
     }

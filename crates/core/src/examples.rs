@@ -21,6 +21,8 @@ pub fn list() -> Vec<Example> {
         Example { id: "compressor", name: "Compressor package", what: "Knock-out drum with level control, centrifugal compressor and motor, air cooler, and the anti-surge loop." },
         Example { id: "exchanger", name: "Exchanger loop", what: "A steam heater with its temperature loop, steam trap and condensate return, insulation and tracing." },
         Example { id: "pfd", name: "Crude preheat (PFD)", what: "A process flow diagram: feed pump, exchanger, fired heater and separator, with a stream table and heat and mass balances that close." },
+        Example { id: "worked", name: "Pump transfer, worked up", what: "The pump transfer taken further, to show what the drawing knows: drawn with the second set of symbols, a nozzle added to V-101, a drain on each pump's suction for the isolation planner (select P-101A, Check › Plan Isolation), normal and maximum process cases, duty and standby pumps in the load list, a future pump in the tag register, and the sheet issued for approval." },
+        Example { id: "develop", name: "Crude preheat, PFD and P&ID", what: "The crude preheat PFD developed into its first P&ID (Sheets › Develop P&ID): the same equipment, each stream a line number with its data and a suggested size, kept in step with the PFD; open the Sheet Manager to see both sheets." },
         Example { id: "faults", name: "Find the faults", what: "The pump transfer with planted mistakes: open the Checks panel and fix them." },
     ]
 }
@@ -32,6 +34,8 @@ pub fn get(id: &str) -> Option<Project> {
         "exchanger" => Some(exchanger()),
         "faults" => Some(faults()),
         "pfd" => Some(pfd()),
+        "worked" => Some(worked()),
+        "develop" => Some(develop()),
         "big" => Some(big(23)),
         _ => None,
     }
@@ -303,6 +307,127 @@ fn faults() -> Project {
     d.p.title.project = "Find the faults".into();
     d.p.sheets[0].title = "Pump transfer, with mistakes to find".into();
     d.p.sheets[0].number = "PID-900".into();
+    d.p
+}
+
+/// The pump transfer worked up: each feature shown on a drawing a user already knows.
+fn worked() -> Project {
+    let (p, _) = pump();
+    let mut d = Doc::new(p);
+    let ok = |d: &mut Doc, op: Op| d.apply(op).unwrap_or_else(|e| panic!("worked example: {e}"));
+    let item = |d: &Doc, t: &str| d.p.items.iter().find(|i| d.p.tag_of(i) == t).unwrap_or_else(|| panic!("{t}")).clone();
+    let s = d.p.sheets[0].id;
+    d.p.name = "Pump transfer, worked up".into();
+    d.p.title.project = "Pump transfer, worked up".into();
+    let mut sh = d.p.sheets[0].clone();
+    sh.number = "PID-110".into();
+    sh.title = "Pump transfer, worked up".into();
+    sh.status = "Issued for approval".into();
+    ok(&mut d, Op::SetSheet { sheet: sh });
+    // A drain on each pump's suction, between the strainer and the pump: a valve normally closed.
+    for pump in ["P-101A", "P-101B"] {
+        let pi = item(&d, pump);
+        let suction = d.p.lines.iter().find(|l| matches!(l.b, End::Port { item, .. } if item == pi.id)).unwrap().clone();
+        let (x, y) = (142.0, pi.y);
+        let v = ok(&mut d, Op::AddItem { item: Item { sheet: s, sym: "gate".into(), x, y: y + 14.0, rot: 1, ..Item::default() }, on: None, tag: String::new(), obj: None })[0];
+        let dr = ok(&mut d, Op::AddItem { item: Item { sheet: s, sym: "drain".into(), x, y: y + 27.0, ..Item::default() }, on: None, tag: String::new(), obj: None })[0];
+        let a = ok(&mut d, Op::AddLine { line: Line { sheet: s, kind: Kind::Minor, a: End::Line { line: suction.id, x, y }, b: End::Port { item: v, port: 0 }, ..Line::default() } })[0];
+        ok(&mut d, Op::AddLine { line: Line { sheet: s, kind: Kind::Minor, a: End::Port { item: v, port: 1 }, b: End::Port { item: dr, port: 0 }, ..Line::default() } });
+        ok(&mut d, Op::SetData { ids: vec![v], key: "position".into(), val: Some(t("NC")) });
+        ok(&mut d, Op::SetData { ids: vec![v], key: "size".into(), val: Some(t("1")) });
+        for (k, v) in [("size", "1"), ("sched", "80"), ("fluid", "P"), ("class", "A1A"), ("service", "Pump suction drain")] {
+            ok(&mut d, Op::SetData { ids: vec![a], key: k.into(), val: Some(t(v)) });
+        }
+    }
+    // A nozzle added to the receiver, with its data.
+    let v101 = item(&d, "V-101");
+    let sym = symbols::get(&v101.sym).unwrap();
+    ok(&mut d, Op::AddNozzle { item: v101.id, x: v101.x + sym.w / 2.0, y: v101.y + 12.0, name: String::new() });
+    for (k, v) in [("size", "2"), ("rating", "300#"), ("service", "Spare, blinded")] {
+        ok(&mut d, Op::SetNozzle { item: v101.id, name: "N1".into(), field: k.into(), value: v.into() });
+    }
+    // Duty and standby pumps for the load list.
+    for (pump, op) in [("P-101A", "Duty"), ("P-101B", "Standby")] {
+        let o = item(&d, pump).obj;
+        ok(&mut d, Op::SetData { ids: vec![o], key: "operation".into(), val: Some(t(op)) });
+        ok(&mut d, Op::SetData { ids: vec![o], key: "voltage".into(), val: Some(t("400 V")) });
+    }
+    // Normal and maximum cases: the maximum case runs at 36 m³/h.
+    ok(&mut d, Op::SetCases { cases: vec!["Normal".into(), "Maximum".into()] });
+    ok(&mut d, Op::SetCase { case: "Maximum".into() });
+    let flowing: Vec<u32> = d.p.lines.iter().filter(|l| matches!(d.p.data_of(l.obj).get("flow"), Some(Val::Num(_)))).map(|l| l.id).collect();
+    ok(&mut d, Op::SetData { ids: flowing, key: "flow".into(), val: Some(m3h(36.0)) });
+    ok(&mut d, Op::SetCase { case: "Normal".into() });
+    // A pump registered for the future, not drawn yet.
+    let row = crate::register::Row { tag: "P-102".into(), class: String::new(), service: "Future transfer pump".into(), status: "new".into(), note: String::new() };
+    ok(&mut d, Op::Register { rows: vec![row] });
+    // Drawn with the second set of symbols.
+    let set = &crate::symlib::builtin_sets()[0];
+    let mut st = d.p.settings.clone();
+    st.standard = crate::model::Standard { library: set.name.clone(), map: set.symbols.iter().map(|c| (c.like.clone(), c.key.clone())).collect() };
+    ok(&mut d, Op::SetSettings { settings: Box::new(st) });
+    d.p.normalize();
+    d.p
+}
+
+/// The crude preheat PFD developed into its first P&ID, the two kept in step.
+fn develop() -> Project {
+    let mut d = Doc::new(pfd());
+    let pfd_sheet = d.p.sheets[0].id;
+    // The project's pipe class first: the developed lines take it.
+    let mut st = d.p.settings.clone();
+    st.specs = vec![crate::specs::starter("A1A")];
+    d.apply(Op::SetSettings { settings: Box::new(st) }).unwrap();
+    d.apply(Op::Develop { sheet: pfd_sheet }).unwrap_or_else(|e| panic!("develop example: {e}"));
+    // What the first P&ID leaves to do, done as a user would from the Checks panel.
+    let ok = |d: &mut Doc, op: Op| d.apply(op).unwrap_or_else(|e| panic!("develop example: {e}"));
+    let no_size: Vec<u32> = d.p.lines.iter().filter(|l| l.kind.process() && !d.p.data_of(l.obj).contains_key("size")).map(|l| l.id).collect();
+    ok(&mut d, Op::SetData { ids: no_size, key: "size".into(), val: Some(t("2")) });
+    let tagged = |d: &Doc, tag: &str| d.p.items.iter().find(|i| d.p.tag_of(i) == tag && d.p.sheet(i.sheet).is_some_and(|s| !s.pfd)).unwrap_or_else(|| panic!("{tag}")).clone();
+    let e301 = tagged(&d, "E-301").obj;
+    ok(&mut d, Op::SetData { ids: vec![e301], key: "relief".into(), val: Some(t("Tube side open to V-301 and PSV-301 (HV-205 locked open)")) });
+    let hv205 = tagged(&d, "HV-205").obj;
+    ok(&mut d, Op::SetData { ids: vec![hv205], key: "position".into(), val: Some(t("LO")) });
+    // The level loop's control valve on V-301's liquid outlet, signalled from LIC-301.
+    let v301 = tagged(&d, "V-301");
+    let k = symbols::get(&v301.sym).unwrap().ports.iter().position(|q| q.name == "liquid out").unwrap() as u8;
+    let outlet = d.p.lines.iter().find(|l| l.a == End::Port { item: v301.id, port: k } || l.b == End::Port { item: v301.id, port: k }).unwrap().id;
+    let at = crate::graph::end_pt(&d.p, &End::Port { item: v301.id, port: k });
+    let s = v301.sheet;
+    let lv = ok(&mut d, Op::AddItem { item: Item { sheet: s, sym: "cv_pneu".into(), x: at[0] + 45.0, y: at[1], ..Item::default() }, on: Some(outlet), tag: "LV-301".into(), obj: None })[0];
+    for (key, v) in [("loop", "301"), ("fail", "FC"), ("size", "3"), ("class", "300#"), ("operator", "Pneumatic")] {
+        ok(&mut d, Op::SetData { ids: vec![lv], key: key.into(), val: Some(t(v)) });
+    }
+    let lic = tagged(&d, "LIC-301");
+    let port = |d: &Doc, it: u32, name: &str| End::Port { item: it, port: symbols::get(&d.p.item(it).unwrap().sym).unwrap().ports.iter().position(|q| q.name == name).unwrap() as u8 };
+    let (a, b) = (port(&d, lic.id, "right"), port(&d, lv, "signal"));
+    ok(&mut d, Op::AddLine { line: Line { sheet: s, kind: Kind::Electric, a, b, ..Line::default() } });
+    // The viscosity and length a stream does not carry, for the hydraulics on every developed line.
+    let objs: std::collections::BTreeSet<u32> = d.p.lines.iter().filter(|l| l.kind.process() && d.p.sheet(l.sheet).is_some_and(|s| !s.pfd) && d.p.data_of(l.obj).contains_key("density")).map(|l| l.obj).collect();
+    for o in objs {
+        let gas = d.p.data_of(o).get("phase").is_some_and(|v| v.text().to_lowercase().contains("gas") || v.text().to_lowercase().contains("vap"));
+        ok(&mut d, Op::SetData { ids: vec![o], key: "viscosity".into(), val: Some(n(if gas { 1.2e-5 } else { 2.0e-3 })) });
+        ok(&mut d, Op::SetData { ids: vec![o], key: "length".into(), val: Some(n(25.0)) });
+        ok(&mut d, Op::SetData { ids: vec![o], key: "fittings".into(), val: Some(n(20.0)) });
+    }
+    // Lines too fast or too steep for their limits: the Checks panel's fix, one size up, until none.
+    for _ in 0..8 {
+        let net = crate::graph::Net::new(&d.p);
+        let hyd = crate::hydraulics::all(&d.p, &net);
+        let fast: Vec<Vec<u32>> = crate::checks::run(&d.p, &net, &hyd).into_iter().filter(|i| i.rule == 13).map(|i| i.ids).collect();
+        if fast.is_empty() {
+            break;
+        }
+        for ids in fast {
+            ok(&mut d, Op::Fix { rule: 13, ids, choice: 0 });
+        }
+    }
+    d.p.name = "Crude preheat, PFD and P&ID".into();
+    d.p.title.project = "Crude preheat".into();
+    for s in &mut d.p.sheets {
+        s.status = if s.pfd { "Issued for approval".into() } else { "Draft".into() };
+    }
+    d.p.normalize();
     d.p
 }
 

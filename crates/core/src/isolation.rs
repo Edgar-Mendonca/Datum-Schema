@@ -57,7 +57,7 @@ fn name(p: &Project, item: u32) -> String {
     p.item(item).map(|i| p.tag_of(i).to_string()).filter(|t| !t.is_empty()).unwrap_or_else(|| p.item(item).and_then(|i| crate::symbols::get(&i.sym)).map_or("a symbol".into(), |s| s.name.to_lowercase()))
 }
 
-/// Does the far side of a valve (from `port`) go nowhere: only open ends, blinds or caps?
+/// Does the far side of a valve (from `port`) go nowhere: only open ends, blinds, drains or vents?
 fn goes_nowhere(net: &Net, item: u32, port: u8) -> bool {
     let Some(s) = net.sym(item) else { return false };
     let far: Vec<u8> = s.ports.iter().enumerate().filter(|(k, q)| !q.signal && *k as u8 != port).map(|(k, _)| k as u8).collect();
@@ -67,7 +67,7 @@ fn goes_nowhere(net: &Net, item: u32, port: u8) -> bool {
             any = true;
             match net.other(l, b) {
                 Some(End::Free { .. }) => {}
-                Some(End::Port { item: n, .. }) if net.items.get(n).is_some_and(|i| BLINDS[..1].contains(&i.base_key().as_str())) => {}
+                Some(End::Port { item: n, .. }) if net.items.get(n).is_some_and(|i| ["blind", "drain", "vent"].contains(&i.base_key().as_str())) => {}
                 _ => return false,
             }
             if net.branches.get(&l).is_some_and(|v| !v.is_empty()) {
@@ -251,6 +251,16 @@ mod tests {
     }
 
     #[test]
+    fn the_worked_example_isolates_a_pump_with_its_drain() {
+        let p = crate::examples::get("worked").unwrap();
+        let plan = plan(&p, &[tag(&p, "P-101A")]).unwrap();
+        let roles: Vec<(&str, &str)> = plan.points.iter().map(|x| (x.role, x.action.as_str())).collect();
+        assert!(roles.contains(&("vent", "Open (vent or drain)")) && roles.iter().filter(|r| r.0 == "boundary").count() == 2, "{roles:?}");
+        assert!(plan.problems.is_empty(), "{:?}", plan.problems);
+        assert!(plan.steps[1].starts_with("Open to depressurise"));
+    }
+
+    #[test]
     fn what_cannot_be_isolated_is_said() {
         let mut p = crate::examples::get("pump").unwrap();
         // A line with an open end, straight off a vessel: no valve, no vent.
@@ -268,7 +278,7 @@ mod tests {
 
     #[test]
     fn every_symbol_and_line_of_every_example_plans_without_panic() {
-        for ex in ["pump", "compressor", "exchanger", "pfd", "faults"] {
+        for ex in crate::examples::list().iter().map(|e| e.id) {
             let p = crate::examples::get(ex).unwrap();
             for id in p.items.iter().map(|i| i.id).chain(p.lines.iter().map(|l| l.id)) {
                 let r = plan(&p, &[id]).unwrap();

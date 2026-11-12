@@ -935,6 +935,24 @@ const shots = process.env.SHOTS;
     check("Show on the sheet selects the isolation", (await p.evaluate(() => document.querySelectorAll(".it.sel").length)) >= 3); }
   await p.keyboard.press("Escape");
 
+  // 71. The worked-up example saved as a web page: search finds a tag, a click shows its data,
+  // a list row leads to the drawing; no script errors.
+  await openEx("Pump transfer, worked up");
+  check("the worked-up example opens clean", (await p.textContent(".status")).includes("0 errors"));
+  await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button:has-text('Web Page')"); await p.waitForTimeout(600);
+  { const web = (await inv("exports")).filter(e => e.kind === "html").pop();
+    check("the plant is saved as one web page", !!web && web.text.startsWith("<!doctype html>"));
+    const w = await b.newPage(); const errs = []; w.on("pageerror", e => errs.push(String(e)));
+    await w.setContent(web.text); await w.waitForTimeout(300);
+    check("the web page shows the sheet", (await w.$$("#view .o")).length > 20);
+    await w.fill("#q", "P-101A"); await w.press("#q", "Enter"); await w.waitForTimeout(200);
+    const info = await w.textContent("#info");
+    check("searching a tag shows its data", info.includes("P-101A") && info.includes("Duty") && info.includes("kW"), info);
+    await w.click("nav button:has-text('Valve list')"); await w.click("#list tbody tr:first-child"); await w.waitForTimeout(200);
+    check("a list row leads to the drawing", (await w.$$("#view .o.hi")).length >= 1 && await w.isVisible("#view"));
+    check("the web page runs without errors", errs.length === 0, errs.join("; "));
+    await w.close(); }
+
   // 53. No commercial product name anywhere in the window (FAMILY §13): the built bundle, and the
   // text shown on each ribbon tab. The names are kept in ROT13 so this file does not name them.
   { const rot = s => s.replace(/[a-z]/gi, c => String.fromCharCode((c <= "Z" ? 65 : 97) + ((c.toUpperCase().charCodeAt(0) - 65 + 13) % 26)));

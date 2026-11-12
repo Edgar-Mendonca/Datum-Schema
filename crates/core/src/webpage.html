@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="Datum Schema {{VERSION}}">
+<title>{{TITLE}}</title>
+<style>
+:root { --bg: #f4f5f7; --panel: #fff; --ink: #1d2330; --muted: #6a7282; --line: #d9dde4; --acc: #1f6feb; --hi: #e8590c; }
+@media (prefers-color-scheme: dark) { :root { --bg: #15181e; --panel: #1e222a; --ink: #e6e9ef; --muted: #98a0ae; --line: #343a46; --acc: #5b9bff; } }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { display: grid; grid-template-rows: auto 1fr; grid-template-columns: 220px 1fr 300px; font: 14px/1.4 "IBM Plex Sans", "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--ink); }
+header { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+header b { font-size: 16px; }
+header .muted { color: var(--muted); font-size: 12px; }
+header .grow { flex: 1; }
+#q { width: 220px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; }
+nav { overflow: auto; background: var(--panel); border-right: 1px solid var(--line); padding: 8px 0; }
+nav h4 { margin: 10px 14px 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+nav button { display: block; width: 100%; text-align: left; border: 0; background: none; color: var(--ink); padding: 6px 14px; font: inherit; cursor: pointer; }
+nav button:hover { background: var(--bg); }
+nav button.on { background: var(--bg); box-shadow: inset 3px 0 var(--acc); font-weight: 600; }
+nav button small { display: block; color: var(--muted); font-weight: 400; font-size: 11px; }
+main { position: relative; overflow: hidden; }
+#view { width: 100%; height: 100%; touch-action: none; cursor: grab; background: #c9ced6; }
+#view svg { width: 100%; height: 100%; display: block; color: #000; }
+#view .o { cursor: pointer; }
+#view .o:hover { color: var(--acc); }
+#view .o.hi { color: var(--hi); }
+#view .hit { stroke: transparent; stroke-width: 3; fill: transparent; }
+#view rect.hit { stroke-width: 0; }
+#list { position: absolute; inset: 0; overflow: auto; background: var(--panel); padding: 12px 16px; display: none; }
+#list table { border-collapse: collapse; font-size: 12px; min-width: 100%; }
+#list th, #list td { border-bottom: 1px solid var(--line); padding: 4px 8px; text-align: left; white-space: nowrap; }
+#list th { position: sticky; top: 0; background: var(--panel); }
+#list tbody tr { cursor: pointer; }
+#list tbody tr:hover { background: var(--bg); }
+.zoom { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 4px; }
+.zoom button { width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); font-size: 16px; cursor: pointer; }
+aside { overflow: auto; background: var(--panel); border-left: 1px solid var(--line); padding: 12px 14px; }
+aside h3 { margin: 0 0 2px; font-size: 18px; }
+aside .muted { color: var(--muted); font-size: 12px; }
+aside table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+aside td { border-bottom: 1px solid var(--line); padding: 4px 2px; vertical-align: top; }
+aside td:first-child { color: var(--muted); width: 45%; }
+aside button { margin-top: 10px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); cursor: pointer; font: inherit; }
+footer { position: absolute; left: 12px; bottom: 12px; font-size: 11px; color: #333; background: rgba(255,255,255,.8); padding: 2px 6px; border-radius: 4px; }
+@media (max-width: 760px) { body { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr auto; } nav { max-height: 140px; border-right: 0; border-bottom: 1px solid var(--line); } aside { max-height: 40vh; border-left: 0; border-top: 1px solid var(--line); } #q { width: 100%; } }
+</style>
+</head>
+<body>
+<header><b id="name"></b><span class="muted" id="sub"></span><span class="grow"></span><input id="q" type="search" placeholder="Find a tag (P-101A)…" list="tags" autocomplete="off"><datalist id="tags"></datalist></header>
+<nav id="nav"></nav>
+<main><div id="view"></div><div id="list"></div><div class="zoom"><button id="zin" title="Zoom in">+</button><button id="zout" title="Zoom out">−</button><button id="zfit" title="Fit the sheet">⤢</button></div><footer>Read-only. Made with Datum Schema {{VERSION}}.</footer></main>
+<aside id="info"><p class="muted">Click a symbol or a line to see its data. Drag to pan; scroll or pinch to zoom.</p></aside>
+<script id="data" type="application/json">{{DATA}}</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById("data").textContent);
+const $ = id => document.getElementById(id);
+const el = (t, txt, cls) => { const e = document.createElement(t); if (txt != null) e.textContent = txt; if (cls) e.className = cls; return e; };
+$("name").textContent = D.name || "Project";
+$("sub").textContent = [D.company, D.stamp && "saved " + D.stamp, D.units + " units"].filter(Boolean).join(" · ");
+document.title = D.name || "Project";
+let cur = -1, vb = [0, 0, 420, 297], svg = null, mode = "sheet";
+const view = $("view"), list = $("list");
+const setVb = () => svg && svg.setAttribute("viewBox", vb.map(v => v.toFixed(2)).join(" "));
+const fit = () => { const s = D.sheets[cur]; if (!s) return; const r = view.getBoundingClientRect(); const k = Math.max(s.w / Math.max(r.width, 1), s.h / Math.max(r.height, 1)); const w = r.width * k, h = r.height * k; vb = [(s.w - w) / 2, (s.h - h) / 2, w, h]; setVb(); };
+const navBtns = [];
+function showSheet(i) {
+  mode = "sheet"; list.style.display = "none"; view.style.display = "block";
+  if (i !== cur) {
+    cur = i; const s = D.sheets[i];
+    view.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" font-family="IBM Plex Sans, Segoe UI, Arial, sans-serif">' + s.svg + "</svg>";
+    svg = view.firstChild; fit();
+  }
+  navBtns.forEach(b => b.classList.toggle("on", b.dataset.k === "s" + i));
+}
+function showList(i) {
+  mode = "list"; const l = D.lists[i]; list.replaceChildren(); view.style.display = "none"; list.style.display = "block";
+  list.append(el("h3", l.title));
+  const t = el("table"), th = el("tr"); l.cols.forEach(c => th.append(el("th", c))); const hd = el("thead"); hd.append(th); t.append(hd);
+  const tb = el("tbody");
+  l.rows.forEach(r => { const tr = el("tr"); r.c.forEach(c => tr.append(el("td", c))); tr.onclick = () => go(r.id); tb.append(tr); });
+  t.append(tb); list.append(t);
+  navBtns.forEach(b => b.classList.toggle("on", b.dataset.k === "l" + i));
+}
+function info(id) {
+  const m = D.ids[id], box = $("info"); box.replaceChildren();
+  if (!m) return;
+  const o = D.objs[m.o];
+  box.append(el("h3", (o && o.tag) || m.n || "(no tag)"));
+  box.append(el("div", [(o && o.class), "sheet " + D.sheets[m.s].number].filter(Boolean).join(" · "), "muted"));
+  if (m.n && o && o.tag !== m.n) box.append(el("div", "Line " + m.n, "muted"));
+  if (o && o.rows.length) { const t = el("table"); o.rows.forEach(r => { const tr = el("tr"); tr.append(el("td", r[0]), el("td", r[1])); t.append(tr); }); box.append(t); }
+  else box.append(el("p", "No data given.", "muted"));
+  if (m.l && D.ids[m.l]) { const b = el("button", "Go to the other sheet (" + D.sheets[D.ids[m.l].s].number + ")"); b.onclick = () => go(m.l); box.append(b); }
+}
+function highlight(oid) { if (!svg) return; svg.querySelectorAll(".o").forEach(g => { const m = D.ids[g.dataset.i]; g.classList.toggle("hi", !!m && m.o === oid && oid !== 0); }); }
+function go(id) {
+  const m = D.ids[id]; if (!m) return;
+  showSheet(m.s);
+  const w = Math.min(vb[2], 160), h = vb[3] * w / vb[2]; vb = [m.x - w / 2, m.y - h / 2, w, h]; setVb();
+  highlight(m.o || -1); if (m.o === 0 && svg) { const g = svg.querySelector('.o[data-i="' + id + '"]'); g && g.classList.add("hi"); }
+  info(id);
+}
+// The sheets and lists.
+const nav = $("nav");
+nav.append(el("h4", "Sheets"));
+D.sheets.forEach((s, i) => { const b = el("button", s.number); b.append(el("small", s.title + (s.rev ? " · rev " + s.rev : ""))); b.dataset.k = "s" + i; b.onclick = () => showSheet(i); navBtns.push(b); nav.append(b); });
+if (D.lists.length) nav.append(el("h4", "Lists"));
+D.lists.forEach((l, i) => { const b = el("button", l.title); b.dataset.k = "l" + i; b.onclick = () => showList(i); navBtns.push(b); nav.append(b); });
+// Search by tag or line number.
+const byTag = new Map();
+Object.entries(D.ids).forEach(([id, m]) => { const o = D.objs[m.o]; const t = (o && o.tag) || m.n; if (t && !byTag.has(t.toUpperCase())) byTag.set(t.toUpperCase(), id); });
+const dl = $("tags"); [...byTag.keys()].sort().forEach(t => { const op = document.createElement("option"); op.value = t; dl.append(op); });
+const find = () => { const v = $("q").value.trim().toUpperCase(); if (!v) return; let id = byTag.get(v); if (!id) { const k = [...byTag.keys()].find(t => t.includes(v)); id = k && byTag.get(k); } if (id) go(id); else { $("info").replaceChildren(el("p", "No tag matches " + $("q").value + ".", "muted")); } };
+$("q").addEventListener("change", find);
+$("q").addEventListener("keydown", e => { if (e.key === "Enter") find(); });
+// Zoom and pan.
+const zoom = (k, cx, cy) => { const r = view.getBoundingClientRect(); const px = cx == null ? .5 : (cx - r.left) / r.width, py = cy == null ? .5 : (cy - r.top) / r.height; const x = vb[0] + vb[2] * px, y = vb[1] + vb[3] * py; vb[2] *= k; vb[3] *= k; vb[0] = x - vb[2] * px; vb[1] = y - vb[3] * py; setVb(); };
+view.addEventListener("wheel", e => { e.preventDefault(); zoom(e.deltaY > 0 ? 1.15 : 1 / 1.15, e.clientX, e.clientY); }, { passive: false });
+$("zin").onclick = () => zoom(1 / 1.4); $("zout").onclick = () => zoom(1.4); $("zfit").onclick = fit;
+const pts = new Map(); let moved = false, pinch = 0;
+view.addEventListener("pointerdown", e => { pts.set(e.pointerId, [e.clientX, e.clientY]); moved = false; view.setPointerCapture(e.pointerId); });
+view.addEventListener("pointermove", e => {
+  const p = pts.get(e.pointerId); if (!p) return;
+  const r = view.getBoundingClientRect();
+  if (pts.size === 2) { pts.set(e.pointerId, [e.clientX, e.clientY]); const [a, b] = [...pts.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch) zoom(pinch / d, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2); pinch = d; moved = true; return; }
+  const dx = e.clientX - p[0], dy = e.clientY - p[1]; if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
+  vb[0] -= dx * vb[2] / r.width; vb[1] -= dy * vb[3] / r.height; setVb(); pts.set(e.pointerId, [e.clientX, e.clientY]);
+});
+const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = 0; };
+view.addEventListener("pointerup", e => { up(e); if (moved) return; const g = document.elementsFromPoint(e.clientX, e.clientY).map(x => x.closest && x.closest(".o")).find(Boolean); if (g) { const m = D.ids[g.dataset.i]; highlight(m ? m.o : -1); if (m && m.o === 0) g.classList.add("hi"); info(g.dataset.i); } });
+view.addEventListener("pointercancel", up);
+window.addEventListener("resize", () => mode === "sheet" && fit());
+showSheet(0);
+</script>
+</body>
+</html>

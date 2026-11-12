@@ -55,6 +55,7 @@ pub mod symlib;
 pub mod tags;
 pub mod units;
 pub mod view;
+pub mod webpage;
 pub mod wiring;
 
 #[cfg(test)]

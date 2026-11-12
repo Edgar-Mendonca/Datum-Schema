@@ -105,6 +105,7 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
                     format!("{} bytes", bytes.len())
                 }
                 "cause" => format!("{} bytes", datum_core::cause::xlsx(&s.doc.p)?.len()),
+                "html" => datum_core::webpage::page(&s.doc.p, &what),
                 "loopdxf" => {
                     let d = datum_core::loops::diagram(&s.doc.p, &what)?;
                     dxf::write_prims(&d.prims, d.w, d.h)

@@ -38,6 +38,7 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Line hydraulics**: inside diameter from size and schedule, velocity, Reynolds number, Colebrook friction factor, pressure drop per 100 m and over the line, with a ✓ ! ✗ badge against the limits for its service.
 - **Plant objects**: every equipment item, valve, instrument and line number is an object in a plant › unit › area hierarchy (the Plant panel); symbols are views of it, so one object can be drawn on several sheets. Every change is recorded with who made it and when.
 - **Classes you can extend**: a class library (named after the open DEXPI data standard) defines what data each kind of object has; add your company's attributes in Options and mark them required.
+- **The plant as a web page**: one HTML file with every sheet, the data behind each tag, search and the lists, that anyone can open in a browser.
 - **Isolation planner**: the valves to close, the blinds and the vents and drains for the selected equipment, valve or line, with what stops a safe isolation (an aid; the site's procedure decides).
 - **Sheet manager**: every sheet with its status, revision and problems; print a chosen set; bring back deleted sheets.
 - **A second set of drawings**: built in and chosen per project; the same objects, lines and checks, drawn differently.
@@ -76,7 +77,7 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Lists**: line list, stream list, I/O summary, take-off, equipment list, instrument index, valve list and datasheet index, always in step with the drawing; edit them, export to Excel or CSV, print them.
 - **Print and export**: PDF (sheets at their size or fitted to A3, lists, legend), SVG, DXF (R12) that opens in any CAD program, and the DEXPI P&ID exchange format (XML), which it also opens.
 - **User guide**: in the app (Help › User Guide), searchable and printable, with every feature step by step.
-- **Examples**: a pump transfer, a compressor package, a steam heater loop, a crude preheat process flow diagram, and "Find the faults".
+- **Examples**: a pump transfer, a compressor package, a steam heater loop, a crude preheat process flow diagram, the pump transfer worked up (symbols, nozzles, drains and isolation, cases, loads, register), the crude preheat developed into its P&ID, and "Find the faults".
 - **Safe files**: `.dschema` projects (a single SQLite database with the history), atomic saves, recovery of unsaved work, undo and redo for everything.
 
 ![The Checks panel on "Find the faults": duplicate tag, open end, a size change without a reducer, a pump without a check valve, a vessel without relief](docs/images/checks.png)
