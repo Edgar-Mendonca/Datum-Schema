@@ -10,7 +10,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: System libraries for Tauri
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev
+        # The runners' package mirrors sometimes fail for a while: retry with timeouts, then check.
+        timeout-minutes: 20
+        run: |
+          A="-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30"
+          for i in 1 2 3; do
+            sudo apt-get $A update && sudo apt-get $A install -y --fix-missing libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev && break
+            sleep 30
+          done
+          dpkg -s libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev > /dev/null
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
