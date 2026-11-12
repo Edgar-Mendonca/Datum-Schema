@@ -42,6 +42,10 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
         "derived" => serde_json::to_value(api::derived(&s.doc.p, a["sheet"].as_u64().unwrap_or(0) as u32)).unwrap(),
         "sheet_manager" => serde_json::to_value(datum_core::sheetman::manager(&s.doc.p)).unwrap(),
         "nozzles" => serde_json::to_value(datum_core::nozzles::list(&s.doc.p, a["item"].as_u64().unwrap_or(0) as u32)).unwrap(),
+        "isolation" => {
+            let ids: Vec<u32> = a["ids"].as_array().map(|v| v.iter().filter_map(|x| x.as_u64()).map(|x| x as u32).collect()).unwrap_or_default();
+            serde_json::to_value(datum_core::isolation::plan(&s.doc.p, &ids)?).unwrap()
+        }
         "fixes" => {
             let ids: Vec<u32> = a["ids"].as_array().map(|v| v.iter().filter_map(|x| x.as_u64()).map(|x| x as u32).collect()).unwrap_or_default();
             serde_json::to_value(datum_core::fixes::labels(&s.doc.p, a["rule"].as_u64().unwrap_or(0) as u8, &ids)).unwrap()

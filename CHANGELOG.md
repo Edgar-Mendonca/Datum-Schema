@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.9.0 — 2026-11-12
+
+The isolation planner.
+
+**What to close, blind and open.** Select a piece of equipment, a valve or a line (Shift adds more) and choose **Check › Plan Isolation**. Datum Schema follows the process lines outwards through fittings, in-line instruments, check valves and off-page pairs until valves or blinds stop them, and lists:
+- the **boundary**: valves to close and lock (or confirm closed, when their Position is NC or LC), spectacle blinds to swing to closed and spacers to replace with a blind for positive isolation;
+- the **vents and drains** inside: valves whose far side goes nowhere, opened to depressurise and drain the section;
+- **relief devices** on the section, to keep in service or isolate under the site's procedure;
+- the **order of work**, and the hand-back in reverse.
+
+**What to decide before work** is said plainly: an open end, another piece of equipment reached with no valve or blind between, a control valve on the boundary, no vent or drain inside. **Show on the sheet** selects everything inside and the isolation points; **Copy** puts the plan on the clipboard for a spreadsheet or a permit.
+
+The planner is an aid read from the drawing: the isolation, its method and its sign-off remain the site's procedure.
+
+CI: the system-library install now retries when the package mirrors fail, instead of failing the check after an hour.
+
 ## 0.8.3 — 2026-11-11
 
 The sheet manager.

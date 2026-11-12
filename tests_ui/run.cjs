@@ -923,6 +923,18 @@ const shots = process.env.SHOTS;
   check("the ticked sheets go to print", ((await p.textContent(".bs")) ?? "").includes("ticked in the sheet manager"));
   await p.click(".bs .back"); await p.waitForTimeout(300);
 
+  // 70. An isolation planned for a pump: its suction and discharge valves are the boundary.
+  await openEx("Pump transfer");
+  { const q = await project(); const pa = q.items.find(i => tagOf(q, i) === "P-101A");
+    const [x, y] = await scr(pa.x, pa.y); await p.mouse.click(x, y); await p.waitForTimeout(300);
+    await p.click(".tabs button:text-is('Check')"); await p.click(".ribbon button:has-text('Plan Isolation')"); await p.waitForSelector(".isotbl tbody tr");
+    const t = await p.textContent(".isotbl");
+    check("the isolation plan closes the pump's valves", t.includes("HV-101") && t.includes("HV-104") && t.includes("Close"), t);
+    check("and says what to decide", ((await p.textContent(".isoprob")) ?? "").includes("vent or drain"));
+    await p.click(".dlg footer button:has-text('Show on the sheet')"); await p.waitForTimeout(300);
+    check("Show on the sheet selects the isolation", (await p.evaluate(() => document.querySelectorAll(".it.sel").length)) >= 3); }
+  await p.keyboard.press("Escape");
+
   // 53. No commercial product name anywhere in the window (FAMILY §13): the built bundle, and the
   // text shown on each ribbon tab. The names are kept in ROT13 so this file does not name them.
   { const rot = s => s.replace(/[a-z]/gi, c => String.fromCharCode((c <= "Z" ? 65 : 97) + ((c.toUpperCase().charCodeAt(0) - 65 + 13) % 26)));

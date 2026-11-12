@@ -144,6 +144,7 @@ export const Ribbon = () => {
       </Show>
       <Show when={tab() === "check"}>
         <G l="Checks" h="checks"><B big i="check" l="Checks Panel" run={() => C.panel("checks")} /><S><span class="rcount err">{counts().e} errors</span><span class="rcount warn">{counts().w} warnings</span><span class="rcount">{counts().n} notes</span></S></G>
+        <G l="Work" h="isolation"><B big i="valve" l="Plan Isolation" title="The valves and blinds that isolate the selected equipment, valve or line, the vents and drains inside, and what stops a safe isolation" off={!sel().length} run={() => import("./isolation").then(m => m.planIsolation())} /></G>
         <G l="Rules" h="rules"><B big i="opts" l="Check Rules" run={() => setBackstage("options")} title="Switch rules on or off (Options › Checks)" /><B big i="gauge" l="Hydraulic Limits" run={() => setBackstage("options")} /></G>
         <G l="Tags" h="tags"><B big i="renum" l="Renumber" run={C.renumber} /></G>
         <G l="Process Case" h="cases"><B big i="gauge" l={`Case: ${proj()?.settings.case ?? "Normal"}`} title="The process case whose values are on the drawing: hydraulics, sizing, lists and datasheets follow it" dd={e => openMenu(e, [...(proj()?.settings.cases ?? []).map(c => ({ label: c === proj()?.settings.case ? `${c} ✓` : c, run: () => act({ SetCase: { case: c } }) })), { label: "Edit the cases…", run: () => setBackstage("options") }])} /></G>
