@@ -332,12 +332,31 @@ fn worked() -> Project {
         let v = ok(&mut d, Op::AddItem { item: Item { sheet: s, sym: "gate".into(), x, y: y + 14.0, rot: 1, ..Item::default() }, on: None, tag: String::new(), obj: None })[0];
         let dr = ok(&mut d, Op::AddItem { item: Item { sheet: s, sym: "drain".into(), x, y: y + 27.0, ..Item::default() }, on: None, tag: String::new(), obj: None })[0];
         let a = ok(&mut d, Op::AddLine { line: Line { sheet: s, kind: Kind::Minor, a: End::Line { line: suction.id, x, y }, b: End::Port { item: v, port: 0 }, ..Line::default() } })[0];
-        ok(&mut d, Op::AddLine { line: Line { sheet: s, kind: Kind::Minor, a: End::Port { item: v, port: 1 }, b: End::Port { item: dr, port: 0 }, ..Line::default() } });
+        let stub = ok(&mut d, Op::AddLine { line: Line { sheet: s, kind: Kind::Minor, a: End::Port { item: v, port: 1 }, b: End::Port { item: dr, port: 0 }, ..Line::default() } })[0];
         ok(&mut d, Op::SetData { ids: vec![v], key: "position".into(), val: Some(t("NC")) });
         ok(&mut d, Op::SetData { ids: vec![v], key: "size".into(), val: Some(t("1")) });
         for (k, v) in [("size", "1"), ("sched", "80"), ("fluid", "P"), ("class", "A1A"), ("service", "Pump suction drain")] {
-            ok(&mut d, Op::SetData { ids: vec![a], key: k.into(), val: Some(t(v)) });
+            ok(&mut d, Op::SetData { ids: vec![a, stub], key: k.into(), val: Some(t(v)) });
         }
+        for (k, v) in [("design_p", bar(10.0)), ("test_p", bar(15.0)), ("length", n(1.0))] {
+            ok(&mut d, Op::SetData { ids: vec![a, stub], key: k.into(), val: Some(v) });
+        }
+    }
+    // A high-point vent on the discharge, normally closed: its test pack fills and vents through it.
+    let discharge = d.p.lines.iter().find(|l| crate::graph::number(&d.p, l) == "3\"-P-1003-A1A" && {
+        let (a, b) = (crate::graph::end_pt(&d.p, &l.a), crate::graph::end_pt(&d.p, &l.b));
+        a[0].min(b[0]) < 238.0 && a[0].max(b[0]) > 238.0 && (a[1] - b[1]).abs() < 0.1
+    }).unwrap().clone();
+    let y = crate::graph::end_pt(&d.p, &discharge.a)[1];
+    let vv = ok(&mut d, Op::AddItem { item: Item { sheet: s, sym: "gate".into(), x: 238.0, y: y - 12.0, rot: 3, ..Item::default() }, on: None, tag: String::new(), obj: None })[0];
+    let vs = ok(&mut d, Op::AddItem { item: Item { sheet: s, sym: "vent".into(), x: 238.0, y: y - 24.0, ..Item::default() }, on: None, tag: String::new(), obj: None })[0];
+    let va = ok(&mut d, Op::AddLine { line: Line { sheet: s, kind: Kind::Minor, a: End::Line { line: discharge.id, x: 238.0, y }, b: End::Port { item: vv, port: 0 }, ..Line::default() } })[0];
+    let vb = ok(&mut d, Op::AddLine { line: Line { sheet: s, kind: Kind::Minor, a: End::Port { item: vv, port: 1 }, b: End::Port { item: vs, port: 0 }, ..Line::default() } })[0];
+    for (k, v) in [("size", t("1")), ("sched", t("80")), ("fluid", t("P")), ("class", t("A1A")), ("service", t("Discharge high-point vent")), ("design_p", bar(10.0)), ("test_p", bar(15.0)), ("length", n(1.0))] {
+        ok(&mut d, Op::SetData { ids: vec![va, vb], key: k.into(), val: Some(v) });
+    }
+    for (k, v) in [("position", "NC"), ("size", "1")] {
+        ok(&mut d, Op::SetData { ids: vec![vv], key: k.into(), val: Some(t(v)) });
     }
     // A nozzle added to the receiver, with its data.
     let v101 = item(&d, "V-101");

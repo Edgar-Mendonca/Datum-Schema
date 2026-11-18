@@ -14,7 +14,7 @@ import { TodoPanel, todos } from "./todo";
 import { designReport, deleteReport } from "./reports";
 import { addTags, placeRegistered } from "./register";
 
-const TABS: [string, string][] = [...[["checks", "Checks"]] as [string, string][], ["todo", "To do"], ["comments", "Comments"], ["lines", "Line list"], ["streams", "Streams"], ["equipment", "Equipment"], ["instruments", "Instruments"], ["io", "I/O summary"], ["valves", "Valves"], ["takeoff", "Take-off"], ...WIRING_TABS, ["datasheets", "Datasheets"], ["register", "Tag register"], ["safety", "Safety"], ["loads", "Loads"], ["hazop", "HAZOP"], ["hazop_recs", "Actions"]];
+const TABS: [string, string][] = [...[["checks", "Checks"]] as [string, string][], ["todo", "To do"], ["comments", "Comments"], ["lines", "Line list"], ["streams", "Streams"], ["equipment", "Equipment"], ["instruments", "Instruments"], ["io", "I/O summary"], ["valves", "Valves"], ["takeoff", "Take-off"], ...WIRING_TABS, ["datasheets", "Datasheets"], ["register", "Tag register"], ["safety", "Safety"], ["loads", "Loads"], ["hazop", "HAZOP"], ["hazop_recs", "Actions"], ["testpacks", "Packs"]];
 
 const level = (l: string) => (l === "error" ? 0 : l === "warning" ? 1 : 2);
 
@@ -123,7 +123,7 @@ export const Bottom = () => {
     <section class="bottom" style={{ height: panelOpen() ? `${h()}px` : "30px" }}>
       <Show when={panelOpen()}><div class="bhandle" onMouseDown={resize} /></Show>
       <nav class="btabs">
-        <For each={[...TABS, ...(proj()?.settings.reports ?? []).map(r => [`report:${r.name}`, r.name] as [string, string])].filter(([k]) => (k !== "streams" || proj()?.sheets.some(s => s.pfd)) && (!k.startsWith("hazop") || panel() === k || !!(proj()?.settings.hazop as { nodes?: unknown[] } | undefined)?.nodes?.length) && (!ADD[k] || panel() === k || !!proj()?.objects.some(o => o.class === ADD[k])))}>{([k, l]) => <button classList={{ on: panelOpen() && panel() === k }} onClick={() => { if (panel() === k && panelOpen()) setPanelOpen(false); else { setPanel(k); setPanelOpen(true); } }}>{l}{badge(k)}</button>}</For>
+        <For each={[...TABS, ...(proj()?.settings.reports ?? []).map(r => [`report:${r.name}`, r.name] as [string, string])].filter(([k]) => (k !== "streams" || proj()?.sheets.some(s => s.pfd)) && (!k.startsWith("hazop") || panel() === k || !!(proj()?.settings.hazop as { nodes?: unknown[] } | undefined)?.nodes?.length) && (k !== "testpacks" || panel() === k || !!(proj()?.settings.testpacks as { packs?: unknown[] } | undefined)?.packs?.length) && (!ADD[k] || panel() === k || !!proj()?.objects.some(o => o.class === ADD[k])))}>{([k, l]) => <button classList={{ on: panelOpen() && panel() === k }} onClick={() => { if (panel() === k && panelOpen()) setPanelOpen(false); else { setPanel(k); setPanelOpen(true); } }}>{l}{badge(k)}</button>}</For>
         <Help k={panel() === "checks" ? "checks" : panel() === "comments" ? "review" : panel() === "todo" ? "todo" : panel().startsWith("report:") ? "reports" : "lists"} />
         <span class="grow" />
         <button class="bcollapse" title={panelOpen() ? "Hide the panel" : "Show the panel"} onClick={() => setPanelOpen(!panelOpen())}>{panelOpen() ? "▾" : "▴"}</button>

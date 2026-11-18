@@ -130,6 +130,8 @@ pub enum Op {
     HazopNode { ids: Vec<u32>, #[serde(default)] name: String },
     /// Add to a HAZOP node's worksheet the deviations suggested from the drawing.
     HazopSuggest { node: u32 },
+    /// Make test packs of the line numbers not yet in one.
+    MakeTestPacks,
     /// Remove an added nozzle with no line on it.
     RemoveNozzle { item: u32, name: String },
     /// A nozzle's size, rating or service.
@@ -674,6 +676,9 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
         }
         Op::HazopNode { ids, name } => {
             created.push(crate::hazop::add_node(p, &ids, &name)?);
+        }
+        Op::MakeTestPacks => {
+            crate::testpack::make(p)?;
         }
         Op::HazopSuggest { node } => {
             if crate::hazop::add_suggestions(p, node)? == 0 {

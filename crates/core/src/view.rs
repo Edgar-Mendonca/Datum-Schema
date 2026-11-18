@@ -94,7 +94,7 @@ pub struct SheetView {
     pub underlay: Option<crate::model::Underlay>,
     /// Revision clouds round the changes since the issued revision the sheet clouds against.
     pub clouds: Vec<Prim>,
-    /// The HAZOP nodes on this sheet (when the study shows them).
+    /// The HAZOP nodes and the test packs on this sheet (when they are shown).
     pub hazop: Vec<Prim>,
     /// Where the company logo goes in the title block (x, y, w, h).
     pub logo: Option<[f64; 4]>,
@@ -477,7 +477,7 @@ pub fn sheet(p: &Project, s: &Sheet, net: &Net, hyd: &[Option<Hyd>]) -> SheetVie
         })
         .collect();
     let notes = p.notes.iter().filter(|n| n.sheet == s.id).map(note_view).collect();
-    SheetView { id: s.id, number: s.number.clone(), title: s.title.clone(), w, h, legend: s.legend, frame: { let mut f = frame::frame(p, s); f.extend(crate::pfd::table(p, s)); f }, items, lines, notes, legend_rows: if s.legend { legend(p, s) } else { vec![] }, underlay: s.underlay.clone().filter(|u| u.show), clouds: crate::revs::clouds(p, s), hazop: crate::hazop::prims(p, s.id), logo: frame::logo(p, s), pins: crate::review::pins(p, s.id) }
+    SheetView { id: s.id, number: s.number.clone(), title: s.title.clone(), w, h, legend: s.legend, frame: { let mut f = frame::frame(p, s); f.extend(crate::pfd::table(p, s)); f }, items, lines, notes, legend_rows: if s.legend { legend(p, s) } else { vec![] }, underlay: s.underlay.clone().filter(|u| u.show), clouds: crate::revs::clouds(p, s), hazop: { let mut h = crate::hazop::prims(p, s.id); h.extend(crate::testpack::prims(p, s.id)); h }, logo: frame::logo(p, s), pins: crate::review::pins(p, s.id) }
 }
 
 /// Text lines of a note, and their box.

@@ -87,12 +87,14 @@ export const sheetSvg = async (id: number) => {
 };
 
 type Page = { w: number; h: number; body: () => JSX.Element; label: string };
-const LISTS: [string, string][] = [["lines", "Line list"], ["streams", "Stream list"], ["equipment", "Equipment list"], ["instruments", "Instrument index"], ["io", "I/O summary"], ["valves", "Valve list"], ["takeoff", "Valve and fitting take-off"], ["comments", "Review comments"], ["cables", "Cable schedule"], ["ioalloc", "I/O allocation"], ["datasheets", "Datasheet index"], ["register", "Tag register"], ["safety", "Safety analysis"], ["loads", "Electrical load list"], ["completeness", "Data completeness"], ["hazop", "HAZOP worksheet"], ["hazop_recs", "HAZOP recommendations"]];
+const LISTS: [string, string][] = [["lines", "Line list"], ["streams", "Stream list"], ["equipment", "Equipment list"], ["instruments", "Instrument index"], ["io", "I/O summary"], ["valves", "Valve list"], ["takeoff", "Valve and fitting take-off"], ["comments", "Review comments"], ["cables", "Cable schedule"], ["ioalloc", "I/O allocation"], ["datasheets", "Datasheet index"], ["register", "Tag register"], ["safety", "Safety analysis"], ["loads", "Electrical load list"], ["completeness", "Data completeness"], ["hazop", "HAZOP worksheet"], ["hazop_recs", "HAZOP recommendations"], ["testpacks", "Test packs"]];
 const [printing, setPrinting] = createSignal(false);
 /** Set by a datasheet's Print button: print only that object's datasheet. */
 export const [printOnly, setPrintOnly] = createSignal<number | null>(null);
 /** Set by the cause-and-effect matrix's Print button: print only the matrix. */
 export const [printCause, setPrintCause] = createSignal(false);
+/** Set by a test pack's Print: print that one list only (its kind). */
+export const [printList, setPrintList] = createSignal<string | null>(null);
 /** Set by the sheet manager: print these sheets. */
 export const [printSheets, setPrintSheets] = createSignal<number[] | null>(null);
 /** Set by a loop diagram's Print button: print only that loop. */
@@ -109,9 +111,9 @@ export const PrintPage = () => {
     return (await Promise.all(ls.map(l => call<LoopView>("loop_diagram", { key: l.key })))).filter(Boolean) as LoopView[];
   });
   const [cause] = createResource(() => call<CauseMatrix>("cause_effect"));
-  onCleanup(() => { setPrintOnly(null); setPrintLoop(null); setPrintCause(false); setPrintSheets(null); });
+  onCleanup(() => { setPrintOnly(null); setPrintLoop(null); setPrintCause(false); setPrintSheets(null); setPrintList(null); });
   // The lists, then the project's own reports.
-  const allLists = createMemo((): [string, string][] => [...LISTS, ...(proj()?.settings.reports ?? []).map(r => [`report:${r.name}`, `Report: ${r.name}`] as [string, string])]);
+  const allLists = createMemo((): [string, string][] => [...LISTS, ...(proj()?.settings.reports ?? []).map(r => [`report:${r.name}`, `Report: ${r.name}`] as [string, string]), ...((proj()?.settings.testpacks as { packs?: { id: string }[] } | undefined)?.packs ?? []).map(k => [`testpack:${k.id}`, `Test pack ${k.id}`] as [string, string])]);
   const [lists] = createResource(() => allLists().map(x => x[0]).join("\n"), async () => Promise.all(allLists().map(([k]) => call<List>("list", { kind: k }).then(l => l ?? null).catch(() => null))));
   const [zoomP, setZoomP] = createSignal(0.4);
   const sheets = createMemo(() => (views() ?? []).filter(v => which() === "all" || (which() === "chosen" ? (printSheets() ?? []).includes(v.id) : v.id === sheet()?.id)));
@@ -151,13 +153,15 @@ export const PrintPage = () => {
     if (printCause()) return hasCause() ? [causePage(cause()!)] : [];
     const lk = printLoop();
     if (lk !== null) return (loops() ?? []).filter(l => l.key === lk).map(loopPage);
-    for (const v of sheets()) {
+    const pl = printList();
+    for (const v of pl ? [] : sheets()) {
       const [w, h] = fitA3() ? [420, 297] : [v.w, v.h];
       out.push({ w, h, label: v.number, body: () => <div innerHTML={svgString(v, { width: w, height: h })} /> });
     }
     const p = proj();
     (lists() ?? []).forEach((l, i) => {
-      if (!l || !want()[allLists()[i]?.[0] ?? ""] || !l.rows.length) return;
+      const key = allLists()[i]?.[0] ?? "";
+      if (!l || !(pl ? key === pl : want()[key]) || !l.rows.length) return;
       const chunks = Math.max(1, Math.ceil(l.rows.length / ROWS));
       for (let c = 0; c < chunks; c++) out.push({ w: 420, h: 297, label: `${l.title} ${c + 1}/${chunks}`, body: () => (
         <div class="plist">
@@ -170,6 +174,7 @@ export const PrintPage = () => {
           </tr></tbody></table>
         </div>) });
     });
+    if (pl) return out;
     if (want().sheets_ds) for (const d of datasheets() ?? []) out.push(dsPage(d));
     if (want().loops) for (const l of loops() ?? []) out.push(loopPage(l));
     if (want().cause && hasCause()) out.push(causePage(cause()!));
@@ -199,8 +204,9 @@ export const PrintPage = () => {
         <h1>Print <Help k="export" /></h1>
         <div class="pbtns"><button class="btn pri big" onClick={doPrint}><svg class="ic"><use href="#i-print" /></svg> Print / Save as PDF</button></div>
         <p class="muted">In the print window choose your printer, or <b>Save as PDF</b>. {pages().length} {pages().length === 1 ? "page" : "pages"}.</p>
+        <Show when={printList()}><p class="small">Printing {allLists().find(x => x[0] === printList())?.[1] ?? printList()}. <button class="btn sm" onClick={() => setPrintList(null)}>Choose what to print</button></p></Show>
         <Show when={printOnly() !== null || printLoop() !== null || printCause()}><p class="small">Printing {printCause() ? "the cause-and-effect matrix" : printLoop() !== null ? "one loop diagram" : "one datasheet"}. <button class="btn sm" onClick={() => { setPrintOnly(null); setPrintLoop(null); setPrintCause(false); }}>Choose what to print</button></p></Show>
-        <Show when={printOnly() === null && printLoop() === null && !printCause()}>
+        <Show when={printOnly() === null && printLoop() === null && !printCause() && !printList()}>
         <h4>Sheets</h4>
         <Pick value={which()} set={v => setWhich(v as any)} options={[["all", "Every sheet"], ["this", "This sheet only"], ...(printSheets() ? [["chosen", `The ${printSheets()!.length} ticked in the sheet manager`] as [string, string]] : [])]} />
         <Check label="Fit every sheet to A3" value={fitA3()} set={setFitA3} />

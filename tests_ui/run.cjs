@@ -975,6 +975,23 @@ const shots = process.env.SHOTS;
     check("the recommendations list has it", (await p.$$(".lv tbody tr, .ltbl tbody tr, table tbody tr")).length >= 1 && (await p.textContent("body")).includes("Add a low-flow alarm"));
     check("the node is drawn on the sheet", await p.$$eval(".hzclouds text", els => els.some(e => e.textContent.startsWith("N1 Duty pump")))); }
 
+  // 73. Pressure test packs made from the worked-up example: the discharge pack's limits and
+  // what is removed inside, its status kept, the pack printed on its own.
+  await openEx("Pump transfer, worked up");
+  await p.click(".tabs button:text-is('Check')"); await p.click(".ribbon button:has-text('Test Packs')"); await p.waitForSelector(".hzhead");
+  await p.click(".dlg button:has-text('Make test packs')"); await p.waitForSelector(".tpsheet");
+  { const ids = await p.$$eval(".hznodes > button", els => els.map(e => e.textContent));
+    check("test packs are made", ids.length >= 3 && ids[0].startsWith("TP-001"), ids.join(" | "));
+    const i = ids.findIndex(t => t.includes("TP-002")); await p.click(`.hznodes > button >> nth=${i}`); await p.waitForTimeout(300);
+    const lim = await p.textContent(".tplimits"), ins = await p.textContent(".tpinside");
+    check("a pack's limits and what to remove", lim.includes("V-101") && ins.includes("LV-101") && ins.includes("PI-102"), lim + " / " + ins);
+    await p.selectOption(".tpstatus", "Ready"); await p.waitForTimeout(400);
+    check("a pack's status is kept", (await project()).settings.testpacks.packs.find(k => k.id === "TP-002").status === "Ready");
+    await p.click(".dlg button:has-text('Print this pack')"); await p.waitForTimeout(800);
+    check("a pack prints on its own", ((await p.textContent(".bs")) ?? "").includes("Printing Test pack TP-002"));
+    await p.click(".bs .back"); await p.waitForTimeout(300);
+    check("the packs are marked on the sheet", await p.$$eval(".hzclouds text", els => els.some(e => e.textContent.startsWith("TP-0")))); }
+
   // 53. No commercial product name anywhere in the window (FAMILY §13): the built bundle, and the
   // text shown on each ribbon tab. The names are kept in ROT13 so this file does not name them.
   { const rot = s => s.replace(/[a-z]/gi, c => String.fromCharCode((c <= "Z" ? 65 : 97) + ((c.toUpperCase().charCodeAt(0) - 65 + 13) % 26)));

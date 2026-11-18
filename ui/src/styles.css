@@ -1094,6 +1094,9 @@ tr.behind td { background: var(--err-bg); }
 .hzhead { grid-template-columns: 80px 1fr; }
 .hzbody { display: grid; grid-template-columns: 200px 1fr; gap: 12px; min-height: 360px; }
 .hzsheet { min-width: 0; }
+.tpsheet .inline select { width: auto; flex: 0 0 auto; }
+.tpsheet .inline b.mono { white-space: nowrap; }
+.tpsheet .inline .btn { white-space: nowrap; }
 .dlg:has(.hzbody) { width: min(1440px, 96vw); max-width: 96vw; }
 .hznodes { display: flex; flex-direction: column; gap: 4px; }
 .hznodes > button:not(.btn) { text-align: left; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 6px; padding: 6px 8px; cursor: pointer; font: inherit; }

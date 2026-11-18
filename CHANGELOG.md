@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.9.3 — 2026-11-18
+
+Pressure test packs.
+
+**Packs made from the drawing.** **Check › Test Packs › Make test packs** groups the line numbers into test packs (TP-001, TP-002…): line numbers of the same pipe class and test pressure that meet, at a branch or through a valve, fitting or in-line instrument, are one pack. A line's test pressure is its own Test P, else 1.5 times its design pressure for a hydrostatic test (1.1 times for a pneumatic one). Line numbers already in a pack are kept, so making packs again adds only new lines; those with no pressure are listed as left out.
+
+**What each pack needs.** For each pack Datum Schema lists:
+- its line numbers, with their test pressure, length and fill volume;
+- its **test limits**: equipment nozzles to blind, valves to close at its edge, branches to other packs, battery limits and off-page connectors;
+- what is **inside** and must be opened (valves; normally closed ones opened and closed again after), removed (check valve discs, control valves and in-line instruments for a spool, strainer elements, relief devices) or isolated (instruments at their root valves);
+- its **vents and drains**, and what to resolve before the test: no vent, no drain, an open end, lines of different test pressures.
+
+Each pack has a medium, a status (Planned, Ready, Tested, Accepted), a date and a witness. **Show on the sheet** selects its lines; **Print this pack** prints the pack's own sheet with the title block. The **Test packs** list gathers them all (print, Excel, CSV), and the packs can be marked on the sheets, in print and in DXF.
+
+**The worked-up example** has a test pressure on its drain lines and a new high-point vent on the pump discharge, so its packs show a vent, drains and limits.
+
+The packs are a planning aid read from the drawing: the test pressure, medium and procedure are the engineer's to set under the piping code.
+
 ## 0.9.2 — 2026-11-18
 
 HAZOP support.

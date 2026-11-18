@@ -51,6 +51,7 @@ pub mod route;
 pub mod sheetman;
 pub mod swap;
 pub mod symbols;
+pub mod testpack;
 pub mod sync;
 pub mod symlib;
 pub mod tags;
