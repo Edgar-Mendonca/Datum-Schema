@@ -126,6 +126,10 @@ pub enum Op {
     PlaceLoop { target: u32, var: String, #[serde(default)] control: bool },
     /// Add a nozzle to an equipment symbol where (x, y) is nearest its outline (empty name: N1, N2…).
     AddNozzle { item: u32, x: f64, y: f64, #[serde(default)] name: String },
+    /// A HAZOP node from the chosen symbols and lines; its number is the id returned.
+    HazopNode { ids: Vec<u32>, #[serde(default)] name: String },
+    /// Add to a HAZOP node's worksheet the deviations suggested from the drawing.
+    HazopSuggest { node: u32 },
     /// Remove an added nozzle with no line on it.
     RemoveNozzle { item: u32, name: String },
     /// A nozzle's size, rating or service.
@@ -251,6 +255,13 @@ impl Doc {
         };
         let is_case = matches!(op, Op::SetCase { .. });
         exec(&mut q, op, &mut created)?;
+        // Tags written in the HAZOP worksheet follow a renamed tag.
+        if !q.settings.hazop.nodes.is_empty() {
+            let renames: Vec<(String, String)> = self.p.objects.iter().filter_map(|o| q.obj(o.id).filter(|n| !o.tag.is_empty() && !n.tag.is_empty() && n.tag != o.tag).map(|n| (o.tag.clone(), n.tag.clone()))).collect();
+            if !renames.is_empty() {
+                crate::hazop::rename(&mut q.settings.hazop, &renames);
+            }
+        }
         let w = q.normalize();
         if let Some(first) = w.first() {
             return Err(format!("That edit would leave the drawing unsound: {first}"));
@@ -660,6 +671,14 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
         Op::PlaceAssembly { name, sheet, x, y } => {
             let a = p.settings.assemblies.iter().find(|a| a.name.eq_ignore_ascii_case(name.trim())).cloned().ok_or_else(|| format!("There is no assembly called {name}."))?;
             paste(p, sheet, a.items, a.lines, a.notes, x, y, created, &a.objs)?;
+        }
+        Op::HazopNode { ids, name } => {
+            created.push(crate::hazop::add_node(p, &ids, &name)?);
+        }
+        Op::HazopSuggest { node } => {
+            if crate::hazop::add_suggestions(p, node)? == 0 {
+                return Err("The worksheet already has every deviation the drawing suggests.".into());
+            }
         }
         Op::SwapSymbol { item, sym } => {
             crate::swap::swap(p, item, &sym)?;

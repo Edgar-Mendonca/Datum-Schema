@@ -55,6 +55,7 @@ export const svgString = (v: SheetView, opts: { width?: number; height?: number 
     body.push(it.texts.map(t => prim(t)).join(""));
   }
   for (const nt of v.notes) body.push(nt.prims.map(p => prim(p)).join(""));
+  if (v.hazop?.length) body.push(`<g stroke="#C2410C" color="#C2410C">${v.hazop.map(p => prim(p).replace('fill="#000"', 'fill="#C2410C"')).join("")}</g>`);
   if (v.clouds?.length) body.push(`<g>${v.clouds.map(p => prim(p)).join("")}</g>`);
   for (const r of v.legend_rows) {
     const s = r.sym ? symOf(r.sym) : undefined;
@@ -86,7 +87,7 @@ export const sheetSvg = async (id: number) => {
 };
 
 type Page = { w: number; h: number; body: () => JSX.Element; label: string };
-const LISTS: [string, string][] = [["lines", "Line list"], ["streams", "Stream list"], ["equipment", "Equipment list"], ["instruments", "Instrument index"], ["io", "I/O summary"], ["valves", "Valve list"], ["takeoff", "Valve and fitting take-off"], ["comments", "Review comments"], ["cables", "Cable schedule"], ["ioalloc", "I/O allocation"], ["datasheets", "Datasheet index"], ["register", "Tag register"], ["safety", "Safety analysis"], ["loads", "Electrical load list"], ["completeness", "Data completeness"]];
+const LISTS: [string, string][] = [["lines", "Line list"], ["streams", "Stream list"], ["equipment", "Equipment list"], ["instruments", "Instrument index"], ["io", "I/O summary"], ["valves", "Valve list"], ["takeoff", "Valve and fitting take-off"], ["comments", "Review comments"], ["cables", "Cable schedule"], ["ioalloc", "I/O allocation"], ["datasheets", "Datasheet index"], ["register", "Tag register"], ["safety", "Safety analysis"], ["loads", "Electrical load list"], ["completeness", "Data completeness"], ["hazop", "HAZOP worksheet"], ["hazop_recs", "HAZOP recommendations"]];
 const [printing, setPrinting] = createSignal(false);
 /** Set by a datasheet's Print button: print only that object's datasheet. */
 export const [printOnly, setPrintOnly] = createSignal<number | null>(null);

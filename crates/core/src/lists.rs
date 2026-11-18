@@ -39,7 +39,7 @@ pub struct List {
     pub heads: Vec<usize>,
 }
 
-pub const KINDS: [(&str, &str); 16] = [("register", "Tag register"), ("safety", "Safety analysis"), ("loads", "Electrical load list"), ("completeness", "Data completeness"), ("lines", "Line list"), ("streams", "Stream list"), ("io", "I/O summary"), ("takeoff", "Valve and fitting take-off"), ("comments", "Review comments"), ("jbs", "Junction boxes"), ("cables", "Cable schedule"), ("ioalloc", "I/O allocation"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list"), ("datasheets", "Datasheet index")];
+pub const KINDS: [(&str, &str); 18] = [("hazop", "HAZOP worksheet"), ("hazop_recs", "HAZOP recommendations"), ("register", "Tag register"), ("safety", "Safety analysis"), ("loads", "Electrical load list"), ("completeness", "Data completeness"), ("lines", "Line list"), ("streams", "Stream list"), ("io", "I/O summary"), ("takeoff", "Valve and fitting take-off"), ("comments", "Review comments"), ("jbs", "Junction boxes"), ("cables", "Cable schedule"), ("ioalloc", "I/O allocation"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list"), ("datasheets", "Datasheet index")];
 
 /// (key, label, quantity, editable)
 type Spec = (&'static str, &'static str, &'static str, bool);
@@ -75,6 +75,7 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
     match kind {
         "loads" => return Ok(crate::loads::load_list(p)),
         "completeness" => return Ok(crate::loads::completeness(p)),
+        "hazop" | "hazop_recs" => return Ok(crate::hazop::list(p, kind)),
         _ => {}
     }
     if let Some(name) = kind.strip_prefix("report:") {

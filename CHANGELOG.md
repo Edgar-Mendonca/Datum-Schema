@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.9.2 — 2026-11-18
+
+HAZOP support.
+
+**Nodes on the P&ID.** Select the symbols and lines of a part of the plant and choose **Check › New Node**: the node is outlined on the sheet with its number and name (N1 Duty pump P-101A), and the outline prints, goes to DXF on a HAZOP layer, and shows on the web page.
+
+**A worksheet for each node.** **Check › HAZOP Study** holds the study's title, date and team, and for each node its design intent and worksheet: parameter, guideword, deviation, causes, consequences, safeguards, severity and likelihood, recommendation, who acts on it, and its status (Open or Closed).
+
+**Suggested from the drawing.** **Suggest from the drawing** adds the usual deviations: no, less, more and reverse flow; more and less pressure; temperature where the node heats or cools; level where it has a vessel; contamination; isolation and draining for maintenance. Each comes with:
+- the **causes** the drawing shows: its pumps stopping, its valves closed in error, its strainers blocked, its control valves failing as their fail position says;
+- the **safeguards** it shows: relief devices and relief paths, check valves, the alarms and trips on its lines and equipment (by their letters or a transmitter's setpoints), a standby pump, and the valves and drains the isolation planner finds; "None shown on the drawing" where there are none.
+
+Suggested rows are marked (in italics) until the team confirms or edits them; the consequences, risk and recommendations are the team's.
+
+**Tags follow.** A tag written in the worksheet follows its renaming (P-101A renamed P-111A everywhere); a deleted symbol leaves its node.
+
+**Lists.** The **HAZOP worksheet** and **HAZOP recommendations** lists print with the title block and export to Excel and CSV; open recommendations are flagged.
+
+The study is an aid kept with the drawing: the HAZOP and its findings are the team's.
+
 ## 0.9.1 — 2026-11-12
 
 The plant as a web page, and two new examples.

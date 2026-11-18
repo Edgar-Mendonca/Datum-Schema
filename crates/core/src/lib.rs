@@ -23,6 +23,7 @@ pub mod graph;
 pub mod hydraulics;
 pub mod import;
 pub mod instruments;
+pub mod hazop;
 pub mod insulation;
 pub mod isolation;
 pub mod listin;

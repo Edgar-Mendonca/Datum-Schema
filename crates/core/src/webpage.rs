@@ -143,6 +143,11 @@ pub fn page(p: &Project, stamp: &str) -> String {
             nt.prims.iter().for_each(|x| b += &prim(x));
         }
         v.clouds.iter().for_each(|x| b += &prim(x));
+        if !v.hazop.is_empty() {
+            b += "<g class=\"hz\">";
+            v.hazop.iter().for_each(|x| b += &prim(x));
+            b += "</g>";
+        }
         for r in &v.legend_rows {
             if let Some(sym) = r.sym.as_deref().and_then(symbols::get) {
                 let sc = (30.0 / sym.w).min(1.0);

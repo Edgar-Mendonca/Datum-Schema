@@ -424,6 +424,7 @@ export const Canvas = () => {
             </g>;
           }}</For></g>
           <Show when={showIssues()}><g class="issuemarks"><For each={(derived()?.issues ?? []).filter(i => i.sheet === sv().id && i.level !== "note")}>{i => <g class={`imark ${i.level}`} transform={`translate(${i.at[0]} ${i.at[1]})`}><title>{i.msg}</title><circle r="5" /><text y="1.2">{i.rule}</text></g>}</For></g></Show>
+          <Show when={sv().hazop?.length}><g class="hzclouds"><For each={sv().hazop}>{p => <PrimEl p={p} />}</For></g></Show>
           <Show when={sv().clouds.length}><g class="revclouds"><For each={sv().clouds}>{p => <PrimEl p={p} />}</For></g></Show>
           <g class="pins"><For each={sv().pins}>{pn => <g class="pin" classList={{ resolved: pn.resolved, on: focus() === pn.uid }} transform={`translate(${pn.x} ${pn.y})`} onMouseDown={e => { e.stopPropagation(); setFocus(pn.uid); setPanel("comments"); setPanelOpen(true); }}>
             <title>{proj()?.comments.find(c => c.uid === pn.uid)?.text ?? ""}</title>

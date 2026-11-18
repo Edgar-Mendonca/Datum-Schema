@@ -1089,6 +1089,21 @@ tr.behind td { background: var(--err-bg); }
 .ubox { display: flex; flex-direction: column; gap: 6px; }
 .ubox .uname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text2); }
 /* Revision clouds and the comparison. */
+.dsvg .hzclouds { stroke: #C2410C; fill: none; pointer-events: none; }
+.dsvg .hzclouds text { fill: #C2410C; stroke: none; dominant-baseline: central; }
+.hzhead { grid-template-columns: 80px 1fr; }
+.hzbody { display: grid; grid-template-columns: 200px 1fr; gap: 12px; min-height: 360px; }
+.hzsheet { min-width: 0; }
+.dlg:has(.hzbody) { width: min(1440px, 96vw); max-width: 96vw; }
+.hznodes { display: flex; flex-direction: column; gap: 4px; }
+.hznodes > button:not(.btn) { text-align: left; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 6px; padding: 6px 8px; cursor: pointer; font: inherit; }
+.hznodes > button.on { border-color: var(--acc); box-shadow: inset 3px 0 var(--acc); }
+.hznodes small { display: block; color: var(--muted); }
+.hzscroll { overflow: auto; max-height: 52vh; }
+.hztbl td { vertical-align: top; padding: 2px; }
+.hztbl textarea, .hztbl input.hzp { width: 100%; font: inherit; font-size: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 3px; resize: vertical; }
+.hztbl input.hzp { width: 84px; display: block; margin-bottom: 2px; }
+.hztbl tr.sugg textarea, .hztbl tr.sugg input { font-style: italic; color: var(--muted); }
 .dsvg .revclouds { stroke: var(--magenta, #9C1F84); fill: none; pointer-events: none; }
 .dsvg .revclouds text { fill: var(--magenta, #9C1F84); stroke: none; dominant-baseline: central; }
 .cmpscroll { max-height: 360px; overflow: auto; }

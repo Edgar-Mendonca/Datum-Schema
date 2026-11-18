@@ -536,6 +536,8 @@ pub struct Settings {
     /// The components of the process flow diagrams' streams (each stream's mass fractions are
     /// its data "x:<component>").
     pub components: Vec<String>,
+    /// The HAZOP study: its nodes on the drawing and their worksheets.
+    pub hazop: crate::hazop::Study,
 }
 
 /// A drawing standard: a library's name and, for each of Datum Schema's symbols, the library
@@ -569,7 +571,7 @@ pub const MAX_LOGO: usize = 280_000;
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), specs: vec![], tag_format: crate::tags::TagFormat::default(), rules: vec![], reports: vec![], arrangements: crate::arrange::starter(), safety: crate::safety::starter(), cases: crate::cases::default_cases(), case: "Normal".into(), assemblies: vec![], labels: vec![], components: vec![] }
+        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), specs: vec![], tag_format: crate::tags::TagFormat::default(), rules: vec![], reports: vec![], arrangements: crate::arrange::starter(), safety: crate::safety::starter(), cases: crate::cases::default_cases(), case: "Normal".into(), assemblies: vec![], labels: vec![], components: vec![], hazop: crate::hazop::Study::default() }
     }
 }
 
@@ -961,6 +963,8 @@ impl Project {
         }
         let t = &mut self.title;
         t.extra = std::mem::take(&mut t.extra).into_iter().filter(|(k, _)| !k.trim().is_empty()).take(40).map(|(k, v)| (crate::clip(k.trim(), 40), crate::clip(&v, 200))).collect();
+        let drawn: HashSet<u32> = self.items.iter().map(|i| i.id).chain(self.lines.iter().map(|l| l.id)).collect();
+        crate::hazop::normalize(&mut self.settings.hazop, &|i| drawn.contains(&i));
         let s = &mut self.settings;
         let mut seen = HashSet::new();
         s.components = std::mem::take(&mut s.components).into_iter().map(|c| crate::clip(c.trim(), 40)).filter(|c| !c.is_empty() && seen.insert(c.to_lowercase())).take(MAX_COMPONENTS).collect();

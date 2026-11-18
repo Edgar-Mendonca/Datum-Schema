@@ -953,6 +953,28 @@ const shots = process.env.SHOTS;
     check("the web page runs without errors", errs.length === 0, errs.join("; "));
     await w.close(); }
 
+  // 72. A HAZOP node from the selection, its deviations suggested from the drawing, a
+  // recommendation written, the worksheet and the actions as lists.
+  await openEx("Pump transfer, worked up");
+  { const q = await project();
+    for (const [k, t] of ["P-101A", "HV-101", "S-101A", "HV-103", "HV-104"].entries()) {
+      const it = q.items.find(i => tagOf(q, i) === t); const [x, y] = await scr(it.x, it.y);
+      if (k) { await p.keyboard.down("Shift"); await p.mouse.click(x, y); await p.keyboard.up("Shift"); } else await p.mouse.click(x, y);
+      await p.waitForTimeout(150);
+    }
+    await p.click(".tabs button:text-is('Check')"); await p.click(".ribbon button:has-text('New Node')"); await p.waitForSelector(".hznodes");
+    await p.fill(".hzsheet input >> nth=0", "Duty pump"); await p.keyboard.press("Tab"); await p.waitForTimeout(300);
+    check("the node is in the study", (await p.textContent(".hznodes")).includes("Duty pump") && (await project()).settings.hazop.nodes[0].ids.length === 5, JSON.stringify((await project()).settings.hazop.nodes[0]?.ids));
+    await p.click(".hzsheet button:has-text('Suggest from the drawing')"); await p.waitForSelector(".hztbl tbody tr");
+    const t = await p.$$eval(".hztbl textarea", els => els.map(e => e.value).join(" | "));
+    check("deviations are suggested from the drawing", t.includes("P-101A stops or trips") && t.includes("check valve HV-103"), t.slice(0, 300));
+    await p.fill(".hztbl tbody tr:first-child td:nth-child(8) textarea", "Add a low-flow alarm on the discharge"); await p.keyboard.press("Tab"); await p.waitForTimeout(400);
+    const st = (await project()).settings.hazop;
+    check("a recommendation is written and open", st.nodes[0].rows[0].rec.startsWith("Add a low-flow") && st.nodes[0].rows[0].status === "Open" && !st.nodes[0].rows[0].suggested);
+    await p.click(".dlg footer button:has-text('Recommendations')"); await p.waitForTimeout(400);
+    check("the recommendations list has it", (await p.$$(".lv tbody tr, .ltbl tbody tr, table tbody tr")).length >= 1 && (await p.textContent("body")).includes("Add a low-flow alarm"));
+    check("the node is drawn on the sheet", await p.$$eval(".hzclouds text", els => els.some(e => e.textContent.startsWith("N1 Duty pump")))); }
+
   // 53. No commercial product name anywhere in the window (FAMILY §13): the built bundle, and the
   // text shown on each ribbon tab. The names are kept in ROT13 so this file does not name them.
   { const rot = s => s.replace(/[a-z]/gi, c => String.fromCharCode((c <= "Z" ? 65 : 97) + ((c.toUpperCase().charCodeAt(0) - 65 + 13) % 26)));
