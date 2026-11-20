@@ -134,27 +134,47 @@
         "0.9.1: the plant as one interactive web page anyone can open: click a tag to see its data (done)",
         "0.9.2: HAZOP support: nodes marked on the P&ID and worksheets linked to its lines and equipment, safeguards filled from the drawing (done)",
         "0.9.3: pressure test packs: test boundaries on the P&ID and the test pack list (done)",
-        "0.9.4: a handover package: tags, classes, data and documents in a structured export"
+        "0.9.4: a handover package: tags, classes, data and documents in CFIHOS-style tables, with DEXPI, the web page and the lists, in one folder"
       ]
     },
     {
       "v": "0.10",
-      "title": "Teams",
-      "when": "Later",
+      "title": "AI and automation",
+      "when": "Next",
       "items": [
-        "0.10.0: document status (for review, approval, construction), approvals and transmittals",
-        "0.10.1: shared projects: several people, items claimed, tag numbers reserved, work merged",
-        "0.10.2: old DXF P&IDs turned into live drawings: blocks mapped to symbols, lines traced and connected",
-        "0.10.3: scripting; more CAD drawing formats"
+        "0.10.0: a command line: project facts, checks, lists, changes through named operations, and every export",
+        "0.10.1: an MCP server: an AI assistant on your own computer opens, checks, changes and saves a project through the same operations; nothing is written until it saves",
+        "0.10.2: find anything (\"control valves without a bypass\") and check exceptions accepted with a reason, kept for audit",
+        "0.10.3: virtual instruments (data and loops without a symbol) and an I/O and tag export for the control system"
       ]
     },
     {
       "v": "0.11",
+      "title": "Old drawings and exchange",
+      "when": "Later",
+      "items": [
+        "0.11.0: old DXF P&IDs turned into live drawings: blocks mapped to symbols, lines traced and connected, with a review",
+        "0.11.1: vector PDF P&IDs the same way; scanned drawings traced with help",
+        "0.11.2: DEXPI in both current schema versions, tested with the official examples; tested on a 50-sheet project",
+        "0.11.3: recorded steps replayed, and design variants: a working copy compared and merged back"
+      ]
+    },
+    {
+      "v": "0.12",
       "title": "Ready for 3D",
       "when": "Later",
       "items": [
-        "0.11.0: a plant package for 3D modelling: equipment with its datasheet values and nozzles, each line with its ends, size, spec, insulation and components in order, in an open, documented format",
-        "0.11.1: a P&ID compared with a 3D model's or isometric's data: missing items, sizes and order along each line"
+        "0.12.0: a plant package for 3D modelling: equipment with its datasheet values and nozzles, each line with its ends, size, spec, insulation and components in order, in an open, documented format",
+        "0.12.1: a P&ID compared with a 3D model's or isometric's data: missing items, sizes and order along each line, and how much is modelled"
+      ]
+    },
+    {
+      "v": "0.13",
+      "title": "Teams",
+      "when": "Later",
+      "items": [
+        "0.13.0: document status (for review, approval, construction), approvals and transmittals",
+        "0.13.1: working together with no server, no login and no telemetry: sheets claimed and tag ranges reserved in a shared folder, changes sent as packages and merged with a preview"
       ]
     },
     {

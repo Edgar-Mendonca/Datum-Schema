@@ -157,6 +157,8 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.9.1 | The web page is made by the engine from the same views as print and DXF, as one self-contained file with its data as JSON and a small script of its own (no framework, no network), so it opens anywhere, offline, and cannot disagree with the drawing. New examples are built from the existing ones with the same edit operations a user makes (`Doc::apply`, including `Op::Develop` and the Checks panel's `Op::Fix`), so they exercise the features they show | One renderer; examples that test themselves |
 | 0.9.2 | The HAZOP study lives in the project's settings (one undoable edit per change, saved with the file) and its nodes are ids of symbols and lines, not a drawn region, so a node follows the drawing as it moves and a deleted symbol simply leaves it. Suggestions are computed from the same reading of the drawing as the safety analysis and the isolation planner, and are marked suggested so the team's own entries are never confused with the program's | One reading of the drawing; the study stays the team's |
 | 0.9.3 | Packs store only their line numbers and status; limits, items inside, vents, drains and volumes are read from the drawing each time, so a pack never disagrees with the P&ID. Grouping by pipe class and test pressure (not by a drawn boundary) follows how packs are usually cut; a pack prints as a list kind (`testpack:<id>`) so it reuses the list printing, Excel and CSV | Always current; no new print path |
+| roadmap (2026-11-20) | After comparing with the commercial smart P&ID tools: build what the app is first (handover, the AI link, find and audit, old drawings, exchange, 3D), and working together last. The AI link copies Datum Plan's: one catalogue of named operations used by the window, the command line and an MCP server over stdio | One way to change a project; the assistant is the user's own, on their computer |
+| roadmap (2026-11-20) | Working together keeps the app's policies: no server, no login, no telemetry. Transport is whatever the company already has (a shared folder, a synced drive, email); a typed name labels who changed what but is not a login; claims and tag ranges are advisory files beside the project; every incoming change is previewed and checked by the engine before it is merged | No account, no network of our own, nothing sent anywhere by the app |
 | 0.5.0 | Wiring objects are ordinary plant objects (classes JunctionBox, Cable, IOCard), not drawn; devices keep naming them in the existing text attributes, so loop diagrams and old projects keep working; the I/O channel is "<card>/<channel>" when it names a card. Check 25 speaks only once the project has wiring objects. A card channel tells nothing about the device's own kind (`io_of` ignores "AI-01/3"), so a valve on an AI card is found | No migration; free-text wiring is left alone; the check compares the device with the card |
 | 0.4.4 | Tag formats (`settings.tag_format`: separator, digit-only unit code before the number, per-sheet or project numbering, digits) always keep the prefix letters first and the number last, so `tags::split`/`loop_of` and every check keep working; "<unit>-<prefix>" forms were left out for that reason | Loops group by number; a format that put digits first would break them |
 | 0.4.4 | `Project::obj` is a binary search over objects kept in id order (sorted in `normalize` only when out of order), with a linear fallback; check 20 builds only loops with wiring typed; To do builds only issued datasheets | The open sheet took 1.9 s on 120 sheets; 39 ms after |
@@ -290,16 +292,20 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 | 0.9.1 | The plant as one interactive web page | ✅ |
 | 0.9.2 | HAZOP support (nodes on the P&ID, worksheets, safeguards from the drawing) | ✅ |
 | 0.9.3 | Pressure test packs (boundaries, list) | ✅ |
-| 0.9.4 | Handover package (tags, classes, data, documents) | ⬜ |
-| 0.10.0 | Document status (IFR, IFA, IFC), approvals, transmittals | ⬜ |
-| 0.10.1 | Shared projects (several people, claims, tag reservation, merge) | ⬜ |
-| 0.10.2 | Old DXF P&IDs converted into live sheets, with a review | ⬜ |
-| 0.10.3 | Scripting; more CAD drawing formats | ⬜ |
-| 0.11.0 | Plant package export for 3D modelling (open, documented format) | ⬜ |
-| 0.11.1 | P&ID compared with a 3D model's or isometric's data | ⬜ |
+| 0.9.4 | Handover package: tags, classes, data and documents in CFIHOS-style tables, with DEXPI, the web page and the lists, in one folder | 🔜 |
+| 0.10.0 | Command line `datum-schema-cli`: info, checks, lists, apply operations, export (DXF, DEXPI, web page, Excel); the operations catalogue with examples (as Datum Plan's) | ⬜ |
+| 0.10.1 | MCP server (`datum-schema-cli mcp`): an AI assistant on the user's computer opens, reads, checks, changes (only through the operations) and saves a project; nothing is written until it saves | ⬜ |
+| 0.10.2 | Find anything (a query the window, the command line and the assistant share: "control valves without a bypass") and check exceptions accepted with a reason, kept for audit | ⬜ |
+| 0.10.3 | Virtual instruments (data and loops without a symbol) and a control-system export (I/O and tag lists for the DCS team) | ⬜ |
+| 0.11.0 | Old DXF P&IDs turned into live sheets: blocks mapped to symbols through the legend reader, lines traced and connected, with a review | ⬜ |
+| 0.11.1 | Vector PDF P&IDs the same way; scanned drawings traced with help over the underlay | ⬜ |
+| 0.11.2 | DEXPI in both current schema versions, tested with the official example files; a 50-sheet, 5,000-symbol project in CI | ⬜ |
+| 0.11.3 | Recorded steps replayed (scripting from the operations) and design variants: a working copy compared and merged back | ⬜ |
+| 0.12.0 | Plant package export for 3D modelling (open, documented format) | ⬜ |
+| 0.12.1 | P&ID compared with a 3D model's or isometric's data; how much is modelled | ⬜ |
+| 0.13.0 | Document status (IFR, IFA, IFC), approvals and transmittals | ⬜ |
+| 0.13.1 | Working together with no server, no login and no telemetry: sheets claimed and tag ranges reserved in a shared project folder, change packages sent and merged with a preview | ⬜ |
 | 1.0 | DEXPI tested with other programs' files; hydraulics validation note; tested at 100+ sheets; signed installer | ⬜ |
-| 0.5 | Company templates; project reports (valve and fitting take-off); review comments | ⬜ |
-| 1.0 | User guide, a validation note for the hydraulics, signed installer | ⬜ |
 
 ## 4. Known limits
 
@@ -562,3 +568,7 @@ Coordinates are millimetres on the sheet, y down, so a sheet prints at its true 
 - `testpack.rs`, `Settings.testpacks`, `Op::MakeTestPacks`, command `test_packs` (main.rs, serve.rs), lists `testpacks` and `testpack:<id>`, pack outlines in `SheetView.hazop`, `ui/src/testpacks.tsx`, print's `printList` (one list only), Check › Work › Test Packs, panel tab Packs, help "testpacks".
 - The worked example's drain lines got design and test pressures and lengths, and a new NC high-point vent (HV-111 and a vent) on 3"-P-1003; instrument connections are not line numbers for packs; a vent or drain behind a valve is named by the valve once.
 - Tests: engine 168 (worked example: four packs; the discharge pack at 15 bar with V-101 a limit, LV-101 spooled, PI-102 isolated, its volume; the suction pack limited by T-101 and the pumps; the lists; marked on the sheet; kept through save and open; making again refused; a deleted line number leaves its pack; pneumatic below hydrostatic; different pressures flagged; every example makes packs without panic); UI 73 (packs made, TP-002's limits and items inside, its status kept, printed on its own, marked on the sheet).
+
+### 2026-11-20: Session 1, comparison and roadmap rework
+- User asked for a comparison with the commercial smart P&ID tools (in chat only). Gaps found: collaboration, approvals, variants, scripting, control-system export, handover data, legacy conversion, DEXPI breadth, scale proof, 3D, and an AI link; ahead on fixes, hydraulics, HAZOP, isolation, test packs, the web page and price.
+- Roadmap reworked: 0.9.4 handover (CFIHOS-style); 0.10 AI and automation (command line, MCP server, find and audit, virtual instruments and control-system export); 0.11 old drawings and exchange (DXF and PDF conversion, DEXPI and scale, recorded steps and variants); 0.12 ready for 3D; 0.13 teams (status and approvals; working together without a server). Read Datum Plan's `crates/cli` (datum-cli and `mcp`) and `ops.rs` catalogue as the pattern to copy.
