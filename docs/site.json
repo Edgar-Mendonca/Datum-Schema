@@ -151,9 +151,9 @@
     {
       "v": "0.11",
       "title": "Old drawings and exchange",
-      "when": "Next",
+      "when": "Now",
       "items": [
-        "0.11.0: old DXF P&IDs turned into live drawings: blocks mapped to symbols, lines traced and connected, with a review",
+        "0.11.0: old DXF P&IDs turned into live drawings: blocks mapped to symbols, lines traced and connected, with a review (done)",
         "0.11.1: vector PDF P&IDs the same way; scanned drawings traced with help",
         "0.11.2: DEXPI in both current schema versions, tested with the official examples; tested on a 50-sheet project",
         "0.11.3: recorded steps replayed, and design variants: a working copy compared and merged back"

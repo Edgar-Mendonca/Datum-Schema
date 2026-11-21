@@ -28,6 +28,10 @@ const HELP: &str = "datum-schema-cli: Datum Schema on the command line
                                        by the extension: .dschema .dxf .xml (DEXPI) .html (web page)
                                        .zip (handover package) .xlsx or .csv (needs --list) .json
   new <out.dschema> [--example <id>]   a new project, or one of the examples (see `examples`)
+  convert <old.dxf> [<project>] --save <out.dschema> [--map BLOCK=symbol …]
+                                       an old DXF P&ID as a new live sheet (blocks to symbols by
+                                       their names; --map sets one, --map BLOCK= leaves it out);
+                                       without --save, lists the blocks and what each becomes
   examples                             the examples
   mcp                                  a Model Context Protocol server over stdio, for an AI assistant
                                        on this computer (nothing is written unless it saves)
@@ -240,6 +244,27 @@ pub fn run(args: &[String]) -> Result<String, String> {
             let d = load(need(args, 1, "a project file")?)?;
             write(&d, need(args, 2, "the file to write")?, args)
         }
+        "convert" => {
+            let dxf = need(args, 1, "an old drawing (.dxf)")?;
+            let text = std::fs::read(dxf).map(|b| String::from_utf8_lossy(&b).into_owned()).map_err(|e| format!("Could not open {dxf}: {e}"))?;
+            let scan = datum_core::convert::scan(&text)?;
+            let mut map = datum_core::convert::suggested(&scan);
+            for m in flags(args, "--map") {
+                let (b, s) = m.split_once('=').ok_or("--map is BLOCK=symbol (or BLOCK= to leave it out).")?;
+                map.insert(b.to_string(), s.to_string());
+            }
+            let Some(out) = flag(args, "--save") else {
+                let rows: Vec<Vec<String>> = scan.blocks.iter().map(|b| vec![b.block.clone(), b.count.to_string(), map.get(&b.block).cloned().unwrap_or_default(), b.sample.clone()]).collect();
+                return Ok(format!("{} lines, {} texts{}\n\n{}", scan.lines, scan.texts, scan.warnings.iter().map(|w| format!("\n{w}")).collect::<String>(), table(&["BLOCK", "PLACED", "BECOMES", "A TAG ON ONE"], &rows, csv)));
+            };
+            let mut d = match args.get(2).filter(|s| !s.starts_with("--")) { Some(p) => load(p)?, None => Doc::new(Project::new()) };
+            let name = Path::new(dxf).file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+            let mut probe = d.p.clone();
+            let rep = datum_core::convert::convert(&mut probe, &text, &name, &map, &mut vec![])?;
+            d.apply(Op::ConvertDxf { text, name, map })?;
+            let saved = write(&d, out, args)?;
+            Ok(format!("{saved} {} symbols ({} tagged), {} lines ({} ends open), {} line numbers.{}", rep.symbols, rep.tagged, rep.lines, rep.open_ends, rep.line_numbers, rep.notes.iter().map(|n| format!(" {n}")).collect::<String>()))
+        }
         "new" => {
             let out = need(args, 1, "the new project's file name (.dschema)")?;
             if !out.to_lowercase().ends_with(".dschema") {
@@ -297,6 +322,12 @@ mod tests {
         }
         assert!(run(&a(&["export", &f("pump.dschema"), &f("e.xlsx"), "--list", "equipment"])).is_ok());
         assert!(run(&a(&["export", &f("pump.dschema"), &f("dcs.xlsx"), "--list", "control-system"])).is_ok());
+        // An old drawing converted into a live sheet.
+        assert!(run(&a(&["export", &f("pump.dschema"), &f("old.dxf")])).is_ok());
+        assert!(run(&a(&["convert", &f("old.dxf")])).unwrap().contains("SYM_GATE"));
+        let conv = run(&a(&["convert", &f("old.dxf"), "--save", &f("conv.dschema"), "--map", "SYM_VENT="])).unwrap();
+        assert!(conv.starts_with("Saved") && conv.contains("Left out: 1 × SYM_VENT"), "{conv}");
+        assert!(load(&f("conv.dschema")).unwrap().p.items.iter().any(|i| i.sym == "pump_cent"));
         assert!(run(&a(&["export", &f("pump.dschema"), &f("e.csv")])).is_err());
         assert!(run(&a(&["export", &f("pump.dschema"), &f("e.exe")])).is_err());
         // DEXPI read back as a project.

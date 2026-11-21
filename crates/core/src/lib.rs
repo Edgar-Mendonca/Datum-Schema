@@ -7,6 +7,7 @@ pub mod arrange;
 pub mod cause;
 pub mod checks;
 pub mod controlsys;
+pub mod convert;
 pub mod calc;
 pub mod cases;
 pub mod classes;

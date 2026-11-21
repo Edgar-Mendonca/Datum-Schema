@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.11.0 — 2026-11-21
+
+Old P&IDs turned into live sheets.
+
+**Convert an old DXF P&ID** (Sheets › Convert Old P&ID, or File › New › From an old DXF P&ID). Choose a P&ID drawn in a CAD program and saved as DXF:
+- **Review first.** Every block in the drawing is listed with how many there are, a tag one of them carries, and the symbol it becomes: from a symbol library that names the block, else from the block's name ("VLV-GATE" a gate valve). Choose another symbol, or Leave out, for any block.
+- **Symbols where they were**, with their turn and mirror, and their **tags** from the blocks' attributes (letters and number joined, as on instrument bubbles) or the nearest tag-like text.
+- **Lines** traced from the drawing: their kind from their layer (process, utility, signal, pneumatic…), their corners kept, pieces cut by a crossing's gap joined again, each end joined to the nearest nozzle of a symbol or onto another line as a branch, and valves drawn over a line set into it.
+- **Line numbers** read from the text beside each line and shared by its pieces across valves.
+- **The old drawing stays behind** the new sheet, faintly, to compare; hide it in the Inspector when done.
+
+The report says how many symbols, tags, lines and line numbers were read, how many line ends were left open, which blocks were left out, and which tags were already used in the project. The Checks panel then lists what is left to finish. Undo takes the whole conversion back.
+
+The command line converts too (`datum-schema-cli convert old.dxf --save new.dschema`, `--map BLOCK=symbol` to choose), and so can an AI assistant (the `convert_dxf` tool).
+
 ## 0.10.3 — 2026-11-21
 
 Virtual instruments, and an export for the control system.

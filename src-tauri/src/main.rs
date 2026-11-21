@@ -397,6 +397,37 @@ async fn legend_scan(app: AppHandle, path: Option<String>) -> R<Option<LibView>>
     Ok(Some(symlib::view("", lib, scan.warnings)))
 }
 
+/// The old drawing waiting to be converted (its file name and text), between the scan and the
+/// conversion.
+static PENDING: std::sync::Mutex<Option<(String, String)>> = std::sync::Mutex::new(None);
+
+/// Reads an old P&ID (DXF) for the review: its blocks with the symbols suggested.
+#[tauri::command]
+async fn convert_scan(app: AppHandle, path: Option<String>) -> R<Option<(String, datum_core::convert::Scan)>> {
+    let Some(path) = path.map(PathBuf::from).or_else(|| pick(&app, "DXF drawing (save a DWG as DXF from any CAD program)", &["dxf"])) else { return Ok(None) };
+    let text = String::from_utf8_lossy(&std::fs::read(&path).map_err(|e| format!("Could not open {}: {e}", path.display()))?).into_owned();
+    let name = path.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    let scan = guard(|| datum_core::convert::scan(&text))?;
+    *PENDING.lock().unwrap_or_else(|e| e.into_inner()) = Some((name.clone(), text));
+    Ok(Some((name, scan)))
+}
+
+/// Converts the drawing just scanned into a new sheet, with the blocks mapped as chosen.
+#[tauri::command]
+fn convert_apply(st: State<St>, map: std::collections::BTreeMap<String, String>) -> R<(Out, datum_core::convert::Report)> {
+    let (name, text) = PENDING.lock().unwrap_or_else(|e| e.into_inner()).clone().ok_or("Read a drawing first.")?;
+    guard(|| {
+        let mut a = st.lock();
+        // A dry run for the report, then the edit itself (one undoable step).
+        let mut probe = a.doc.p.clone();
+        let rep = datum_core::convert::convert(&mut probe, &text, &name, &map, &mut vec![])?;
+        let created = a.doc.apply(Op::ConvertDxf { text, name, map })?;
+        let mut o = out(&a);
+        o.created = created;
+        Ok((o, rep))
+    })
+}
+
 /// Puts an old drawing (DXF) behind a sheet.
 #[tauri::command]
 async fn underlay_import(app: AppHandle, st: State<'_, St>, sheet: u32) -> R<Option<Out>> {
@@ -858,7 +889,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, import_streams, import_list, fixes, nozzles, sheet_manager, isolation, test_packs, handover_summary, report_sources, report_preview, arrangement_starter, register_read, register_file, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, builtin_sets, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, title_preview, title_standard, spec_starter, specs_csv, todo, calc_sheets, sizing, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
+            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, import_streams, import_list, fixes, nozzles, sheet_manager, isolation, test_packs, handover_summary, convert_scan, convert_apply, report_sources, report_preview, arrangement_starter, register_read, register_file, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, builtin_sets, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, title_preview, title_standard, spec_starter, specs_csv, todo, calc_sheets, sizing, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
             options, set_options, autosave, recovery, recover, recent, startup_file, open_url, version, quit, check_update, install_update
         ])
         .run(tauri::generate_context!())

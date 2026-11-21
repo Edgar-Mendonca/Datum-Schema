@@ -132,6 +132,9 @@ pub enum Op {
     HazopSuggest { node: u32 },
     /// Make test packs of the line numbers not yet in one.
     MakeTestPacks,
+    /// Turn an old DXF P&ID into a new live sheet: blocks become the symbols `map` names (block →
+    /// symbol key; empty or missing: left out), lines are traced and joined.
+    ConvertDxf { text: String, #[serde(default)] name: String, #[serde(default)] map: std::collections::BTreeMap<String, String> },
     /// Accept a problem (its rule, ids and message as the checks give them) with a reason.
     Accept { rule: u8, ids: Vec<u32>, msg: String, reason: String, #[serde(default)] by: String, #[serde(default)] date: String },
     /// Open an accepted problem again.
@@ -698,6 +701,9 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
             if p.settings.accepted.len() == n {
                 return Err("That problem was not accepted.".into());
             }
+        }
+        Op::ConvertDxf { text, name, map } => {
+            crate::convert::convert(p, &text, &name, &map, created)?;
         }
         Op::MakeTestPacks => {
             crate::testpack::make(p)?;

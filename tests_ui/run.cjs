@@ -1028,6 +1028,15 @@ const shots = process.env.SHOTS;
   { const x = (await inv("exports")).filter(e => e.kind === "controlsys").pop();
     check("the control-system workbook is written", !!x && parseInt(x.text) > 3000, x?.text); }
 
+  // 77. An old DXF P&ID converted into a live sheet: the review, then the new sheet.
+  await openEx("Pump transfer");
+  await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button:has-text('Convert Old P&ID')"); await p.waitForSelector(".cvtbl");
+  check("the review lists the blocks and what each becomes", (await p.$$(".cvtbl tbody tr")).length >= 8 && ((await p.textContent(".cvtbl")) ?? "").includes("SYM_GATE"));
+  { const n0 = (await project()).sheets.length;
+    await p.click(".dlg footer .btn.pri"); await p.waitForTimeout(1500);
+    const q = await project(); const s = q.sheets[q.sheets.length - 1];
+    check("the old drawing is a new live sheet", q.sheets.length === n0 + 1 && q.items.filter(i => i.sheet === s.id).length >= 15 && q.lines.filter(l => l.sheet === s.id).length >= 10 && !!s.underlay, `${q.items.filter(i => i.sheet === s.id).length} symbols`); }
+
   // 53. No commercial product name anywhere in the window (FAMILY §13): the built bundle, and the
   // text shown on each ribbon tab. The names are kept in ROT13 so this file does not name them.
   { const rot = s => s.replace(/[a-z]/gi, c => String.fromCharCode((c <= "Z" ? 65 : 97) + ((c.toUpperCase().charCodeAt(0) - 65 + 13) % 26)));

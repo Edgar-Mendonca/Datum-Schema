@@ -38,6 +38,7 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Line hydraulics**: inside diameter from size and schedule, velocity, Reynolds number, Colebrook friction factor, pressure drop per 100 m and over the line, with a ✓ ! ✗ badge against the limits for its service.
 - **Plant objects**: every equipment item, valve, instrument and line number is an object in a plant › unit › area hierarchy (the Plant panel); symbols are views of it, so one object can be drawn on several sheets. Every change is recorded with who made it and when.
 - **Classes you can extend**: a class library (named after the open DEXPI data standard) defines what data each kind of object has; add your company's attributes in Options and mark them required.
+- **Old P&IDs converted**: a DXF P&ID turned into a live sheet: blocks become symbols (reviewed first), lines joined to them, tags and line numbers read, the old drawing behind it to compare.
 - **Virtual instruments and the control system**: instruments in their loops, lists and I/O without being drawn; one workbook for the control-system team (I/O list, tag list, alarms and trips, I/O summary).
 - **Find anything**: a plain query ("control valves without a bypass", "lines with velocity above 3 m/s") whose results are a list; the same in the command line and for an assistant.
 - **Accepted problems**: a check's problem accepted with a reason, kept for audit, open again if the drawing changes.

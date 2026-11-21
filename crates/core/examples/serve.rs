@@ -13,6 +13,8 @@ struct St {
     doc: Doc,
     opts: Value,
     exports: Vec<Value>,
+    /// The drawing scanned for conversion.
+    pending: Option<String>,
 }
 
 fn out(s: &St, created: Vec<u32>, warnings: Vec<String>) -> Value {
@@ -42,6 +44,26 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
         "derived" => serde_json::to_value(api::derived(&s.doc.p, a["sheet"].as_u64().unwrap_or(0) as u32)).unwrap(),
         "sheet_manager" => serde_json::to_value(datum_core::sheetman::manager(&s.doc.p)).unwrap(),
         "nozzles" => serde_json::to_value(datum_core::nozzles::list(&s.doc.p, a["item"].as_u64().unwrap_or(0) as u32)).unwrap(),
+        "convert_scan" => {
+            // The test cannot pick a file: it converts the pump example's sheet, as DXF.
+            let p = examples::get("pump").ok_or("no example")?;
+            let text = datum_core::dxf::write(&p, &p.sheets[0]);
+            let scan = datum_core::convert::scan(&text)?;
+            s.pending = Some(text);
+            json!(["PID-100.dxf", scan])
+        }
+        "convert_apply" => {
+            let text = s.pending.clone().ok_or("Read a drawing first.")?;
+            let map: std::collections::BTreeMap<String, String> = serde_json::from_value(a["map"].clone()).map_err(|e| e.to_string())?;
+            let mut probe = s.doc.p.clone();
+            let rep = datum_core::convert::convert(&mut probe, &text, "PID-100.dxf", &map, &mut vec![])?;
+            let created = s.doc.apply(datum_core::doc::Op::ConvertDxf { text, name: "PID-100.dxf".into(), map })?;
+            let mut o = serde_json::to_value(out(s, created, vec![])).unwrap();
+            if let Some(m) = o.as_object_mut() {
+                m.remove("dummy");
+            }
+            json!([o, rep])
+        }
         "handover_summary" => serde_json::to_value(datum_core::handover::summary(&s.doc.p)).unwrap(),
         "test_packs" => serde_json::to_value(datum_core::testpack::overview(&s.doc.p)).unwrap(),
         "isolation" => {
@@ -289,7 +311,7 @@ fn main() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../ui/dist");
     let listener = TcpListener::bind(("127.0.0.1", port)).expect("port in use");
     let opts = json!({ "autosave": 0, "beta": false, "theme": "light", "openLast": false, "units": "SI", "grid": true, "paper": "sheet", "company": "", "defaults": null });
-    let mut st = St { doc: Doc::new(Project::new()), opts, exports: vec![] };
+    let mut st = St { doc: Doc::new(Project::new()), opts, exports: vec![], pending: None };
     println!("ready on {port}");
     for stream in listener.incoming().flatten() {
         let mut r = BufReader::new(&stream);

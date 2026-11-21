@@ -39,6 +39,8 @@ pub struct Dxf {
     pub blocks: HashMap<String, Vec<Ent>>,
     /// The model space.
     pub ents: Vec<Ent>,
+    /// Each model-space entity's layer (the same order as `ents`).
+    pub layers: Vec<String>,
     /// Entity types skipped, with how many.
     pub skipped: std::collections::BTreeMap<String, usize>,
 }
@@ -174,16 +176,27 @@ fn bulged(v: &[([f64; 2], f64)], closed: bool) -> Vec<[f64; 2]> {
 }
 
 /// Reads an entity list from `pairs[i..]` up to ENDSEC or ENDBLK; returns it and where it stopped.
-fn entities(ps: &[(i32, &str)], mut i: usize, end: &str, skipped: &mut std::collections::BTreeMap<String, usize>, count: &mut usize) -> Result<(Vec<Ent>, usize), String> {
+fn entities(ps: &[(i32, &str)], i: usize, end: &str, skipped: &mut std::collections::BTreeMap<String, usize>, count: &mut usize) -> Result<(Vec<Ent>, usize), String> {
+    entities_layered(ps, i, end, skipped, count).map(|(e, _, k)| (e, k))
+}
+
+/// The entities and each one's layer.
+fn entities_layered(ps: &[(i32, &str)], mut i: usize, end: &str, skipped: &mut std::collections::BTreeMap<String, usize>, count: &mut usize) -> Result<(Vec<Ent>, Vec<String>, usize), String> {
     let mut out = vec![];
+    let mut layers: Vec<String> = vec![];
     while i < ps.len() {
+        // Every entity read so far has its layer (the entity just handled gave its own).
+        while layers.len() < out.len() {
+            layers.push(String::new());
+        }
         let (c, v) = ps[i];
         if c != 0 {
             i += 1;
             continue;
         }
         if v == end || v == "ENDSEC" || v == "EOF" {
-            return Ok((out, i));
+            layers.resize(out.len(), String::new());
+            return Ok((out, layers, i));
         }
         *count += 1;
         if *count > MAX_ENTS {
@@ -197,6 +210,8 @@ fn entities(ps: &[(i32, &str)], mut i: usize, end: &str, skipped: &mut std::coll
         }
         let g = &ps[i + 1..j];
         let get = |code: i32| g.iter().find(|p| p.0 == code).map(|p| p.1);
+        let layer = get(8).unwrap_or("").trim().to_string();
+        let before = out.len();
         let num = |code: i32, d: f64| get(code).map_or(d, f);
         let pt = |cx: i32| [num(cx, 0.0), num(cx + 10, 0.0)];
         match ty {
@@ -246,6 +261,12 @@ fn entities(ps: &[(i32, &str)], mut i: usize, end: &str, skipped: &mut std::coll
                 }
                 if v.len() >= 2 {
                     out.push(Ent::Poly { pts: bulged(&v, closed), closed, fill: false });
+                }
+                while layers.len() < before {
+                    layers.push(String::new());
+                }
+                while layers.len() < out.len() {
+                    layers.push(layer.clone());
                 }
                 i = k;
                 continue;
@@ -350,6 +371,10 @@ fn entities(ps: &[(i32, &str)], mut i: usize, end: &str, skipped: &mut std::coll
                     }
                 }
                 out.push(Ent::Insert { name, p: pt(10), sx: num(41, 1.0), sy: num(42, 1.0), rot: num(50, 0.0), attribs });
+                while layers.len() < before {
+                    layers.push(String::new());
+                }
+                layers.push(layer.clone());
                 if k > j {
                     i = k;
                     continue;
@@ -358,9 +383,16 @@ fn entities(ps: &[(i32, &str)], mut i: usize, end: &str, skipped: &mut std::coll
             "SEQEND" | "VERTEX" | "ATTRIB" | "ATTDEF" | "ENDBLK" => {}
             other => *skipped.entry(other.to_string()).or_insert(0) += 1,
         }
+        while layers.len() < before {
+            layers.push(String::new());
+        }
+        while layers.len() < out.len() {
+            layers.push(layer.clone());
+        }
         i = j;
     }
-    Ok((out, i))
+    layers.resize(out.len(), String::new());
+    Ok((out, layers, i))
 }
 
 /// Reads a DXF file.
@@ -417,8 +449,9 @@ pub fn read(text_in: &str) -> Result<Dxf, String> {
                     }
                 }
                 "ENTITIES" => {
-                    let (ents, stop) = entities(&ps, i, "ENDSEC", &mut d.skipped, &mut count)?;
+                    let (ents, layers, stop) = entities_layered(&ps, i, "ENDSEC", &mut d.skipped, &mut count)?;
                     d.ents = ents;
+                    d.layers = layers;
                     i = stop;
                 }
                 _ => {
