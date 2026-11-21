@@ -1,0 +1,14 @@
+[package]
+name = "datum-schema-cli"
+version = "0.10.0"
+edition = "2021"
+license = "MIT"
+description = "Datum Schema on the command line: inspect, check, list, change and export P&ID projects."
+
+[[bin]]
+name = "datum-schema-cli"
+path = "src/main.rs"
+
+[dependencies]
+datum-core = { path = "../core" }
+serde_json.workspace = true

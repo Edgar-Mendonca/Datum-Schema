@@ -1,5 +1,6 @@
 name: Release
-# Builds one Windows installer, DatumSchema-x.y.z-setup.exe, and publishes it with SHA256SUMS.txt
+# Builds the Windows installer, DatumSchema-x.y.z-setup.exe, and the command line,
+# datum-schema-cli-x.y.z.exe, and publishes them with SHA256SUMS.txt
 # as a GitHub Release (the shape Datum Home and the in-app updater rely on, FAMILY §9).
 # Bump the version in src-tauri/Cargo.toml and crates/core/Cargo.toml, add a CHANGELOG.md section,
 # then run this workflow from the Actions tab (or push a tag: git tag v0.1.0 && git push origin v0.1.0).
@@ -38,14 +39,16 @@ jobs:
           awk -v v="$V" 'index($0, "## " v " ") == 1 || $0 == "## " v {f=1; next} /^## / {f=0} f' CHANGELOG.md > notes.md
           cat notes.md
           test -s notes.md || { echo "CHANGELOG.md has no section for $V"; exit 1; }
-      - run: cargo test -p datum-core
-      - name: Installer
+      - run: cargo test -p datum-core -p datum-schema-cli
+      - name: Installer, command line and checksums
         shell: bash
         run: |
           npx tauri build --bundles nsis
+          cargo build --release -p datum-schema-cli
           mkdir -p out
           cp target/release/bundle/nsis/*-setup.exe "out/DatumSchema-$V-setup.exe"
-          cd out && sha256sum "DatumSchema-$V-setup.exe" > SHA256SUMS.txt && cat SHA256SUMS.txt && ls -la
+          cp target/release/datum-schema-cli.exe "out/datum-schema-cli-$V.exe"
+          cd out && sha256sum "DatumSchema-$V-setup.exe" "datum-schema-cli-$V.exe" > SHA256SUMS.txt && cat SHA256SUMS.txt && ls -la
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.V }}
@@ -55,4 +58,5 @@ jobs:
           make_latest: true
           files: |
             out/DatumSchema-${{ env.V }}-setup.exe
+            out/datum-schema-cli-${{ env.V }}.exe
             out/SHA256SUMS.txt

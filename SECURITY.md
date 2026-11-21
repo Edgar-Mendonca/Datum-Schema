@@ -11,4 +11,5 @@ Please report a security problem privately: use **Security › Report a vulnerab
 - The window can only open links to the Datum repositories and site (`open_url` refuses anything else).
 - Project files are treated as untrusted: the reader is tested with damaged and random files and must never crash the app; a damaged file opens as far as possible and lists what it left out. Text in tags and notes is always shown as text, never run.
 - Every save is atomic (a temporary file, then a rename), and every file read has a size limit.
+- `datum-schema-cli` runs on your computer with your permissions and makes no network call. It changes a project only through the named operations the window uses, writes only project and export file types (by extension), and writes only the file named by `--save` or `export`.
 - The installer is not code-signed yet (planned for 1.0), so Windows shows a SmartScreen warning on the first install.

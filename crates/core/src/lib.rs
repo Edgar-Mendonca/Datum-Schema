@@ -36,6 +36,7 @@ pub mod loops;
 pub mod makepfd;
 pub mod model;
 pub mod nozzles;
+pub mod ops;
 pub mod pfd;
 pub mod pipes;
 pub mod review;

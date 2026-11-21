@@ -38,6 +38,7 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Line hydraulics**: inside diameter from size and schedule, velocity, Reynolds number, Colebrook friction factor, pressure drop per 100 m and over the line, with a ✓ ! ✗ badge against the limits for its service.
 - **Plant objects**: every equipment item, valve, instrument and line number is an object in a plant › unit › area hierarchy (the Plant panel); symbols are views of it, so one object can be drawn on several sheets. Every change is recorded with who made it and when.
 - **Classes you can extend**: a class library (named after the open DEXPI data standard) defines what data each kind of object has; add your company's attributes in Options and mark them required.
+- **Command line**: `datum-schema-cli` reads, checks, lists, changes (through the same named operations as the window) and exports projects, for scripts and batch work.
 - **Handover package**: tags, classes, data and documents in CFIHOS-style tables, each P&ID in DEXPI, the web page, the lists and datasheets, in one zip file, with what to fix first.
 - **Pressure test packs**: line numbers grouped by pipe class and test pressure, each with its limits, what to open, remove or isolate, its vents and drains, printed pack by pack (an aid; the code and the engineer set the test).
 - **HAZOP support**: nodes marked on the P&ID, a worksheet for each, deviations suggested with the causes and safeguards the drawing shows, tags that follow renames, the worksheet and recommendations as lists (an aid; the study is the team's).
@@ -95,12 +96,28 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 4. Open the **Line list**: every line number with its from and to, flow, velocity and pressure drop. Click a line on the drawing to see its hydraulics and its ✓, ! or ✗ badge.
 5. File › Print: the sheet with its title block, then the lists. Sheets › DXF writes the drawing for any CAD program.
 
+## Command line
+
+`datum-schema-cli` (on the [Releases](https://github.com/Edgar-Mendonca/Datum-Schema/releases/latest) page, beside the installer) works with projects without the window:
+
+```bash
+datum-schema-cli info plant.dschema                 # sheets, tags, line numbers, checks
+datum-schema-cli check plant.dschema --csv          # every open check with its ids
+datum-schema-cli list plant.dschema lines --csv     # any list (see `lists`)
+datum-schema-cli ops                                # the named operations, with examples
+datum-schema-cli apply plant.dschema --op '{"SetTag":{"id":11,"tag":"HV-101"}}' --save new.dschema
+datum-schema-cli export plant.dschema plant.zip     # the handover package (also .dxf .xml .html .json)
+```
+
+It changes a project only through the named operations the window uses, makes no network call, and writes only the file you name.
+
 ## Build
 
 ```bash
 npm ci
 npm run build:ui
 cargo build -p datum-schema --release
+cargo run -p datum-schema-cli -- help   # the command line
 ```
 
 Checks before every push: `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`, `npm run check:ui`, `npm run test:ui`, `cargo deny check`.

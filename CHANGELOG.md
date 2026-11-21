@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.10.0 — 2026-11-21
+
+The command line.
+
+**`datum-schema-cli`**, on the Releases page beside the installer, works with projects without the window, for scripts and batch work:
+- `info`: sheets, tags, line numbers and the checks; `check`: every open check with the ids it is about; `objects`: every symbol and line with its id, sheet and tag; `list`: any list, as a table or CSV.
+- `ops`: the named operations, each with what it does and an example. `apply` changes a project through them (several at once, `--op` each) and saves to the file named by `--save`; a failed operation saves nothing.
+- `export`: by the file's extension: the project (.dschema), DXF, DEXPI (.xml), the web page (.html), the handover package (.zip), the project as JSON, and any list in Excel or CSV (`--list`). `--sheet` chooses the sheet.
+- `new`: a new project or one of the examples; `symbols`, `lists` and `examples` list what they can be.
+
+The window, the command line and, next, an AI assistant change a project through the same named operations. The command line runs on your computer, makes no network call, and writes only the file you name.
+
 ## 0.9.4 — 2026-11-21
 
 The handover package.
