@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.9.4 — 2026-11-21
+
+The handover package.
+
+**Everything handed over, in one zip file.** File › Export › **Handover package** (or Sheets › Handover) first shows what the package holds and what is worth fixing before handing over, then saves it:
+- **Tables in the shape of the CFIHOS handover specification**, as CSV with a header row:
+  - every tag (equipment, valves, instruments and line numbers) with its class, discipline, plant breakdown and status (drawn or registered);
+  - each tag's data, one value per row, with its unit in its own column;
+  - the classes used, with their parents, and the plant breakdown;
+  - the documents (sheets, issued datasheets, test packs, the HAZOP worksheet) with revision and status, and which tags each document shows.
+- **Each P&ID in DEXPI**, the **plant as one web page**, the **lists, test packs, HAZOP worksheet and datasheets in Excel**, the **checks still open**, and a **README** that says what each file is and what was still open.
+
+**What to fix first** is listed before saving: tags with no description, classes the library does not know, open errors and warnings, required data missing, sheets still Draft, open HAZOP recommendations, test packs not accepted. A valve or fitting with no service is described by its type and line ("Gate valve on 4"-P-1001-A1A").
+
+The package is read from the drawing when it is made; the project does not change. Text a spreadsheet would run as a formula is made safe, and file names inside the package are made safe from any project or sheet name.
+
 ## 0.9.3 — 2026-11-18
 
 Pressure test packs.

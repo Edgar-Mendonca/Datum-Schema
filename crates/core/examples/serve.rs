@@ -42,6 +42,7 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
         "derived" => serde_json::to_value(api::derived(&s.doc.p, a["sheet"].as_u64().unwrap_or(0) as u32)).unwrap(),
         "sheet_manager" => serde_json::to_value(datum_core::sheetman::manager(&s.doc.p)).unwrap(),
         "nozzles" => serde_json::to_value(datum_core::nozzles::list(&s.doc.p, a["item"].as_u64().unwrap_or(0) as u32)).unwrap(),
+        "handover_summary" => serde_json::to_value(datum_core::handover::summary(&s.doc.p)).unwrap(),
         "test_packs" => serde_json::to_value(datum_core::testpack::overview(&s.doc.p)).unwrap(),
         "isolation" => {
             let ids: Vec<u32> = a["ids"].as_array().map(|v| v.iter().filter_map(|x| x.as_u64()).map(|x| x as u32).collect()).unwrap_or_default();
@@ -107,6 +108,10 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
                 }
                 "cause" => format!("{} bytes", datum_core::cause::xlsx(&s.doc.p)?.len()),
                 "html" => datum_core::webpage::page(&s.doc.p, &what),
+                "handover" => {
+                    let z = datum_core::handover::zip(&s.doc.p, &what)?;
+                    format!("{} bytes", z.len())
+                }
                 "loopdxf" => {
                     let d = datum_core::loops::diagram(&s.doc.p, &what)?;
                     dxf::write_prims(&d.prims, d.w, d.h)

@@ -1094,6 +1094,7 @@ tr.behind td { background: var(--err-bg); }
 .hzhead { grid-template-columns: 80px 1fr; }
 .hzbody { display: grid; grid-template-columns: 200px 1fr; gap: 12px; min-height: 360px; }
 .hzsheet { min-width: 0; }
+.hofiles { columns: 2; max-height: 30vh; overflow: auto; margin: 0; padding-left: 18px; }
 .tpsheet .inline select { width: auto; flex: 0 0 auto; }
 .tpsheet .inline b.mono { white-space: nowrap; }
 .tpsheet .inline .btn { white-space: nowrap; }

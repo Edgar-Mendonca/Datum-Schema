@@ -38,6 +38,7 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Line hydraulics**: inside diameter from size and schedule, velocity, Reynolds number, Colebrook friction factor, pressure drop per 100 m and over the line, with a ✓ ! ✗ badge against the limits for its service.
 - **Plant objects**: every equipment item, valve, instrument and line number is an object in a plant › unit › area hierarchy (the Plant panel); symbols are views of it, so one object can be drawn on several sheets. Every change is recorded with who made it and when.
 - **Classes you can extend**: a class library (named after the open DEXPI data standard) defines what data each kind of object has; add your company's attributes in Options and mark them required.
+- **Handover package**: tags, classes, data and documents in CFIHOS-style tables, each P&ID in DEXPI, the web page, the lists and datasheets, in one zip file, with what to fix first.
 - **Pressure test packs**: line numbers grouped by pipe class and test pressure, each with its limits, what to open, remove or isolate, its vents and drains, printed pack by pack (an aid; the code and the engineer set the test).
 - **HAZOP support**: nodes marked on the P&ID, a worksheet for each, deviations suggested with the causes and safeguards the drawing shows, tags that follow renames, the worksheet and recommendations as lists (an aid; the study is the team's).
 - **The plant as a web page**: one HTML file with every sheet, the data behind each tag, search and the lists, that anyone can open in a browser.

@@ -992,6 +992,16 @@ const shots = process.env.SHOTS;
     await p.click(".bs .back"); await p.waitForTimeout(300);
     check("the packs are marked on the sheet", await p.$$eval(".hzclouds text", els => els.some(e => e.textContent.startsWith("TP-0")))); }
 
+  // 74. The handover package: what it holds and what to fix, then saved as one zip file.
+  await openEx("Pump transfer, worked up");
+  await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button:has-text('Handover')"); await p.waitForSelector(".hosum");
+  { const sum = await p.textContent(".hosum"), files = await p.textContent(".hofiles");
+    check("the handover package says what it holds", /\d+ tags/.test(sum) && files.includes("tag.csv") && files.includes("dexpi/PID-110.xml") && files.includes("README.txt"), sum + " / " + files.slice(0, 200));
+    check("and what is worth fixing first, or that nothing is", !!(await p.$(".hogaps li")) || ((await p.textContent(".dlg .bd")) ?? "").includes("Nothing left to fix"));
+    await p.click(".dlg footer button:has-text('Save the package')"); await p.waitForTimeout(800);
+    const z = (await inv("exports")).filter(e => e.kind === "handover").pop();
+    check("the package is saved as a zip", !!z && /^\d+ bytes$/.test(z.text) && parseInt(z.text) > 5000, z?.text); }
+
   // 53. No commercial product name anywhere in the window (FAMILY §13): the built bundle, and the
   // text shown on each ribbon tab. The names are kept in ROT13 so this file does not name them.
   { const rot = s => s.replace(/[a-z]/gi, c => String.fromCharCode((c <= "Z" ? 65 : 97) + ((c.toUpperCase().charCodeAt(0) - 65 + 13) % 26)));

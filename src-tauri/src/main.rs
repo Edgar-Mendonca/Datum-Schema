@@ -258,6 +258,12 @@ async fn register_file(app: AppHandle, st: State<'_, St>) -> R<Option<Vec<datum_
     guard(|| datum_core::register::read(&st.lock().doc.p, &bytes)).map(Some)
 }
 
+/// What the handover package will hold, and what is worth fixing first.
+#[tauri::command]
+fn handover_summary(st: State<St>) -> datum_core::handover::Summary {
+    datum_core::handover::summary(&st.lock().doc.p)
+}
+
 /// The test packs read from the drawing, and the line numbers in none.
 #[tauri::command]
 fn test_packs(st: State<St>) -> datum_core::testpack::Overview {
@@ -622,11 +628,12 @@ async fn export(app: AppHandle, st: State<'_, St>, kind: String, what: String, s
         "xlsx" | "datasheets" | "cause" => ("Excel workbook", "xlsx"),
         "dexpi" => ("DEXPI P&ID exchange file", "xml"),
         "html" => ("Web page", "html"),
+        "handover" => ("Handover package", "zip"),
         "loopdxf" => ("DXF drawing", "dxf"),
         "dxf" => ("DXF drawing", "dxf"),
         k => return Err(format!("Unknown export type {k}.")),
     };
-    let file = if kind == "dxf" { format!("{name}.dxf") } else if kind == "datasheets" { format!("{name} datasheets.xlsx") } else if kind == "cause" { format!("{name} cause and effect.xlsx") } else if kind == "loopdxf" { format!("{name} loop {what}.dxf") } else if kind == "dexpi" { format!("{name}.xml") } else if kind == "html" { format!("{name}.html") } else { format!("{name} {what}.{ext}") };
+    let file = if kind == "dxf" { format!("{name}.dxf") } else if kind == "datasheets" { format!("{name} datasheets.xlsx") } else if kind == "cause" { format!("{name} cause and effect.xlsx") } else if kind == "loopdxf" { format!("{name} loop {what}.dxf") } else if kind == "dexpi" { format!("{name}.xml") } else if kind == "html" { format!("{name}.html") } else if kind == "handover" { format!("{name} handover.zip") } else { format!("{name} {what}.{ext}") };
     let Some(path) = app.dialog().file().add_filter(label, &[ext]).set_file_name(file).blocking_save_file().and_then(|f| f.into_path().ok()) else { return Ok(None) };
     let bytes = guard(|| {
         let a = st.lock();
@@ -637,6 +644,7 @@ async fn export(app: AppHandle, st: State<'_, St>, kind: String, what: String, s
             "datasheets" => datasheets::xlsx(p),
             "cause" => datum_core::cause::xlsx(p),
             "html" => Ok(datum_core::webpage::page(p, &what).into_bytes()),
+            "handover" => datum_core::handover::zip(p, &what),
             "loopdxf" => datum_core::loops::diagram(p, &what).map(|d| dxf::write_prims(&d.prims, d.w, d.h).into_bytes()),
             "dexpi" => {
                 let s = p.sheet(sheet).or(p.sheets.first()).ok_or("There is no sheet.")?;
@@ -848,7 +856,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, import_streams, import_list, fixes, nozzles, sheet_manager, isolation, test_packs, report_sources, report_preview, arrangement_starter, register_read, register_file, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, builtin_sets, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, title_preview, title_standard, spec_starter, specs_csv, todo, calc_sheets, sizing, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
+            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, import_streams, import_list, fixes, nozzles, sheet_manager, isolation, test_packs, handover_summary, report_sources, report_preview, arrangement_starter, register_read, register_file, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, builtin_sets, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, send, sheet_compare, title_preview, title_standard, spec_starter, specs_csv, todo, calc_sheets, sizing, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
             options, set_options, autosave, recovery, recover, recent, startup_file, open_url, version, quit, check_update, install_update
         ])
         .run(tauri::generate_context!())

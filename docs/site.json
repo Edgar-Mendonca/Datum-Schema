@@ -128,19 +128,19 @@
     {
       "v": "0.9",
       "title": "Beyond the drawing",
-      "when": "Now",
+      "when": "Done",
       "items": [
         "0.9.0: an isolation planner: the valves to close and the drains and vents to open to isolate a piece of equipment, shown and listed (done)",
         "0.9.1: the plant as one interactive web page anyone can open: click a tag to see its data (done)",
         "0.9.2: HAZOP support: nodes marked on the P&ID and worksheets linked to its lines and equipment, safeguards filled from the drawing (done)",
         "0.9.3: pressure test packs: test boundaries on the P&ID and the test pack list (done)",
-        "0.9.4: a handover package: tags, classes, data and documents in CFIHOS-style tables, with DEXPI, the web page and the lists, in one folder"
+        "0.9.4: a handover package: tags, classes, data and documents in CFIHOS-style tables, with DEXPI, the web page and the lists, in one folder (done)"
       ]
     },
     {
       "v": "0.10",
       "title": "AI and automation",
-      "when": "Next",
+      "when": "Now",
       "items": [
         "0.10.0: a command line: project facts, checks, lists, changes through named operations, and every export",
         "0.10.1: an MCP server: an AI assistant on your own computer opens, checks, changes and saves a project through the same operations; nothing is written until it saves",

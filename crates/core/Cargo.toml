@@ -1,6 +1,6 @@
 [package]
 name = "datum-core"
-version = "0.9.3"
+version = "0.9.4"
 license = "MIT"
 edition = "2021"
 description = "Datum Schema engine: the P&ID model and its edits, the symbol library, connectivity, tags, checks, line hydraulics, lists, the sheet frame and the DXF writer."
@@ -13,4 +13,6 @@ rust_xlsxwriter = { version = "0.101.0", default-features = false }
 rusqlite = { version = "0.41.1", features = ["bundled"] }
 calamine = { version = "0.38", default-features = false }
 quick-xml = "0.42.0"
+# The handover package (MIT); the same version and features the Excel writer already uses.
+zip = { version = "9.0", default-features = false, features = ["deflate"] }
 
