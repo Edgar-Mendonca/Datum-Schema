@@ -1,5 +1,5 @@
 //! Nozzles added to equipment. A piece of equipment's symbol has fixed nozzles; adding one makes a
-//! project symbol for that symbol on the drawing ("x.nozzles.<item>"): the same drawing and the same
+//! project symbol for that symbol on the drawing ("x.nozzles.<item>-<nonce>"): the same drawing and the same
 //! nozzles plus the new ones, "like" the original so its class, checks and lists are unchanged, kept
 //! in the project file like a client library's symbols. Existing nozzles keep their numbers, so the
 //! lines on them stay where they are. A nozzle's size, rating and service are the object's data
@@ -18,10 +18,18 @@ pub fn key(nozzle: &str, field: &str) -> String {
 
 /// The project symbol an item would carry with its added nozzles.
 fn derived(p: &Project, it: &Item) -> Result<CustomSym, String> {
-    let key = format!("x.nozzles.{}", it.id);
-    if let Some(c) = p.custom_syms.iter().find(|c| c.key == it.sym && c.key == key) {
-        return Ok(c.clone());
+    // A symbol that already has added nozzles takes more on itself.
+    if it.sym.starts_with("x.nozzles.") {
+        if let Some(c) = p.custom_syms.iter().find(|c| c.key == it.sym) {
+            return Ok(c.clone());
+        }
     }
+    // A new one: the item's id and a nonce, so two projects (or two tests) in one process never
+    // share a key in the symbol registry.
+    static N: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let t = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_nanos() as u64);
+    let nonce = (t ^ N.fetch_add(1, std::sync::atomic::Ordering::Relaxed).wrapping_mul(0x9E37_79B9_7F4A_7C15)) & 0xFFFF_FFFF;
+    let key = format!("x.nozzles.{}-{nonce:08x}", it.id);
     let s = symbols::get(&it.sym).ok_or("There is no such symbol.")?;
     if !s.cat.equipment() {
         return Err("Nozzles are added to equipment (vessels, machines, exchangers).".into());
@@ -171,6 +179,22 @@ mod tests {
     use super::*;
     use crate::doc::{Doc, Op};
     use crate::model::{End, Kind, Line};
+
+    #[test]
+    fn two_projects_adding_nozzles_to_the_same_item_never_share_its_symbol() {
+        let mut a = Doc::new(crate::examples::get("pump").unwrap());
+        let mut b = Doc::new(crate::examples::get("pump").unwrap());
+        let v = a.p.items.iter().find(|i| a.p.tag_of(i) == "V-101").unwrap().clone();
+        a.apply(Op::AddNozzle { item: v.id, x: v.x - 30.0, y: v.y + 4.0, name: String::new() }).unwrap();
+        b.apply(Op::AddNozzle { item: v.id, x: v.x + 30.0, y: v.y - 4.0, name: String::new() }).unwrap();
+        let (sa, sb) = (a.p.item(v.id).unwrap().sym.clone(), b.p.item(v.id).unwrap().sym.clone());
+        assert_ne!(sa, sb);
+        assert_eq!(symbols::get(&sa).unwrap().ports.last().unwrap().dir, 2);
+        assert_eq!(symbols::get(&sb).unwrap().ports.last().unwrap().dir, 0);
+        // A second nozzle goes on the item's own symbol.
+        a.apply(Op::AddNozzle { item: v.id, x: v.x - 30.0, y: v.y - 6.0, name: String::new() }).unwrap();
+        assert_eq!(a.p.item(v.id).unwrap().sym, sa);
+    }
 
     #[test]
     fn a_nozzle_is_added_used_and_removed() {

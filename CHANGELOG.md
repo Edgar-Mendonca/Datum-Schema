@@ -12,6 +12,8 @@ The command line.
 
 The window, the command line and, next, an AI assistant change a project through the same named operations. The command line runs on your computer, makes no network call, and writes only the file you name.
 
+**Fixed:** a nozzle added to a piece of equipment made a symbol named only by the equipment's id, so two projects open in one process (the examples in a test run, or the command line) could overwrite each other's nozzles. Each new nozzle symbol now has a name of its own; projects saved before keep theirs.
+
 ## 0.9.4 — 2026-11-21
 
 The handover package.
