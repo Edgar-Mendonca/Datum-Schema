@@ -9,6 +9,8 @@ use datum_core::{checks, dxf, examples, file, graph, handover, hydraulics, lists
 use serde_json::{json, Value};
 use std::path::Path;
 
+mod mcp;
+
 const HELP: &str = "datum-schema-cli: Datum Schema on the command line
 
   info <project>                       facts: sheets, tags, lines, checks
@@ -25,6 +27,8 @@ const HELP: &str = "datum-schema-cli: Datum Schema on the command line
                                        .zip (handover package) .xlsx or .csv (needs --list) .json
   new <out.dschema> [--example <id>]   a new project, or one of the examples (see `examples`)
   examples                             the examples
+  mcp                                  a Model Context Protocol server over stdio, for an AI assistant
+                                       on this computer (nothing is written unless it saves)
 
 Projects are .dschema files; a DEXPI P&ID (.xml) can be read too. Numbers in operations are in SI
 base units (Pa, K, m, m³/s). Hydraulic and sizing values are a sizing aid checked by the engineer.";
@@ -32,6 +36,7 @@ base units (Pa, K, m, m³/s). Hydraulic and sizing values are a sizing aid check
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match run(&args) {
+        Ok(out) if out.is_empty() => {}
         Ok(out) => println!("{out}"),
         Err(e) => {
             eprintln!("{e}");
@@ -90,7 +95,7 @@ fn table(head: &[&str], rows: &[Vec<String>], csv: bool) -> String {
     out
 }
 
-fn issues(p: &Project) -> Vec<checks::Issue> {
+pub fn issues(p: &Project) -> Vec<checks::Issue> {
     let net = graph::Net::new(p);
     let hyd = hydraulics::all(p, &net);
     checks::run(p, &net, &hyd)
@@ -171,6 +176,10 @@ pub fn run(args: &[String]) -> Result<String, String> {
     let pretty = |v: Value| serde_json::to_string_pretty(&v).unwrap_or_default();
     match cmd {
         "help" | "--help" | "-h" => Ok(HELP.into()),
+        "mcp" => {
+            mcp::serve(std::io::stdin().lock(), std::io::stdout().lock());
+            Ok(String::new())
+        }
         "version" | "--version" => Ok(format!("datum-schema-cli {}", env!("CARGO_PKG_VERSION"))),
         "info" => Ok(pretty(info(&load(need(args, 1, "a project file")?)?.p))),
         "check" => {

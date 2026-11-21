@@ -38,6 +38,7 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Line hydraulics**: inside diameter from size and schedule, velocity, Reynolds number, Colebrook friction factor, pressure drop per 100 m and over the line, with a ✓ ! ✗ badge against the limits for its service.
 - **Plant objects**: every equipment item, valve, instrument and line number is an object in a plant › unit › area hierarchy (the Plant panel); symbols are views of it, so one object can be drawn on several sheets. Every change is recorded with who made it and when.
 - **Classes you can extend**: a class library (named after the open DEXPI data standard) defines what data each kind of object has; add your company's attributes in Options and mark them required.
+- **AI assistants**: `datum-schema-cli mcp` lets an assistant on your computer read, check, change and save a project through the same operations as the window.
 - **Command line**: `datum-schema-cli` reads, checks, lists, changes (through the same named operations as the window) and exports projects, for scripts and batch work.
 - **Handover package**: tags, classes, data and documents in CFIHOS-style tables, each P&ID in DEXPI, the web page, the lists and datasheets, in one zip file, with what to fix first.
 - **Pressure test packs**: line numbers grouped by pipe class and test pressure, each with its limits, what to open, remove or isolate, its vents and drains, printed pack by pack (an aid; the code and the engineer set the test).
@@ -110,6 +111,16 @@ datum-schema-cli export plant.dschema plant.zip     # the handover package (also
 ```
 
 It changes a project only through the named operations the window uses, makes no network call, and writes only the file you name.
+
+### AI assistants
+
+`datum-schema-cli mcp` is a Model Context Protocol server over stdio. Add it to an assistant on your computer that speaks the protocol, for example:
+
+```json
+{ "mcpServers": { "datum-schema": { "command": "C:\\Tools\\datum-schema-cli.exe", "args": ["mcp"] } } }
+```
+
+The assistant can open or start a project, read its sheets, objects, checks and lists, plan an isolation, change it through the named operations (undoable; a failed one changes nothing), and save or export it. Nothing is written unless it saves. Datum Schema calls no AI service itself.
 
 ## Build
 

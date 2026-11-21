@@ -19,7 +19,7 @@ const CHAPTERS: Chapter[] = [
   { id: "pfd", t: "Process flow diagrams", intro: "Streams with their flows, conditions and compositions, a stream table on the sheet, and heat, mass and component balances.", keys: ["pfd"] },
   { id: "standards", t: "Symbols, standards and title blocks", intro: "A client's own symbols, old drawings to trace over, and your company's title block.", keys: ["libraries", "underlay", "titleblock"] },
   { id: "review", t: "Revisions and review", intro: "Issue sheets at revisions, compare and cloud what changed, and review with comments.", keys: ["revisions", "review"] },
-  { id: "family", t: "Working with other programs", intro: "Send lines and loops to the other Datum apps; exchange drawings as DXF and DEXPI.", keys: ["send", "cli"] },
+  { id: "family", t: "Working with other programs", intro: "Send lines and loops to the other Datum apps; exchange drawings as DXF and DEXPI.", keys: ["send", "cli", "ai"] },
   { id: "examples", t: "Examples", intro: "Worked projects to learn from and to show.", keys: ["examples"] },
 ];
 

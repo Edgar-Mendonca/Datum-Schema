@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.10.1 — 2026-11-21
+
+An AI assistant on your own computer.
+
+**`datum-schema-cli mcp`** is a Model Context Protocol server: an AI assistant that speaks the protocol, running on your computer, can work on a project with you. It can:
+- open a project or a DEXPI P&ID, or start one from an example;
+- read a sheet's symbols and lines with what each line connects to, any object's data (in your units, and raw in SI), the open checks with the fixes offered, and any list;
+- plan an isolation;
+- change the project only through the same named operations the window uses (place symbols, draw lines, set data and tags, apply a check's fix, place a control loop, make HAZOP nodes and test packs…), one at a time, each undoable, a failed one changing nothing;
+- save the project, or export it (DXF, DEXPI, the web page, the handover package).
+
+Nothing is written unless the assistant saves, and then only a project or export file type. Datum Schema itself still calls no AI service and sends nothing anywhere: the assistant is yours, and what it sends is up to it and you.
+
 ## 0.10.0 — 2026-11-21
 
 The command line.
