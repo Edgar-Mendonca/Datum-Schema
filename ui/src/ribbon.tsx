@@ -112,6 +112,7 @@ export const Ribbon = () => {
         <G l="Draw" h="draw"><B big i="select" l="Select" on={tool().k === "select"} run={() => setTool({ k: "select" })} /><LineB big k="major" i="line" l="Line" /><B big i="symbols" l="Add Symbol" run={() => C.quickInsert()} title="Type a symbol's name (double-click the sheet does the same)" /></G>
         <G l="Units" h="units"><S><B i="units" l="SI: bar, °C, m³/h" on={proj()?.units === "SI"} run={() => C.units("SI")} /><B i="units" l="US: psi, °F, gpm" on={proj()?.units === "US"} run={() => C.units("US")} /></S></G>
         <G l="Examples" h="examples"><B big i="open" l="Examples" dd={exampleMenu} /></G>
+        <G l="Find" h="find"><B big i="search" l="Find" title="Find anything: control valves without a bypass, lines with velocity above 3 m/s… (Ctrl+F)" run={() => import("./find").then(m => m.openFind())} /></G>
         <G l="Checks" h="checks"><B big i="check" l={`${counts().e} errors`} run={() => C.panel("checks")} title="Open the Checks panel" /><S><span class="rcount warn">{counts().w} warnings</span><span class="rcount">{counts().n} notes</span></S></G>
       </Show>
       <Show when={tab() === "draw"}>

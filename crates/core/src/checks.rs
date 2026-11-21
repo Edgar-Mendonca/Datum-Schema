@@ -7,8 +7,77 @@ use crate::hydraulics::Hyd;
 use crate::model::{End, Item, Line, Project, STREAM_CLASS};
 use crate::symbols::{self, Cat};
 use crate::tags;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+
+/// A problem the engineer has accepted, with a reason: kept for audit. It applies while the check
+/// still says exactly the same about the same things; if the drawing changes what the check says,
+/// the problem is open again.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
+pub struct Accepted {
+    pub rule: u8,
+    pub ids: Vec<u32>,
+    pub msg: String,
+    pub reason: String,
+    pub by: String,
+    pub date: String,
+}
+
+impl Accepted {
+    pub fn matches(&self, i: &Issue) -> bool {
+        let (mut a, mut b) = (self.ids.clone(), i.ids.clone());
+        a.sort_unstable();
+        b.sort_unstable();
+        self.rule == i.rule && self.msg == i.msg && a == b
+    }
+}
+
+/// Keeps the accepted problems sound: a reason each, text clipped, at most 5000, one per problem.
+pub fn normalize_accepted(v: &mut Vec<Accepted>) {
+    v.retain(|a| !a.reason.trim().is_empty() && !a.msg.is_empty());
+    for a in v.iter_mut() {
+        a.reason = crate::clip(a.reason.trim(), 1000);
+        a.msg = crate::clip(&a.msg, 1000);
+        a.by = crate::clip(&a.by, 100);
+        a.date = crate::clip(&a.date, 40);
+        a.ids.sort_unstable();
+        a.ids.dedup();
+    }
+    let mut seen = std::collections::HashSet::new();
+    v.retain(|a| seen.insert((a.rule, a.ids.clone(), a.msg.clone())));
+    if v.len() > 5000 {
+        let n = v.len() - 5000;
+        v.drain(..n);
+    }
+}
+
+/// The audit list of accepted problems, each with whether it still applies.
+pub fn accepted_list(p: &Project) -> crate::lists::List {
+    use crate::lists::{Col, List, Row};
+    let net = Net::new(p);
+    let hyd = crate::hydraulics::all(p, &net);
+    let now = run(p, &net, &hyd);
+    let col = |k: &str, l: &str| Col { key: k.into(), label: l.into(), q: "", edit: false, num: false };
+    let cols = vec![col("rule", "Rule"), col("msg", "Problem"), col("reason", "Reason"), col("by", "By"), col("date", "Date"), col("now", "Now")];
+    let rows = p
+        .settings
+        .accepted
+        .iter()
+        .map(|a| {
+            let state = if now.iter().any(|i| a.matches(i)) {
+                "Accepted"
+            } else if now.iter().any(|i| i.rule == a.rule && i.ids.iter().any(|x| a.ids.contains(x))) {
+                "Changed: check it again"
+            } else {
+                "No longer raised"
+            };
+            let sheet = a.ids.iter().find_map(|i| p.item(*i).map(|x| x.sheet).or_else(|| p.line(*i).map(|x| x.sheet))).unwrap_or(0);
+            Row { ids: a.ids.clone(), sheet, cells: vec![a.rule.to_string(), a.msg.clone(), a.reason.clone(), a.by.clone(), a.date.clone(), state.into()], status: (state != "Accepted").then_some(1) }
+        })
+        .collect();
+    List { kind: "accepted".into(), title: "Accepted problems".into(), cols, rows, heads: vec![] }
+}
 
 #[derive(Clone, Debug, Serialize, PartialEq)]
 pub struct Issue {
@@ -26,6 +95,8 @@ pub const RULES: u8 = 27;
 const ERROR: &str = "error";
 const WARNING: &str = "warning";
 const NOTE: &str = "note";
+/// A problem accepted with a reason (`Settings.accepted`).
+pub const ACCEPTED: &str = "accepted";
 
 fn name(p: &Project, it: &Item) -> String {
     let tag = p.tag_of(it);
@@ -362,6 +433,14 @@ pub fn run(p: &Project, net: &Net, hyd: &[Option<Hyd>]) -> Vec<Issue> {
     // 16. A P&ID line that names a PFD stream carries what the stream says.
     if on(16) {
         v.extend(crate::pfd::line_vs_stream(p, net));
+    }
+    // Problems accepted with a reason: still listed, no longer counted.
+    if !p.settings.accepted.is_empty() {
+        for i in v.iter_mut() {
+            if p.settings.accepted.iter().any(|a| a.matches(i)) {
+                i.level = ACCEPTED;
+            }
+        }
     }
     v
 }

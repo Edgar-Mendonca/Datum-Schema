@@ -1002,6 +1002,19 @@ const shots = process.env.SHOTS;
     const z = (await inv("exports")).filter(e => e.kind === "handover").pop();
     check("the package is saved as a zip", !!z && /^\d+ bytes$/.test(z.text) && parseInt(z.text) > 5000, z?.text); }
 
+  // 75. Find anything, and a problem accepted with a reason.
+  await openEx("Pump transfer, worked up");
+  await p.keyboard.press("Control+f"); await p.waitForSelector(".findq");
+  await p.fill(".findq", "control valves without a bypass"); await p.click(".dlg footer .btn.pri"); await p.waitForTimeout(600);
+  { const t = (await p.textContent(".bottom .ltitle")) + " " + (await p.textContent(".bottom .egrid"));
+    check("find lists what it understood and found", t.includes("Find: Control valves, without a bypass") && t.includes("LV-101"), t.slice(0, 200)); }
+  await p.click(".tabs button:text-is('Check')"); await p.click(".ribbon button:has-text('Checks Panel')"); await p.waitForSelector(".ctbl");
+  { const n0 = (await project()).settings.accepted.length;
+    await p.click(".ctbl tbody tr:first-child .fixb"); await p.click(".menu button:has-text('Accept it, with a reason'), .ctx button:has-text('Accept it, with a reason'), button:has-text('Accept it, with a reason')"); await p.waitForSelector(".acceptwhy");
+    await p.fill(".acceptwhy", "Tank vents to atmosphere"); await p.click(".dlg footer .btn.pri"); await p.waitForTimeout(500);
+    const q = await project();
+    check("a problem is accepted with its reason", q.settings.accepted.length === n0 + 1 && q.settings.accepted[n0].reason === "Tank vents to atmosphere"); }
+
   // 53. No commercial product name anywhere in the window (FAMILY §13): the built bundle, and the
   // text shown on each ribbon tab. The names are kept in ROT13 so this file does not name them.
   { const rot = s => s.replace(/[a-z]/gi, c => String.fromCharCode((c <= "Z" ? 65 : 97) + ((c.toUpperCase().charCodeAt(0) - 65 + 13) % 26)));

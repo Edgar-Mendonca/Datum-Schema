@@ -144,7 +144,7 @@
       "items": [
         "0.10.0: a command line: project facts, checks, lists, changes through named operations, and every export (done)",
         "0.10.1: an MCP server: an AI assistant on your own computer opens, checks, changes and saves a project through the same operations; nothing is written until it saves (done)",
-        "0.10.2: find anything (\"control valves without a bypass\") and check exceptions accepted with a reason, kept for audit",
+        "0.10.2: find anything (\"control valves without a bypass\") and check exceptions accepted with a reason, kept for audit (done)",
         "0.10.3: virtual instruments (data and loops without a symbol) and an I/O and tag export for the control system"
       ]
     },

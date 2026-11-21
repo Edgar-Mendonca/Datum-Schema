@@ -79,6 +79,7 @@ const App = () => {
     else if (ctrl && k === "o") { e.preventDefault(); C.open(); }
     else if (ctrl && k === "n") { e.preventDefault(); setBackstage("home"); }
     else if (ctrl && k === "p") { e.preventDefault(); C.print(); }
+    else if (ctrl && k === "f") { e.preventDefault(); import("./find").then(m => m.openFind()); }
     else if (ctrl && k === "z" && !typing) { e.preventDefault(); C.undo(); }
     else if (ctrl && k === "y" && !typing) { e.preventDefault(); C.redo(); }
     else if (e.key === "F1") { e.preventDefault(); D.shortcuts(); }

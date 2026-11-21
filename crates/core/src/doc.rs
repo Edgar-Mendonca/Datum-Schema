@@ -132,6 +132,10 @@ pub enum Op {
     HazopSuggest { node: u32 },
     /// Make test packs of the line numbers not yet in one.
     MakeTestPacks,
+    /// Accept a problem (its rule, ids and message as the checks give them) with a reason.
+    Accept { rule: u8, ids: Vec<u32>, msg: String, reason: String, #[serde(default)] by: String, #[serde(default)] date: String },
+    /// Open an accepted problem again.
+    Unaccept { rule: u8, ids: Vec<u32>, msg: String },
     /// Remove an added nozzle with no line on it.
     RemoveNozzle { item: u32, name: String },
     /// A nozzle's size, rating or service.
@@ -251,6 +255,7 @@ impl Doc {
         let op = match op {
             Op::IssueDatasheet { ids, rev, status, date, note, by } if by.trim().is_empty() => Op::IssueDatasheet { ids, rev, status, date, note, by: self.user.clone() },
             Op::Comment { sheet, x, y, text, on, by } if by.trim().is_empty() => Op::Comment { sheet, x, y, text, on, by: self.user.clone() },
+            Op::Accept { rule, ids, msg, reason, by, date } if by.trim().is_empty() => Op::Accept { rule, ids, msg, reason, by: self.user.clone(), date },
             Op::Reply { uid, text, by } if by.trim().is_empty() => Op::Reply { uid, text, by: self.user.clone() },
             Op::Resolve { uid, resolved, by } if by.trim().is_empty() => Op::Resolve { uid, resolved, by: self.user.clone() },
             op => op,
@@ -676,6 +681,23 @@ fn exec(p: &mut Project, op: Op, created: &mut Vec<u32>) -> Result<(), String> {
         }
         Op::HazopNode { ids, name } => {
             created.push(crate::hazop::add_node(p, &ids, &name)?);
+        }
+        Op::Accept { rule, ids, msg, reason, by, date } => {
+            if reason.trim().chars().count() < 3 {
+                return Err("Say why the problem is accepted (a few words at least).".into());
+            }
+            let a = crate::checks::Accepted { rule, ids, msg, reason, by, date };
+            p.settings.accepted.retain(|x| !(x.rule == a.rule && x.msg == a.msg && { let (mut l, mut r) = (x.ids.clone(), a.ids.clone()); l.sort_unstable(); r.sort_unstable(); l == r }));
+            p.settings.accepted.push(a);
+        }
+        Op::Unaccept { rule, ids, msg } => {
+            let mut want = ids.clone();
+            want.sort_unstable();
+            let n = p.settings.accepted.len();
+            p.settings.accepted.retain(|x| !(x.rule == rule && x.msg == msg && { let mut l = x.ids.clone(); l.sort_unstable(); l == want }));
+            if p.settings.accepted.len() == n {
+                return Err("That problem was not accepted.".into());
+            }
         }
         Op::MakeTestPacks => {
             crate::testpack::make(p)?;

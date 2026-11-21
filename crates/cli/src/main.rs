@@ -17,6 +17,8 @@ const HELP: &str = "datum-schema-cli: Datum Schema on the command line
   check <project> [--csv]              every open check (rule, level, sheet, message)
   objects <project> [--csv]            every symbol and line with its id, sheet and tag
   list <project> <kind> [--csv]        a list (see `lists`), as a table or CSV
+  find <project> '<query>' [--csv]     find anything: 'control valves without a bypass',
+                                       'lines with velocity above 3 m/s', 'pumps without a check valve'
   lists                                the list kinds
   symbols                              the symbol keys AddItem takes
   ops                                  the named operations, each with an example
@@ -204,6 +206,16 @@ pub fn run(args: &[String]) -> Result<String, String> {
             let rows: Vec<Vec<String>> = l.rows.iter().map(|r| r.cells.clone()).collect();
             Ok(format!("{}\n\n{}", l.title, table(&head, &rows, false)))
         }
+        "find" => {
+            let d = load(need(args, 1, "a project file")?)?;
+            let q = args.get(2).filter(|s| !s.starts_with("--")).ok_or("Give a query in quotes, e.g. \"control valves without a bypass\".")?;
+            let f = datum_core::query::find(&d.p, q)?;
+            let sheet = |id: u32| d.p.sheet(id).map(|s| s.number.clone()).unwrap_or_else(|| "not drawn".into());
+            let rows: Vec<Vec<String>> = f.rows.iter().map(|r| vec![r.tag.clone(), r.what.clone(), sheet(r.sheet), r.id.to_string(), r.detail.clone()]).collect();
+            let head = format!("{}{}", f.understood.join(", "), if f.unknown.is_empty() { String::new() } else { format!(" (not understood: {})", f.unknown.join(" ")) });
+            let t = table(&["TAG", "WHAT", "SHEET", "ID", "WHY"], &rows, csv);
+            Ok(if csv { t } else { format!("{head}: {} found\n\n{t}", rows.len()) })
+        }
         "lists" => Ok(table(&["KIND", "LIST"], &lists::KINDS.iter().map(|k| vec![k.0.to_string(), k.1.to_string()]).chain([vec!["testpack:<id>".into(), "One test pack (TP-001…)".into()], vec!["report:<name>".into(), "A report designed in the project".into()]]).collect::<Vec<_>>(), csv)),
         "symbols" => Ok(table(&["KEY", "NAME", "CATEGORY", "PORTS"], &symbols::all().iter().filter(|s| !s.rare).map(|s| vec![s.key.to_string(), s.name.to_string(), s.cat.name().to_string(), s.ports.iter().map(|q| q.name).collect::<Vec<_>>().join(", ")]).collect::<Vec<_>>(), csv)),
         "ops" => Ok(pretty(json!(ops::catalog()))),
@@ -289,6 +301,9 @@ mod tests {
         let back: Value = serde_json::from_str(&run(&a(&["info", &f("e.xml")])).unwrap()).unwrap();
         assert!(back["tags"].as_u64().unwrap() > 10);
         // The catalogues.
+        let found = run(&a(&["find", &f("pump.dschema"), "control valves without a bypass"])).unwrap();
+        assert!(found.starts_with("Control valves, without a bypass: 1 found") && found.contains("LV-101"), "{found}");
+        assert!(run(&a(&["find", &f("pump.dschema"), "pumps without a check valve"])).unwrap().contains(": 0 found"));
         assert!(run(&a(&["ops"])).unwrap().contains("\"AddItem\""));
         assert!(run(&a(&["symbols"])).unwrap().contains("pump_cent"));
         assert!(run(&a(&["lists"])).unwrap().contains("testpacks"));

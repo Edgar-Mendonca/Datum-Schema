@@ -45,6 +45,8 @@ pub fn catalog() -> Vec<OpInfo> {
         o("HazopSuggest", "Add the deviations suggested from the drawing to a HAZOP node's worksheet.", json!({"HazopSuggest": {"node": 1}})),
         o("MakeTestPacks", "Make pressure test packs of the line numbers not yet in one.", json!("MakeTestPacks")),
         o("Comment", "Pin a review comment on a sheet at x, y mm (on: the ids it is about).", json!({"Comment": {"sheet": 1, "x": 120.0, "y": 80.0, "text": "Check the strainer size", "on": []}})),
+        o("Accept", "Accept a check's problem with a reason, kept for audit (its rule, ids and message exactly as the checks give them). It comes back if the drawing changes what the check says.", json!({"Accept": {"rule": 27, "ids": [5], "msg": "T-101 has no PSH (high pressure) on the drawing: add it, or say it is not needed (Safety, not needed).", "reason": "Vents to atmosphere", "by": "", "date": "2026-11-21"}})),
+        o("Unaccept", "Open an accepted problem again.", json!({"Unaccept": {"rule": 27, "ids": [5], "msg": "T-101 has no PSH (high pressure) on the drawing: add it, or say it is not needed (Safety, not needed)."}})),
         o("Renumber", "Renumber tags and line numbers in drawing order.", json!("Renumber")),
         o("Batch", "Several operations as one edit (one undo).", json!({"Batch": {"ops": [{"SetData": {"ids": [11], "key": "size", "val": "4"}}, {"SetTag": {"id": 11, "tag": "HV-111"}}]}})),
     ]

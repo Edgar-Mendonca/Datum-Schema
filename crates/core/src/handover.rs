@@ -260,9 +260,10 @@ pub fn files(p: &Project, stamp: &str) -> Vec<(String, Vec<u8>)> {
     let net = crate::graph::Net::new(p);
     let hyd = crate::hydraulics::all(p, &net);
     let issues = crate::checks::run(p, &net, &hyd);
-    let mut q = Table::new(&["RULE", "LEVEL", "SHEET", "MESSAGE"]);
+    let mut q = Table::new(&["RULE", "LEVEL", "SHEET", "MESSAGE", "ACCEPTED_BECAUSE", "ACCEPTED_BY", "ACCEPTED_ON"]);
     for i in &issues {
-        q.push(vec![i.rule.to_string(), i.level.into(), p.sheet(i.sheet).map(|s| s.number.clone()).unwrap_or_default(), i.msg.clone()]);
+        let a = p.settings.accepted.iter().find(|a| a.matches(i));
+        q.push(vec![i.rule.to_string(), i.level.into(), p.sheet(i.sheet).map(|s| s.number.clone()).unwrap_or_default(), i.msg.clone(), a.map(|a| a.reason.clone()).unwrap_or_default(), a.map(|a| a.by.clone()).unwrap_or_default(), a.map(|a| a.date.clone()).unwrap_or_default()]);
     }
     put("open_checks.csv", q.csv().into_bytes());
 

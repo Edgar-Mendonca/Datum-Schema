@@ -909,6 +909,12 @@ tr.behind td { background: var(--err-bg); }
 .ctbl tr.error td.lvl { color: var(--crit); }
 .ctbl tr.warning td.lvl { color: var(--amber); }
 .ctbl tr.note td.lvl { color: var(--muted); }
+.ctbl tr.accepted td { color: var(--muted); }
+.ctbl tr.accepted td.lvl { color: var(--ok, #2e7d32); }
+.ltitle { display: flex; gap: 10px; align-items: center; padding: 4px 10px 0; }
+.findq { width: 100%; font-size: 15px; padding: 8px 10px; }
+.findex { display: flex; flex-wrap: wrap; gap: 6px; }
+.acceptwhy { width: 100%; }
 .cempty { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; }
 .cempty b { color: var(--green); }
 .lsearch { width: 180px; }

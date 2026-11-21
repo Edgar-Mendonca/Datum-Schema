@@ -28,6 +28,7 @@ fn tools() -> Value {
         { "name": "run_checks", "description": "Every open check: rule, level (error, warning, note), sheet, the ids it is about, and the message.", "inputSchema": obj(json!({}), &[]) },
         { "name": "list_fixes", "description": "The fixes offered for one check (its rule and ids from run_checks); apply one with apply_operation {\"Fix\":{\"rule\":r,\"ids\":[..],\"choice\":n}}.", "inputSchema": obj(json!({ "rule": { "type": "integer" }, "ids": ids }), &["rule", "ids"]) },
         { "name": "get_list", "description": "A list as rows: lines, equipment, instruments, valves, register, safety, loads, testpacks, hazop… (see `datum-schema-cli lists`).", "inputSchema": obj(json!({ "kind": { "type": "string" } }), &["kind"]) },
+        { "name": "find", "description": "Find anything with a plain query: \"control valves without a bypass\", \"lines with velocity above 3 m/s\", \"pumps without a check valve\", \"instruments without a range\", \"equipment with errors\", a tag pattern like FT-1*. Says what it understood and any words it did not.", "inputSchema": obj(json!({ "query": { "type": "string" } }), &["query"]) },
         { "name": "plan_isolation", "description": "The valves and blinds that isolate symbols or lines (by id), the vents and drains inside, and what stops a safe isolation. A planning aid.", "inputSchema": obj(json!({ "ids": ids }), &["ids"]) },
         { "name": "list_symbols", "description": "The symbol keys AddItem takes, with their connection points.", "inputSchema": obj(json!({}), &[]) },
         { "name": "list_operations", "description": "The named operations that change a project, each with an example.", "inputSchema": obj(json!({}), &[]) },
@@ -129,6 +130,7 @@ fn call(doc: &mut Option<Doc>, name: &str, a: &Value) -> Result<Value, String> {
                     let l = lists::build(&d.p, &s("kind").ok_or("kind is needed")?)?;
                     Ok(json!({ "title": l.title, "columns": l.cols.iter().map(|c| c.label.clone()).collect::<Vec<_>>(), "rows": l.rows.iter().map(|r| json!({"ids": r.ids, "cells": r.cells})).collect::<Vec<_>>() }))
                 }
+                "find" => Ok(json!(datum_core::query::find(&d.p, &s("query").ok_or("query is needed")?)?)),
                 "plan_isolation" => {
                     let ids: Vec<u32> = a["ids"].as_array().map(|v| v.iter().filter_map(|x| x.as_u64()).map(|x| x as u32).collect()).unwrap_or_default();
                     Ok(json!(isolation::plan(&d.p, &ids)?))
@@ -239,6 +241,7 @@ mod tests {
             tool(7, "apply_operation", json!({"operation": {"SetTag": {"id": hv, "tag": "HV-901"}}})),
             tool(8, "apply_operation", json!({"operation": {"SetTag": {"id": 999_999, "tag": "X-1"}}})),
             tool(9, "plan_isolation", json!({"ids": [pump]})),
+            tool(91, "find", json!({"query": "gate valves tagged HV-90*"})),
             tool(10, "get_list", json!({"kind": "valves"})),
             tool(11, "save_project", json!({"path": path})),
             tool(12, "save_project", json!({"path": dir.join("x.exe").display().to_string()})),
@@ -246,8 +249,8 @@ mod tests {
             json!({"jsonrpc": "2.0", "id": 14, "method": "nope"}),
         ]);
         assert_eq!(r[0]["result"]["serverInfo"]["name"], "datum-schema");
-        assert_eq!(r.len(), 15, "the notification gets no answer");
-        assert_eq!(r[1]["result"]["tools"].as_array().map(|t| t.len()), Some(15));
+        assert_eq!(r.len(), 16, "the notification gets no answer");
+        assert_eq!(r[1]["result"]["tools"].as_array().map(|t| t.len()), Some(16));
         assert_eq!(r[2]["result"]["isError"], true, "no project open yet");
         assert_eq!(text(&r[3])["checks"]["errors"], 0);
         let dwg = text(&r[4]);
@@ -258,15 +261,16 @@ mod tests {
         assert_eq!(text(&r[6])["errors"], 0);
         assert_eq!(r[7]["result"]["isError"], true);
         assert!(text(&r[8])["points"].as_array().unwrap().iter().any(|x| x["tag"] == "HV-901"), "the isolation sees the renamed valve");
-        assert!(text(&r[9])["rows"].as_array().unwrap().iter().any(|x| x["cells"][0] == "HV-901"));
-        assert_eq!(r[10]["result"]["isError"], false);
+        assert_eq!(text(&r[9])["rows"][0]["tag"], "HV-901", "{}", r[9]);
+        assert!(text(&r[10])["rows"].as_array().unwrap().iter().any(|x| x["cells"][0] == "HV-901"));
+        assert_eq!(r[11]["result"]["isError"], false);
         let saved = crate::load(&path).unwrap();
         assert!(saved.p.items.iter().any(|i| saved.p.tag_of(i) == "HV-901"));
-        assert_eq!(r[11]["result"]["isError"], true, "only project and export types are written");
+        assert_eq!(r[12]["result"]["isError"], true, "only project and export types are written");
         assert!(!dir.join("x.exe").exists());
-        assert!(text(&r[12]).as_array().is_some());
-        assert_eq!(r[13]["error"]["code"], -32601);
-        assert_eq!(r[14]["error"]["code"], -32700);
+        assert!(text(&r[13]).as_array().is_some());
+        assert_eq!(r[14]["error"]["code"], -32601);
+        assert_eq!(r[15]["error"]["code"], -32700);
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

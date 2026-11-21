@@ -13,20 +13,24 @@ import { ADD, WIRING_TABS, addWiring } from "./wiring";
 import { TodoPanel, todos } from "./todo";
 import { designReport, deleteReport } from "./reports";
 import { addTags, placeRegistered } from "./register";
+import { acceptProblem, unacceptProblem } from "./find";
 
-const TABS: [string, string][] = [...[["checks", "Checks"]] as [string, string][], ["todo", "To do"], ["comments", "Comments"], ["lines", "Line list"], ["streams", "Streams"], ["equipment", "Equipment"], ["instruments", "Instruments"], ["io", "I/O summary"], ["valves", "Valves"], ["takeoff", "Take-off"], ...WIRING_TABS, ["datasheets", "Datasheets"], ["register", "Tag register"], ["safety", "Safety"], ["loads", "Loads"], ["hazop", "HAZOP"], ["hazop_recs", "Actions"], ["testpacks", "Packs"]];
+const TABS: [string, string][] = [...[["checks", "Checks"]] as [string, string][], ["todo", "To do"], ["comments", "Comments"], ["lines", "Line list"], ["streams", "Streams"], ["equipment", "Equipment"], ["instruments", "Instruments"], ["io", "I/O summary"], ["valves", "Valves"], ["takeoff", "Take-off"], ...WIRING_TABS, ["datasheets", "Datasheets"], ["register", "Tag register"], ["safety", "Safety"], ["loads", "Loads"], ["hazop", "HAZOP"], ["hazop_recs", "Actions"], ["testpacks", "Packs"], ["accepted", "Accepted"]];
 
-const level = (l: string) => (l === "error" ? 0 : l === "warning" ? 1 : 2);
+const level = (l: string) => (l === "error" ? 0 : l === "warning" ? 1 : l === "note" ? 2 : 3);
+/** The reason a problem was accepted with, if it was. */
+const acceptedOf = (i: Issue) => ((proj()?.settings as unknown as { accepted?: { rule: number; ids: number[]; msg: string; reason: string; by: string; date: string }[] }).accepted ?? []).find(a => a.rule === i.rule && a.msg === i.msg && [...a.ids].sort().join() === [...i.ids].sort().join());
 
 /** The fixes the engine offers for a problem, as a menu; the one chosen is one undoable edit. */
 const offerFixes = async (e: MouseEvent, i: Issue) => {
   const labels = (await call<string[]>("fixes", { rule: i.rule, ids: i.ids })) ?? [];
   const items = labels.length ? labels.map((l, k) => ({ label: l, run: () => act({ Fix: { rule: i.rule, ids: i.ids, choice: k } }).then(o => o && toast(`Fixed: ${l}. Undo takes it back.`, true)) })) : [{ label: "No fix to offer: go to it and put it right by hand", run: () => C.goTo(i.ids, i.sheet) }];
+  items.push(i.level === "accepted" ? { label: "Open it again (no longer accepted)", run: () => unacceptProblem(i) } : { label: "Accept it, with a reason…", run: () => acceptProblem(i) });
   openMenu(e, items);
 };
 
 const Checks = () => {
-  const [show, setShow] = createSignal<Record<string, boolean>>({ error: true, warning: true, note: true });
+  const [show, setShow] = createSignal<Record<string, boolean>>({ error: true, warning: true, note: true, accepted: false });
   const issues = createMemo(() => [...(derived()?.issues ?? [])].sort((a, b) => level(a.level) - level(b.level) || a.rule - b.rule).filter(i => show()[i.level]));
   const sheetNo = (id: number) => proj()?.sheets.find(s => s.id === id)?.number ?? "";
   const go = (i: Issue) => C.goTo(i.ids, i.sheet);
@@ -34,13 +38,13 @@ const Checks = () => {
   return (
     <div class="checks">
       <div class="cfilter">
-        <For each={[["error", "Errors"], ["warning", "Warnings"], ["note", "Notes"]]}>{([k, l]) => <label class={`chk ${k}`}><input type="checkbox" checked={show()[k]} onChange={e => setShow({ ...show(), [k]: e.currentTarget.checked })} />{n(k)} {l.toLowerCase()}</label>}</For>
+        <For each={[["error", "Errors"], ["warning", "Warnings"], ["note", "Notes"], ["accepted", "Accepted"]]}>{([k, l]) => <label class={`chk ${k}`}><input type="checkbox" checked={show()[k]} onChange={e => setShow({ ...show(), [k]: e.currentTarget.checked })} />{n(k)} {l.toLowerCase()}</label>}</For>
         <span class="grow" /><span class="muted small">Click a row to go to it. Rules can be switched off in Options › Checks.</span>
       </div>
       <div class="cscroll">
         <Show when={issues().length} fallback={<div class="cempty"><b>✓ Nothing to report</b><span class="muted">{(derived()?.issues.length ?? 0) ? "Nothing at the levels shown." : "Every check passes: no duplicate tags, no open ends, sizes and classes change where they should, pumps have check valves, vessels have relief."}</span></div>}>
           <table class="tbl ctbl"><thead><tr><th style={{ width: "30px" }} /><th style={{ width: "42px" }}>Rule</th><th>What</th><th style={{ width: "90px" }}>Sheet</th><th style={{ width: "60px" }} /></tr></thead><tbody>
-            <For each={issues()}>{i => <tr class={`f ${i.level}`} onClick={() => go(i)}><td class="lvl">{i.level === "error" ? "✗" : i.level === "warning" ? "!" : "i"}</td><td class="mono">{i.rule}</td><td>{i.msg}</td><td class="mono">{sheetNo(i.sheet)}</td><td class="fixc"><button class="btn sm fixb" title="The fixes for this problem" onClick={e => { e.stopPropagation(); offerFixes(e, i); }}>Fix ▾</button></td></tr>}</For>
+            <For each={issues()}>{i => <tr class={`f ${i.level}`} onClick={() => go(i)}><td class="lvl">{i.level === "error" ? "✗" : i.level === "warning" ? "!" : i.level === "accepted" ? "✓" : "i"}</td><td class="mono">{i.rule}</td><td>{i.msg}<Show when={i.level === "accepted" && acceptedOf(i)}>{a => <div class="muted small acc">Accepted by {a().by || "—"}, {a().date || "—"}: {a().reason}</div>}</Show></td><td class="mono">{sheetNo(i.sheet)}</td><td class="fixc"><button class="btn sm fixb" title="The fixes for this problem" onClick={e => { e.stopPropagation(); offerFixes(e, i); }}>Fix ▾</button></td></tr>}</For>
           </tbody></table>
         </Show>
       </div>
@@ -76,11 +80,12 @@ const ListView = (p: { kind: string }) => {
   };
   return (
     <div class="lists">
+      <Show when={p.kind.startsWith("find:") || p.kind === "accepted"}><div class="ltitle"><b>{list()?.title}</b><Show when={p.kind.startsWith("find:")}><button class="btn sm" onClick={() => import("./find").then(m => m.openFind())}>Change the query…</button></Show></div></Show>
       <div class="cfilter">
         <input class="lsearch" placeholder="Filter" value={q()} onInput={e => setQ(e.currentTarget.value)} />
         <label class="inline small">Group by <select onChange={e => setGroup(+e.currentTarget.value)}><option value="-1">—</option><For each={list()?.cols ?? []}>{(c, i) => <option value={i()}>{c.label}</option>}</For></select></label>
         <span class="grow" /><span class="muted small">{rows().filter(r => !heads().has(r)).length} rows</span>
-        <Show when={p.kind.startsWith("report:")} fallback={<button class="btn sm" title="Design a report from this list: its columns, filters and grouping, saved in the project" onClick={() => designReport({ source: p.kind, name: "" })}>Save as report…</button>}>
+        <Show when={p.kind.startsWith("report:")} fallback={<Show when={!p.kind.startsWith("find:") && p.kind !== "accepted"}><button class="btn sm" title="Design a report from this list: its columns, filters and grouping, saved in the project" onClick={() => designReport({ source: p.kind, name: "" })}>Save as report…</button></Show>}>
           <button class="btn sm" onClick={() => { const r = proj()?.settings.reports.find(x => `report:${x.name}` === p.kind); if (r) designReport(r, r.name); }}>Edit report…</button>
           <button class="btn sm" onClick={() => deleteReport(p.kind.slice(7))}>Delete report</button>
         </Show>
@@ -89,7 +94,7 @@ const ListView = (p: { kind: string }) => {
         <Show when={p.kind === "streams"}><button class="btn sm" title="Import a simulator's stream results (Excel or CSV), with a preview first" onClick={importStreams}>Import results…</button></Show>
         <Show when={ADD[p.kind]}><button class="btn sm" onClick={() => addWiring(ADD[p.kind])}>Add {p.kind === "jbs" ? "a junction box" : p.kind === "cables" ? "a cable" : "an I/O card"}…</button></Show>
         <Show when={p.kind === "datasheets" && rows().length}><button class="btn sm" title="Issue every datasheet shown (use the filter to choose), each with its next revision" onClick={() => issueDialog(rows().map(r => r.ids[0]))}>Issue {rows().length} shown…</button></Show>
-        <button class="btn sm" onClick={() => C.exportList(p.kind, "xlsx")}>Excel</button><button class="btn sm" title="Read this list back after editing it in Excel (export it first): the changes are shown before anything changes" onClick={() => importList({ kind: p.kind })}>Read back…</button><button class="btn sm" onClick={() => C.exportList(p.kind, "csv")}>CSV</button><button class="btn sm" onClick={C.print}>Print</button>
+        <button class="btn sm" onClick={() => C.exportList(p.kind, "xlsx")}>Excel</button><Show when={!p.kind.startsWith("find:") && p.kind !== "accepted"}><button class="btn sm" title="Read this list back after editing it in Excel (export it first): the changes are shown before anything changes" onClick={() => importList({ kind: p.kind })}>Read back…</button></Show><button class="btn sm" onClick={() => C.exportList(p.kind, "csv")}>CSV</button><button class="btn sm" onClick={C.print}>Print</button>
       </div>
       <div class="lscroll">
         <Show when={list()} fallback={<div class="cempty"><span class="muted">{list.error ? String(list.error) : "…"}</span></div>}>{l => <table class="egrid">
@@ -123,7 +128,7 @@ export const Bottom = () => {
     <section class="bottom" style={{ height: panelOpen() ? `${h()}px` : "30px" }}>
       <Show when={panelOpen()}><div class="bhandle" onMouseDown={resize} /></Show>
       <nav class="btabs">
-        <For each={[...TABS, ...(proj()?.settings.reports ?? []).map(r => [`report:${r.name}`, r.name] as [string, string])].filter(([k]) => (k !== "streams" || proj()?.sheets.some(s => s.pfd)) && (!k.startsWith("hazop") || panel() === k || !!(proj()?.settings.hazop as { nodes?: unknown[] } | undefined)?.nodes?.length) && (k !== "testpacks" || panel() === k || !!(proj()?.settings.testpacks as { packs?: unknown[] } | undefined)?.packs?.length) && (!ADD[k] || panel() === k || !!proj()?.objects.some(o => o.class === ADD[k])))}>{([k, l]) => <button classList={{ on: panelOpen() && panel() === k }} onClick={() => { if (panel() === k && panelOpen()) setPanelOpen(false); else { setPanel(k); setPanelOpen(true); } }}>{l}{badge(k)}</button>}</For>
+        <For each={[...TABS, ...(proj()?.settings.reports ?? []).map(r => [`report:${r.name}`, r.name] as [string, string])].filter(([k]) => (k !== "streams" || proj()?.sheets.some(s => s.pfd)) && (!k.startsWith("hazop") || panel() === k || !!(proj()?.settings.hazop as { nodes?: unknown[] } | undefined)?.nodes?.length) && (k !== "accepted" || panel() === k || !!(proj()?.settings as { accepted?: unknown[] } | undefined)?.accepted?.length) && (k !== "testpacks" || panel() === k || !!(proj()?.settings.testpacks as { packs?: unknown[] } | undefined)?.packs?.length) && (!ADD[k] || panel() === k || !!proj()?.objects.some(o => o.class === ADD[k])))}>{([k, l]) => <button classList={{ on: panelOpen() && panel() === k }} onClick={() => { if (panel() === k && panelOpen()) setPanelOpen(false); else { setPanel(k); setPanelOpen(true); } }}>{l}{badge(k)}</button>}</For>
         <Help k={panel() === "checks" ? "checks" : panel() === "comments" ? "review" : panel() === "todo" ? "todo" : panel().startsWith("report:") ? "reports" : "lists"} />
         <span class="grow" />
         <button class="bcollapse" title={panelOpen() ? "Hide the panel" : "Show the panel"} onClick={() => setPanelOpen(!panelOpen())}>{panelOpen() ? "▾" : "▴"}</button>

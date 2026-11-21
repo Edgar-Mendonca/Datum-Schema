@@ -38,6 +38,8 @@ Draw the plant with real symbols, and every symbol and line carries its data and
 - **Line hydraulics**: inside diameter from size and schedule, velocity, Reynolds number, Colebrook friction factor, pressure drop per 100 m and over the line, with a ✓ ! ✗ badge against the limits for its service.
 - **Plant objects**: every equipment item, valve, instrument and line number is an object in a plant › unit › area hierarchy (the Plant panel); symbols are views of it, so one object can be drawn on several sheets. Every change is recorded with who made it and when.
 - **Classes you can extend**: a class library (named after the open DEXPI data standard) defines what data each kind of object has; add your company's attributes in Options and mark them required.
+- **Find anything**: a plain query ("control valves without a bypass", "lines with velocity above 3 m/s") whose results are a list; the same in the command line and for an assistant.
+- **Accepted problems**: a check's problem accepted with a reason, kept for audit, open again if the drawing changes.
 - **AI assistants**: `datum-schema-cli mcp` lets an assistant on your computer read, check, change and save a project through the same operations as the window.
 - **Command line**: `datum-schema-cli` reads, checks, lists, changes (through the same named operations as the window) and exports projects, for scripts and batch work.
 - **Handover package**: tags, classes, data and documents in CFIHOS-style tables, each P&ID in DEXPI, the web page, the lists and datasheets, in one zip file, with what to fix first.

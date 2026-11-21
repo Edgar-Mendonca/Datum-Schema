@@ -540,6 +540,8 @@ pub struct Settings {
     pub hazop: crate::hazop::Study,
     /// The pressure test packs.
     pub testpacks: crate::testpack::Packs,
+    /// Problems accepted with a reason (kept for audit).
+    pub accepted: Vec<crate::checks::Accepted>,
 }
 
 /// A drawing standard: a library's name and, for each of Datum Schema's symbols, the library
@@ -573,7 +575,7 @@ pub const MAX_LOGO: usize = 280_000;
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), specs: vec![], tag_format: crate::tags::TagFormat::default(), rules: vec![], reports: vec![], arrangements: crate::arrange::starter(), safety: crate::safety::starter(), cases: crate::cases::default_cases(), case: "Normal".into(), assemblies: vec![], labels: vec![], components: vec![], hazop: crate::hazop::Study::default(), testpacks: crate::testpack::Packs::default() }
+        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), specs: vec![], tag_format: crate::tags::TagFormat::default(), rules: vec![], reports: vec![], arrangements: crate::arrange::starter(), safety: crate::safety::starter(), cases: crate::cases::default_cases(), case: "Normal".into(), assemblies: vec![], labels: vec![], components: vec![], hazop: crate::hazop::Study::default(), testpacks: crate::testpack::Packs::default(), accepted: vec![] }
     }
 }
 
@@ -943,6 +945,7 @@ impl Project {
         crate::arrange::normalize(&mut s.arrangements);
         crate::cases::normalize(&mut s.cases, &mut s.case);
         crate::safety::normalize(&mut s.safety);
+        crate::checks::normalize_accepted(&mut s.accepted);
         s.assemblies.truncate(200);
         let mut seen_a = HashSet::new();
         s.assemblies.retain(|a| !a.name.trim().is_empty() && seen_a.insert(a.name.trim().to_lowercase()));

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.2 — 2026-11-21
+
+Find anything, and problems accepted with a reason.
+
+**Find anything (Ctrl+F, or Home › Find).** Type a plain query; the results open as a list you can click, print and export:
+- what to look at: pumps, control valves, check valves, gate valves (any symbol's name), lines, instruments, transmitters, controllers, equipment, or a tag pattern like FT-1*;
+- conditions joined by "and": missing or present data ("without a range", "with service"), comparisons with units ("velocity above 3 m/s", "design pressure > 10 bar", "size < 2"), the drawing ("without a bypass", "without isolation", "without a check valve", "not drawn", "on PID-100", "in Area 1", "with errors", "failing rule 8", "fail open", "normally closed"), or "quoted text".
+
+The list's title says what was understood, and any word not understood is listed rather than guessed. The same query works from the command line (`datum-schema-cli find`) and for an AI assistant (the `find` tool).
+
+**A problem accepted with a reason.** In the Checks panel, Fix ▾ › **Accept it, with a reason…** marks a problem as acceptable here (a tank that vents to atmosphere needs no high-pressure trip). It stays listed as accepted, is no longer counted, and keeps the reason, your name and the date. If the drawing changes what the check says, it is open again. The **Accepted** list is the audit record, showing whether each acceptance still applies; the handover package's open checks carry the reasons. The command line and an assistant accept and reopen problems through the same operations.
+
+**Fixed:** the HAZOP group's New Node button had no icon.
+
 ## 0.10.1 — 2026-11-21
 
 An AI assistant on your own computer.
