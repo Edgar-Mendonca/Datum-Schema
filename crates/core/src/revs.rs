@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 
 /// The sheet as it is now, to keep as an issued revision.
 pub fn snapshot(p: &Project, sheet: u32) -> SnapBody {
-    let items: Vec<Item> = p.items.iter().filter(|i| i.sheet == sheet).cloned().collect();
+    let items: Vec<Item> = p.items.iter().filter(|i| i.sheet == sheet && !i.virt).cloned().collect();
     let lines: Vec<Line> = p.lines.iter().filter(|l| l.sheet == sheet).cloned().collect();
     let notes: Vec<Note> = p.notes.iter().filter(|n| n.sheet == sheet).cloned().collect();
     let routes = crate::view::routes(p, sheet, None).into_iter().collect();

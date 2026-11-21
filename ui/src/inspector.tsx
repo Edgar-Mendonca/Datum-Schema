@@ -69,6 +69,8 @@ const ItemPanel = (p: { it: Item }) => {
   const partner = () => proj()?.items.find(i => i.id === p.it.link);
   return <>
     <div class="iwhat"><b>{s()?.name ?? p.it.sym}</b><span class="muted small"> · {lib()?.classes.find(c => c.name === o()?.class)?.label ?? o()?.class} · {s()?.cat_name}</span><Help k={`cat:${s()?.cat ?? "mark"}`} /></div>
+    <Show when={p.it.virt}><div class="ivirt">Virtual: in its loop, the lists, the I/O and its datasheet, not drawn on the sheet. <button class="btn sm" onClick={() => { const [x, y] = C.centre(); act({ SetItem: { item: { ...p.it, virt: false, x, y } } }).then(o => o && toast("Drawn in the middle of the view.", true)); }}>Draw it here</button></div></Show>
+    <Show when={!p.it.virt && s()?.cat === "instrument" && !(proj()?.lines ?? []).some(l => (l.a.at === "port" && l.a.item === p.it.id) || (l.b.at === "port" && l.b.item === p.it.id))}><div class="ibtns"><button class="btn sm" title="Keep it in its loop, the lists, the I/O and its datasheet, but do not draw it (a function in the control system, an alarm, a calculated tag)" onClick={() => act({ SetItem: { item: { ...p.it, virt: true } } }).then(o => o && toast("Virtual now: no longer drawn, still in its loop and the lists. The Inspector draws it again.", true))}>Make it virtual</button></div></Show>
     <Show when={s() && !["mark", "connector"].includes(s()!.cat)}>
       <Row label="Symbol" hint="Swap it for another of its kind: its tag, data and lines stay">
         <select class="swapsym" value={p.it.sym.startsWith("x.") ? "" : p.it.sym} onChange={e => e.currentTarget.value && act({ SwapSymbol: { item: p.it.id, sym: e.currentTarget.value } })}>

@@ -81,12 +81,16 @@ fn tags(p: &Project) -> Vec<TagInfo> {
     let pfd: BTreeSet<u32> = p.sheets.iter().filter(|s| s.pfd).map(|s| s.id).collect();
     let mut cat: BTreeMap<u32, Cat> = BTreeMap::new();
     let mut drawn: BTreeSet<u32> = BTreeSet::new();
+    let mut virt: BTreeSet<u32> = BTreeSet::new();
     for it in &p.items {
         if let Some(s) = symbols::get(&it.sym) {
             cat.entry(it.obj).or_insert(s.cat);
         }
-        if !pfd.contains(&it.sheet) {
+        if !pfd.contains(&it.sheet) && !it.virt {
             drawn.insert(it.obj);
+        }
+        if it.virt {
+            virt.insert(it.obj);
         }
     }
     for l in p.lines.iter().filter(|l| !pfd.contains(&l.sheet)) {
@@ -104,7 +108,7 @@ fn tags(p: &Project) -> Vec<TagInfo> {
         }
         let registered = o.data.contains_key("~reg");
         let class_label = crate::classes::get(&o.class).map_or(o.class.clone(), |c| c.label.clone());
-        let status = if drawn.contains(&o.id) { "Drawn" } else if registered { "Registered" } else { "Not drawn" };
+        let status = if drawn.contains(&o.id) { "Drawn" } else if virt.contains(&o.id) { "Virtual" } else if registered { "Registered" } else { "Not drawn" };
         if status == "Not drawn" && !cat.contains_key(&o.id) {
             continue;
         }

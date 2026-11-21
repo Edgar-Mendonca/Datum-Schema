@@ -162,8 +162,9 @@ pub fn write(d: &Doc, out: &str, args: &[String]) -> Result<String, String> {
         "csv" => lists::csv(&lists::build(p, flag(args, "--list").ok_or("A CSV export needs --list <kind> (see `lists`).")?)?).into_bytes(),
         "xlsx" => match flag(args, "--list") {
             Some("datasheets-all") => datum_core::datasheets::xlsx(p)?,
+            Some("control-system") => datum_core::controlsys::xlsx(p)?,
             Some(k) => lists::xlsx(p, k)?,
-            None => return Err("An Excel export needs --list <kind> (see `lists`), or --list datasheets-all for every datasheet.".into()),
+            None => return Err("An Excel export needs --list <kind> (see `lists`), --list datasheets-all for every datasheet, or --list control-system for the control-system workbook.".into()),
         },
         _ => return Err(format!("{out}: write .dschema, .dxf, .xml, .html, .zip, .json, .csv or .xlsx.")),
     };
@@ -295,6 +296,7 @@ mod tests {
             assert!(std::fs::metadata(dir.join(out)).unwrap().len() > 100, "{out}");
         }
         assert!(run(&a(&["export", &f("pump.dschema"), &f("e.xlsx"), "--list", "equipment"])).is_ok());
+        assert!(run(&a(&["export", &f("pump.dschema"), &f("dcs.xlsx"), "--list", "control-system"])).is_ok());
         assert!(run(&a(&["export", &f("pump.dschema"), &f("e.csv")])).is_err());
         assert!(run(&a(&["export", &f("pump.dschema"), &f("e.exe")])).is_err());
         // DEXPI read back as a project.

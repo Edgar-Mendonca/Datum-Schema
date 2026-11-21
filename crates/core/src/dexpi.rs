@@ -168,7 +168,7 @@ pub const NOT_PFD: &str = "DEXPI is the P&ID exchange: choose a P&ID sheet. A pr
 pub fn write(p: &Project, sheet: &Sheet) -> String {
     let (w, h) = sheet.dims();
     let mut x = X { s: String::with_capacity(1 << 16), h };
-    let items: Vec<&Item> = p.items.iter().filter(|i| i.sheet == sheet.id).collect();
+    let items: Vec<&Item> = p.items.iter().filter(|i| i.sheet == sheet.id && !i.virt).collect();
     let by_id: HashMap<u32, &Item> = items.iter().map(|i| (i.id, *i)).collect();
     let roles: HashMap<u32, Role> = items.iter().map(|i| (i.id, role(p, i))).collect();
     let routes = crate::view::routes(p, sheet.id, None);
@@ -533,7 +533,7 @@ pub fn read(text: &str) -> Result<(Project, Vec<String>), String> {
         let obj = p.new_obj(class, tag);
         fill_attrs(p, obj, el);
         let id = p.id();
-        p.items.push(Item { id, sheet: sheet_id, sym: sym.into(), x: pt[0], y: pt[1], rot, flip, scale: 1.0, obj, link: 0, base: String::new() });
+        p.items.push(Item { id, sheet: sheet_id, sym: sym.into(), x: pt[0], y: pt[1], rot, flip, scale: 1.0, obj, link: 0, virt: false, base: String::new() });
         id
     };
     let mut equipment: Vec<&El> = vec![];

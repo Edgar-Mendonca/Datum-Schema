@@ -108,6 +108,7 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
                 }
                 "cause" => format!("{} bytes", datum_core::cause::xlsx(&s.doc.p)?.len()),
                 "html" => datum_core::webpage::page(&s.doc.p, &what),
+                "controlsys" => format!("{} bytes", datum_core::controlsys::xlsx(&s.doc.p)?.len()),
                 "handover" => {
                     let z = datum_core::handover::zip(&s.doc.p, &what)?;
                     format!("{} bytes", z.len())

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.3 — 2026-11-21
+
+Virtual instruments, and an export for the control system.
+
+**Virtual instruments.** An instrument can be in its loop, the instrument index, the loop diagram, the I/O list, the alarms list and its datasheet without being drawn: a function in the control system, an alarm or trip block, a calculated tag. Add one with **Instruments › Virtual Instrument** (its tag, kind, function and set points), or select an instrument bubble with no lines on it and choose **Make it virtual**. It is not drawn, printed or written to DXF or DEXPI; the instrument index marks it "(virtual)", Find knows "virtual instruments", and the Inspector's **Draw it here** puts it on the sheet when you want it there. Older versions of Datum Schema open the file and simply draw it.
+
+**For the control-system team.** **Instruments › Export for the DCS** (or File › Export) writes one workbook read from the drawing:
+- the **I/O list**: each input and output with its tag, description, I/O type, signal, range, fail position, system, channel, junction box, cable, loop and P&ID;
+- the **instrument tag list**, drawn and virtual;
+- the **alarms and trips** read from each instrument's set points ("SP 50 %, LAH 80 %, LAHH 90 %"), each marked alarm, trip, switch or set point;
+- the **I/O summary** per system, with 20 % spare.
+
+The I/O list and Alarms and trips are also lists under the drawing (Instruments › I/O List, Alarms and Trips), and the command line writes the workbook with `export plant.dschema dcs.xlsx --list control-system`.
+
 ## 0.10.2 — 2026-11-21
 
 Find anything, and problems accepted with a reason.

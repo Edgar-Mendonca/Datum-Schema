@@ -273,6 +273,10 @@ pub struct Item {
     /// Drawn with a library symbol by the drawing standard: the Datum Schema symbol it stands for
     /// (empty: `sym` is what was placed).
     pub base: String,
+    /// A virtual instrument: in the loops, lists, I/O and datasheets, not drawn on the sheet
+    /// (a function in the control system, an alarm, a calculated tag). Drawn later by clearing it.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub virt: bool,
 }
 
 impl Item {
@@ -293,7 +297,7 @@ impl Item {
 
 impl Default for Item {
     fn default() -> Self {
-        Self { id: 0, sheet: 0, sym: String::new(), x: 0.0, y: 0.0, rot: 0, flip: false, scale: 1.0, obj: 0, link: 0, base: String::new() }
+        Self { id: 0, sheet: 0, sym: String::new(), x: 0.0, y: 0.0, rot: 0, flip: false, scale: 1.0, obj: 0, link: 0, base: String::new(), virt: false }
     }
 }
 
@@ -968,6 +972,15 @@ impl Project {
         }
         let t = &mut self.title;
         t.extra = std::mem::take(&mut t.extra).into_iter().filter(|(k, _)| !k.trim().is_empty()).take(40).map(|(k, v)| (crate::clip(k.trim(), 40), crate::clip(&v, 200))).collect();
+        // A virtual item is an instrument with no line on it: anything else is drawn again.
+        let ended: HashSet<u32> = self.lines.iter().flat_map(|l| [l.a.item(), l.b.item()]).flatten().map(|x| x.0).collect();
+        for it in self.items.iter_mut().filter(|i| i.virt) {
+            let ok = crate::symbols::get(&it.sym).is_some_and(|s| s.cat == crate::symbols::Cat::Instrument);
+            if !ok || ended.contains(&it.id) {
+                it.virt = false;
+                w.push(if ok { format!("{} has lines on it: take them off before making it virtual.", it.id) } else { "Only instruments (bubbles) can be virtual.".into() });
+            }
+        }
         let drawn: HashSet<u32> = self.items.iter().map(|i| i.id).chain(self.lines.iter().map(|l| l.id)).collect();
         crate::hazop::normalize(&mut self.settings.hazop, &|i| drawn.contains(&i));
         let line_objs: HashSet<u32> = self.lines.iter().filter(|l| l.kind.process()).map(|l| l.obj).filter(|o| *o != 0).collect();

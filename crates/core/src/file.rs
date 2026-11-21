@@ -43,7 +43,7 @@ pub fn write(path: &Path, p: &Project, history: &[Change]) -> Result<(), String>
         c.execute_batch(SCHEMA).map_err(sql)?;
         let t = c.transaction().map_err(sql)?;
         let js = |v: &dyn erased::Ser| v.json();
-        for (k, v) in [("format", model::FORMAT.to_string()), ("app", format!("Datum Schema {}", env!("CARGO_PKG_VERSION"))), ("name", p.name.clone()), ("units", p.units.clone()), ("next", p.next.to_string()), ("title", js(&p.title)), ("settings", js(&p.settings)), ("symbols", js(&p.custom_syms)), ("comments", js(&p.comments)), ("bin", js(&p.bin))] {
+        for (k, v) in [("format", model::FORMAT.to_string()), ("app", format!("Datum Schema {}", env!("CARGO_PKG_VERSION"))), ("name", p.name.clone()), ("units", p.units.clone()), ("next", p.next.to_string()), ("title", js(&p.title)), ("settings", js(&p.settings)), ("symbols", js(&p.custom_syms)), ("comments", js(&p.comments)), ("bin", js(&p.bin)), ("virtual", js(&p.items.iter().filter(|i| i.virt).map(|i| i.id).collect::<Vec<u32>>()))] {
             t.execute("INSERT INTO meta VALUES (?1, ?2)", params![k, v]).map_err(sql)?;
         }
         for n in &p.nodes {
@@ -203,8 +203,13 @@ fn read_sqlite(path: &Path) -> Result<(Project, Vec<Change>, Vec<String>), Strin
     // The drawing standard's base symbol is in the items table from format 4.
     let base = if format >= 4 { ", base" } else { ", ''" };
     p.items = table(&c, &format!("SELECT id, sheet, object, symbol, x, y, rot, flip, scale, link{base} FROM items"), "symbols", &mut w, |r| {
-        Ok(Some(Item { id: r.get(0)?, sheet: r.get(1)?, obj: r.get(2)?, sym: r.get(3)?, x: r.get(4)?, y: r.get(5)?, rot: r.get::<_, i64>(6)?.rem_euclid(4) as u8, flip: r.get(7)?, scale: r.get(8)?, link: r.get(9)?, base: r.get(10)? }))
+        Ok(Some(Item { id: r.get(0)?, sheet: r.get(1)?, obj: r.get(2)?, sym: r.get(3)?, x: r.get(4)?, y: r.get(5)?, rot: r.get::<_, i64>(6)?.rem_euclid(4) as u8, flip: r.get(7)?, scale: r.get(8)?, link: r.get(9)?, base: r.get(10)?, virt: false }))
     });
+    // Virtual instruments (ids in the meta table, so older versions read the file and draw them).
+    let virt: std::collections::HashSet<u32> = meta("virtual").and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default();
+    for it in p.items.iter_mut() {
+        it.virt = virt.contains(&it.id);
+    }
     p.lines = table(&c, "SELECT line FROM lines", "lines", &mut w, |r| Ok(serde_json::from_str::<Line>(&r.get::<_, String>(0)?).ok()));
     p.notes = table(&c, "SELECT note FROM notes", "notes", &mut w, |r| Ok(serde_json::from_str::<Note>(&r.get::<_, String>(0)?).ok()));
     // Datasheet revisions (format 3 on; format 2 files have none).

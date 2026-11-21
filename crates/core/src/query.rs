@@ -255,6 +255,12 @@ pub fn find(p: &Project, query: &str) -> Result<Found, String> {
             }
         }
     }
+    for phrase in ["virtual instruments", "virtual"] {
+        if take(&words, &mut used, phrase).is_some() {
+            out.understood.push("virtual (not drawn on the sheet)".into());
+            tests.push(Box::new(move |c: &Cand| c.item.is_some_and(|i| i.virt).then(String::new)));
+        }
+    }
     for phrase in ["not drawn", "undrawn", "registered"] {
         if take(&words, &mut used, phrase).is_some() {
             out.understood.push("not drawn yet".into());

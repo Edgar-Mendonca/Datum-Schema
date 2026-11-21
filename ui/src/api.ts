@@ -23,7 +23,7 @@ export interface SheetChange { kind: "added" | "removed" | "changed"; what: stri
 export interface Compare { rev: string; next: string; changes: SheetChange[]; areas: [number, number, number, number][] }
 /** An old drawing behind a sheet, placed at (x, y) mm and scaled by k; its drawing is fetched by rev. */
 export interface Underlay { name: string; w: number; h: number; x: number; y: number; k: number; show: boolean; print: boolean; rev: string }
-export interface Item { id: number; sheet: number; sym: string; x: number; y: number; rot: number; flip: boolean; scale: number; obj: number; link: number; base: string }
+export interface Item { id: number; sheet: number; sym: string; x: number; y: number; rot: number; flip: boolean; scale: number; obj: number; link: number; base: string; virt?: boolean }
 /** A plant object: the master of a tag and its data; symbols and line pieces are views of it. */
 export interface Obj { id: number; uid: string; class: string; tag: string; node: number; data: Data }
 export interface PlantNode { id: number; parent: number; level: "plant" | "unit" | "area"; name: string }

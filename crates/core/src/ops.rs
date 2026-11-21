@@ -19,6 +19,7 @@ pub fn catalog() -> Vec<OpInfo> {
     let o = |name, about, example| OpInfo { name, about, example };
     vec![
         o("AddItem", "Place a symbol (sym is a symbol key: gate, pump_cent, vvessel, inst_field…; see `symbols`) on a sheet at x, y mm with an optional tag; on: a line id to drop an in-line symbol onto (it splits the line).", json!({"AddItem": {"item": {"sheet": 1, "sym": "gate", "x": 100.0, "y": 60.0}, "on": null, "tag": "HV-201"}})),
+        o("AddItem (virtual)", "Add a virtual instrument: in its loop, the lists, the I/O and its datasheet, not drawn (virt: true; instrument bubbles only). SetItem with virt false draws it.", json!({"AddItem": {"item": {"sheet": 1, "sym": "inst_dcs", "x": 0.0, "y": 0.0, "virt": true}, "on": null, "tag": "FY-101"}})),
         o("AddLine", "Draw a line between two ends: {\"at\":\"port\",\"item\":id,\"port\":n}, {\"at\":\"line\",\"line\":id,\"x\":..,\"y\":..} (a branch) or {\"at\":\"free\",\"x\":..,\"y\":..}; kind major, minor, utility, pneumatic, electric, data or capillary.", json!({"AddLine": {"line": {"sheet": 1, "kind": "major", "a": {"at": "free", "x": 40.0, "y": 60.0}, "b": {"at": "free", "x": 90.0, "y": 60.0}}}})),
         o("SetData", "Set one data value on symbols, lines or objects (by any of their ids): a number in SI base units (Pa, K, m³/s, m…) or text; val null removes it. Keys are the class attributes (size, service, design_p, design_t, flow, position, fail…).", json!({"SetData": {"ids": [11], "key": "service", "val": "Pump suction isolation"}})),
         o("SetTag", "Give a symbol's object a tag (it must be free).", json!({"SetTag": {"id": 11, "tag": "HV-101"}})),
@@ -60,7 +61,7 @@ mod tests {
             let op: Result<crate::doc::Op, _> = serde_json::from_value(o.example.clone());
             assert!(op.is_ok(), "{}: {:?}", o.name, op.err());
             let first = o.example.as_object().and_then(|m| m.keys().next().cloned()).or_else(|| o.example.as_str().map(String::from)).unwrap();
-            assert_eq!(first, o.name);
+            assert!(o.name.starts_with(&first), "{}", o.name);
         }
     }
 }

@@ -39,7 +39,7 @@ pub struct List {
     pub heads: Vec<usize>,
 }
 
-pub const KINDS: [(&str, &str); 20] = [("accepted", "Accepted problems"), ("testpacks", "Test packs"), ("hazop", "HAZOP worksheet"), ("hazop_recs", "HAZOP recommendations"), ("register", "Tag register"), ("safety", "Safety analysis"), ("loads", "Electrical load list"), ("completeness", "Data completeness"), ("lines", "Line list"), ("streams", "Stream list"), ("io", "I/O summary"), ("takeoff", "Valve and fitting take-off"), ("comments", "Review comments"), ("jbs", "Junction boxes"), ("cables", "Cable schedule"), ("ioalloc", "I/O allocation"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list"), ("datasheets", "Datasheet index")];
+pub const KINDS: [(&str, &str); 22] = [("io_list", "I/O list"), ("alarms", "Alarms and trips"), ("accepted", "Accepted problems"), ("testpacks", "Test packs"), ("hazop", "HAZOP worksheet"), ("hazop_recs", "HAZOP recommendations"), ("register", "Tag register"), ("safety", "Safety analysis"), ("loads", "Electrical load list"), ("completeness", "Data completeness"), ("lines", "Line list"), ("streams", "Stream list"), ("io", "I/O summary"), ("takeoff", "Valve and fitting take-off"), ("comments", "Review comments"), ("jbs", "Junction boxes"), ("cables", "Cable schedule"), ("ioalloc", "I/O allocation"), ("equipment", "Equipment list"), ("instruments", "Instrument index"), ("valves", "Valve list"), ("datasheets", "Datasheet index")];
 
 /// (key, label, quantity, editable)
 type Spec = (&'static str, &'static str, &'static str, bool);
@@ -77,6 +77,8 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
         "completeness" => return Ok(crate::loads::completeness(p)),
         "hazop" | "hazop_recs" => return Ok(crate::hazop::list(p, kind)),
         "accepted" => return Ok(crate::checks::accepted_list(p)),
+        "io_list" => return Ok(crate::controlsys::io_list(p)),
+        "alarms" => return Ok(crate::controlsys::alarms(p)),
         k if k.starts_with("find:") => return crate::query::list(p, &k[5..]),
         k if k == "testpacks" || k.starts_with("testpack:") => return crate::testpack::list(p, k),
         _ => {}
@@ -220,7 +222,7 @@ pub fn build(p: &Project, kind: &str) -> Result<List, String> {
             let rows = items(&|c| c.instrument())
                 .into_iter()
                 .map(|(o, it)| {
-                    let cells = specs.iter().map(|&(k, _, q, _)| match k { "tag" => o.tag.clone(), "loop" => crate::tags::loop_of(&o.tag).1, "kind" => sym_name(it), "on" => attached(&net, it), "sheet" => sheet_no(p, it.sheet), "area" => p.node_path(o.node), _ => val(&o.data, k, q, us) }).collect();
+                    let cells = specs.iter().map(|&(k, _, q, _)| match k { "tag" => o.tag.clone(), "loop" => crate::tags::loop_of(&o.tag).1, "kind" => sym_name(it), "on" => attached(&net, it), "sheet" => if it.virt { format!("{} (virtual)", sheet_no(p, it.sheet)) } else { sheet_no(p, it.sheet) }, "area" => p.node_path(o.node), _ => val(&o.data, k, q, us) }).collect();
                     Row { ids: vec![it.id], sheet: it.sheet, cells, status: None }
                 })
                 .collect();
@@ -534,10 +536,17 @@ pub fn csv(l: &List) -> String {
 /// An Excel workbook with the list on one sheet: a title, the column headers, the rows (numbers as
 /// numbers), frozen headers.
 pub fn xlsx(p: &Project, kind: &str) -> Result<Vec<u8>, String> {
-    use rust_xlsxwriter::{Format, Workbook};
     let l = build(p, kind)?;
+    let mut wb = rust_xlsxwriter::Workbook::new();
+    write_sheet(&mut wb, p, &l)?;
+    wb.save_to_buffer().map_err(|x| x.to_string())
+}
+
+/// One list as a worksheet of a workbook: a title, the headers, the rows (numbers as numbers),
+/// frozen headers, and a hidden last column naming each row's objects (for reading back).
+pub fn write_sheet(wb: &mut rust_xlsxwriter::Workbook, p: &Project, l: &List) -> Result<(), String> {
+    use rust_xlsxwriter::Format;
     let e = |x: rust_xlsxwriter::XlsxError| x.to_string();
-    let mut wb = Workbook::new();
     let ws = wb.add_worksheet();
     // Excel forbids [ ] : * ? / \ in a worksheet's name ("I/O summary").
     let name: String = l.title.chars().map(|c| if "[]:*?/\\".contains(c) { '-' } else { c }).collect();
@@ -576,7 +585,7 @@ pub fn xlsx(p: &Project, kind: &str) -> Result<Vec<u8>, String> {
     }
     ws.set_column_hidden(idc).map_err(e)?;
     ws.set_freeze_panes(3, 0).map_err(e)?;
-    wb.save_to_buffer().map_err(e)
+    Ok(())
 }
 
 #[cfg(test)]

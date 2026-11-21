@@ -629,11 +629,12 @@ async fn export(app: AppHandle, st: State<'_, St>, kind: String, what: String, s
         "dexpi" => ("DEXPI P&ID exchange file", "xml"),
         "html" => ("Web page", "html"),
         "handover" => ("Handover package", "zip"),
+        "controlsys" => ("Excel workbook", "xlsx"),
         "loopdxf" => ("DXF drawing", "dxf"),
         "dxf" => ("DXF drawing", "dxf"),
         k => return Err(format!("Unknown export type {k}.")),
     };
-    let file = if kind == "dxf" { format!("{name}.dxf") } else if kind == "datasheets" { format!("{name} datasheets.xlsx") } else if kind == "cause" { format!("{name} cause and effect.xlsx") } else if kind == "loopdxf" { format!("{name} loop {what}.dxf") } else if kind == "dexpi" { format!("{name}.xml") } else if kind == "html" { format!("{name}.html") } else if kind == "handover" { format!("{name} handover.zip") } else { format!("{name} {what}.{ext}") };
+    let file = if kind == "dxf" { format!("{name}.dxf") } else if kind == "datasheets" { format!("{name} datasheets.xlsx") } else if kind == "cause" { format!("{name} cause and effect.xlsx") } else if kind == "loopdxf" { format!("{name} loop {what}.dxf") } else if kind == "dexpi" { format!("{name}.xml") } else if kind == "html" { format!("{name}.html") } else if kind == "handover" { format!("{name} handover.zip") } else if kind == "controlsys" { format!("{name} control system.xlsx") } else { format!("{name} {what}.{ext}") };
     let Some(path) = app.dialog().file().add_filter(label, &[ext]).set_file_name(file).blocking_save_file().and_then(|f| f.into_path().ok()) else { return Ok(None) };
     let bytes = guard(|| {
         let a = st.lock();
@@ -645,6 +646,7 @@ async fn export(app: AppHandle, st: State<'_, St>, kind: String, what: String, s
             "cause" => datum_core::cause::xlsx(p),
             "html" => Ok(datum_core::webpage::page(p, &what).into_bytes()),
             "handover" => datum_core::handover::zip(p, &what),
+            "controlsys" => datum_core::controlsys::xlsx(p),
             "loopdxf" => datum_core::loops::diagram(p, &what).map(|d| dxf::write_prims(&d.prims, d.w, d.h).into_bytes()),
             "dexpi" => {
                 let s = p.sheet(sheet).or(p.sheets.first()).ok_or("There is no sheet.")?;

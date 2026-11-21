@@ -149,7 +149,7 @@ pub fn routes(p: &Project, sheet: u32, skip: Option<u32>) -> HashMap<u32, Vec<[f
     let rects: Vec<Rect> = p
         .items
         .iter()
-        .filter(|i| i.sheet == sheet && Some(i.id) != skip && symbols::get(&i.sym).is_some_and(|s| s.cat != Cat::Mark || s.inline))
+        .filter(|i| i.sheet == sheet && !i.virt && Some(i.id) != skip && symbols::get(&i.sym).is_some_and(|s| s.cat != Cat::Mark || s.inline))
         .map(|i| {
             let b = bbox(i);
             Rect { x: b[0], y: b[1], w: b[2] - b[0], h: b[3] - b[1] }
@@ -339,7 +339,7 @@ pub fn sheet(p: &Project, s: &Sheet, net: &Net, hyd: &[Option<Hyd>]) -> SheetVie
     let items = p
         .items
         .iter()
-        .filter(|i| i.sheet == s.id)
+        .filter(|i| i.sheet == s.id && !i.virt)
         .map(|it| {
             let sym = symbols::get(&it.sym);
             let pl = Place::of(it);
@@ -525,7 +525,7 @@ fn note_view(n: &crate::model::Note) -> NoteView {
 
 /// The legend: every symbol the project uses (by category) and every line type, in columns.
 pub fn legend(p: &Project, s: &Sheet) -> Vec<LegendRow> {
-    let used: BTreeSet<String> = p.items.iter().filter(|i| p.sheet(i.sheet).is_some_and(|x| !x.legend)).map(|i| if i.sym.starts_with("x.nozzles.") { i.base_key() } else { i.sym.clone() }).collect();
+    let used: BTreeSet<String> = p.items.iter().filter(|i| !i.virt && p.sheet(i.sheet).is_some_and(|x| !x.legend)).map(|i| if i.sym.starts_with("x.nozzles.") { i.base_key() } else { i.sym.clone() }).collect();
     let kinds: BTreeSet<Kind> = p.lines.iter().map(|l| l.kind).collect();
     let mut by_cat: BTreeMap<Cat, Vec<&symbols::Sym>> = BTreeMap::new();
     for sym in symbols::all().iter().filter(|x| used.contains(x.key)) {

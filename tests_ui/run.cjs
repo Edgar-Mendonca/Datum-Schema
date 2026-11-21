@@ -1015,6 +1015,19 @@ const shots = process.env.SHOTS;
     const q = await project();
     check("a problem is accepted with its reason", q.settings.accepted.length === n0 + 1 && q.settings.accepted[n0].reason === "Tank vents to atmosphere"); }
 
+  // 76. A virtual instrument: in the instrument index, not on the sheet; the control-system lists.
+  await openEx("Pump transfer, worked up");
+  await p.click(".tabs button:text-is('Instruments')"); await p.click(".ribbon button:has-text('Virtual Instrument')"); await p.waitForSelector(".vtag");
+  await p.fill(".vtag", "LY-101"); await p.click(".dlg footer .btn.pri"); await p.waitForTimeout(600);
+  { const q = await project(); const v = q.items.find(i => tagOf(q, i) === "LY-101");
+    check("a virtual instrument is added, not drawn", !!v && v.virt === true && (await p.$$eval(".it", els => els.length)) === q.items.filter(i => !i.virt && q.sheets.find(s => s.id === i.sheet)).length, JSON.stringify(v));
+    check("the Inspector says it is virtual", ((await p.textContent(".insp")) ?? "").includes("Virtual: in its loop")); }
+  await p.click(".ribbon button:has-text('I/O List')"); await p.waitForTimeout(500);
+  check("the I/O list shows the loop's I/O", ((await p.textContent(".bottom .egrid")) ?? "").includes("LV-101"));
+  await p.click(".ribbon button:has-text('Export for the DCS')"); await p.waitForTimeout(600);
+  { const x = (await inv("exports")).filter(e => e.kind === "controlsys").pop();
+    check("the control-system workbook is written", !!x && parseInt(x.text) > 3000, x?.text); }
+
   // 53. No commercial product name anywhere in the window (FAMILY §13): the built bundle, and the
   // text shown on each ribbon tab. The names are kept in ROT13 so this file does not name them.
   { const rot = s => s.replace(/[a-z]/gi, c => String.fromCharCode((c <= "Z" ? 65 : 97) + ((c.toUpperCase().charCodeAt(0) - 65 + 13) % 26)));

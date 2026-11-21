@@ -140,18 +140,18 @@
     {
       "v": "0.10",
       "title": "AI and automation",
-      "when": "Now",
+      "when": "Done",
       "items": [
         "0.10.0: a command line: project facts, checks, lists, changes through named operations, and every export (done)",
         "0.10.1: an MCP server: an AI assistant on your own computer opens, checks, changes and saves a project through the same operations; nothing is written until it saves (done)",
         "0.10.2: find anything (\"control valves without a bypass\") and check exceptions accepted with a reason, kept for audit (done)",
-        "0.10.3: virtual instruments (data and loops without a symbol) and an I/O and tag export for the control system"
+        "0.10.3: virtual instruments (data and loops without a symbol) and an I/O and tag export for the control system (done)"
       ]
     },
     {
       "v": "0.11",
       "title": "Old drawings and exchange",
-      "when": "Later",
+      "when": "Next",
       "items": [
         "0.11.0: old DXF P&IDs turned into live drawings: blocks mapped to symbols, lines traced and connected, with a review",
         "0.11.1: vector PDF P&IDs the same way; scanned drawings traced with help",
