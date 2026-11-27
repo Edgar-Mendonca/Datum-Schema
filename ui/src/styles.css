@@ -1342,3 +1342,4 @@ tr.behind td { background: var(--err-bg); }
 .dlg header .totab { color: var(--muted); padding: 0 6px; font-size: 14px; }
 .dlg header .totab:hover { color: var(--blue); }
 .dlg header .totab + .x { margin-left: 0; }
+.btabs > :not(.bt):not(.grow) { flex: none; }
