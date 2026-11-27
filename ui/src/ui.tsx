@@ -1,6 +1,6 @@
 // Small building blocks: icons, menus, dialogs, tabs and form rows.
-import { For, Show, JSX, createSignal, onMount, onCleanup } from "solid-js";
-import { menu, setMenu, MenuItem as Item, closeDialog, msg, setMsg } from "./store";
+import { For, Show, JSX, createSignal, onMount, onCleanup, createContext, useContext, untrack } from "solid-js";
+import { menu, setMenu, MenuItem as Item, closeDialog, msg, setMsg, setDialogs, openDoc, closeDoc, bigWhere } from "./store";
 import { Help } from "./help";
 
 export const Icon = (p: { n: string; size?: number }) => (
@@ -42,24 +42,35 @@ export const Toast = () => (
   <Show when={msg()}>{m => <div id="toast" classList={{ ok: m().ok }} onClick={() => setMsg(null)}>{m().text}</div>}</Show>
 );
 
-/** A modal dialog. `ok` returns false to keep it open. */
+/** The window function a dialog was opened with, and the tab it is shown in (if it was moved to one). */
+export const DlgFn = createContext<(() => JSX.Element) | null>(null);
+export const InTab = createContext<string | null>(null);
+
+/** A modal dialog. `ok` returns false to keep it open. A wide one can be opened as a tab beside the
+ *  sheets instead (its ⧉ button, or always, by the user's choice). */
 export const Dialog = (p: { title: string; wide?: boolean; children: JSX.Element; ok?: () => boolean | void | Promise<boolean | void>; okText?: string; extra?: JSX.Element; cancel?: string; help?: string }) => {
-  const done = async () => { if (!p.ok || (await p.ok()) !== false) closeDialog(); };
+  const fn = useContext(DlgFn), tab = useContext(InTab);
+  const close = () => (tab ? closeDoc(tab) : closeDialog());
+  const toTab = () => { if (!fn) return; setDialogs(v => v.filter(x => x !== fn)); openDoc({ id: `win:${Date.now()}:${Math.random()}`, title: p.title, render: fn }); };
+  const done = async () => { if (!p.ok || (await p.ok()) !== false) close(); };
   const key = (e: KeyboardEvent) => {
-    if (e.key === "Escape") { e.stopPropagation(); closeDialog(); }
-    if (e.key === "Enter" && !(e.target instanceof HTMLTextAreaElement) && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); done(); }
+    if (e.key === "Escape" && !tab) { e.stopPropagation(); close(); }
+    if (e.key === "Enter" && !(e.target instanceof HTMLTextAreaElement) && !(e.target instanceof HTMLButtonElement) && !(e.target instanceof HTMLSelectElement)) { e.preventDefault(); done(); }
   };
   let el!: HTMLDivElement;
-  onMount(() => ((el.querySelector("input:not([type=checkbox]),textarea") ?? el.querySelector(".btn.pri") ?? el.querySelector("footer .btn")) as HTMLElement | null)?.focus());
-  return (
-    <div class="ov" onKeyDown={key}>
-      <div class="dlg" classList={{ wide: p.wide }} ref={el}>
-        <header>{p.title}{p.help && <Help k={p.help} />}<button class="x" onClick={closeDialog}>×</button></header>
-        <div class="bd">{p.children}</div>
-        <footer>{p.extra}<span class="grow" />{p.ok && <button class="btn pri" onClick={done}>{p.okText ?? "OK"}</button>}<button class="btn" onClick={closeDialog}>{p.cancel ?? (p.ok ? "Cancel" : "Close")}</button></footer>
-      </div>
+  onMount(() => {
+    if (!tab && p.wide && fn && bigWhere() === "tab") return queueMicrotask(toTab);
+    ((el.querySelector("input:not([type=checkbox]),textarea") ?? el.querySelector(".btn.pri") ?? el.querySelector("footer .btn")) as HTMLElement | null)?.focus();
+  });
+  const body = () => (
+    <div class="dlg" classList={{ wide: p.wide, intab: !!tab }} ref={el} onKeyDown={tab ? key : undefined}>
+      <header>{p.title}{p.help && <Help k={p.help} />}<span class="grow" /><Show when={!tab && p.wide && fn}><button class="x totab" title="Open in a tab beside the sheets (full size)" onClick={toTab}>⧉</button></Show><button class="x" title={tab ? "Close this tab" : "Close"} onClick={close}>×</button></header>
+      <div class="bd">{p.children}</div>
+      <footer>{p.extra}<span class="grow" />{p.ok && <button class="btn pri" onClick={done}>{p.okText ?? "OK"}</button>}<button class="btn" onClick={close}>{p.cancel ?? (p.ok ? "Cancel" : "Close")}</button></footer>
     </div>
   );
+  const node = untrack(body);
+  return tab ? node : <div class="ov" onKeyDown={key}>{node}</div>;
 };
 
 export const Tabs = (p: { tabs: [string, string][]; on: string; set: (k: string) => void }) => (

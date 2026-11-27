@@ -3,7 +3,7 @@
 // drawing, edit a cell and the drawing follows.
 import { For, Show, createSignal, createMemo, createResource, createEffect, on } from "solid-js";
 import { List, Col, Row, parseNum, Issue } from "./api";
-import { panel, setPanel, panelOpen, setPanelOpen, derived, call, out, act, proj, toast, openMenu } from "./store";
+import { panel, setPanel, panelOpen, setPanelOpen, derived, call, out, act, proj, toast, openMenu, openDoc, listWhere, setListWhere, bigWhere, setBigWhere } from "./store";
 import { fromU } from "./units";
 import { C } from "./cmds";
 import { Help } from "./help";
@@ -115,6 +115,16 @@ const ListView = (p: { kind: string }) => {
   );
 };
 
+/** What a list key shows: the Checks, the to-do list, the comments, or a list. Shown in the panel below
+ *  the sheet, or full size in a tab beside the sheets. */
+export const PanelBody = (p: { k: string }) => (
+  <Show when={p.k === "checks"} fallback={<Show when={p.k === "comments"} fallback={<Show when={p.k === "todo"} fallback={<ListView kind={p.k} />}><TodoPanel /></Show>}><CommentsPanel /></Show>}><Checks /></Show>
+);
+/** A list's title (its tab's name). */
+export const tabTitle = (k: string) => TABS.find(t => t[0] === k)?.[1] ?? (k.startsWith("report:") ? k.slice(7) : k);
+/** Opens a list as a tab beside the sheets. */
+export const openListTab = (k: string) => openDoc({ id: `list:${k}`, title: tabTitle(k), list: k });
+
 export const Bottom = () => {
   const [h, setH] = createSignal(230);
   const resize = (e: MouseEvent) => {
@@ -124,17 +134,27 @@ export const Bottom = () => {
     addEventListener("mousemove", mv); addEventListener("mouseup", upf);
   };
   const badge = (k: string) => { if (k === "todo") { const n = todos()?.length ?? 0; return n ? ` (${n})` : ""; } if (k === "comments") { const n = (proj()?.comments ?? []).filter(c => !c.resolved).length; return n ? ` (${n})` : ""; } if (k !== "checks") return ""; const i = derived()?.issues ?? []; const e = i.filter(x => x.level === "error").length, w = i.filter(x => x.level === "warning").length; return e || w ? ` (${e} · ${w})` : ""; };
+  const shownTabs = createMemo(() => [...TABS, ...(proj()?.settings.reports ?? []).map(r => [`report:${r.name}`, r.name] as [string, string])].filter(([k]) => (k !== "streams" || proj()?.sheets.some(s => s.pfd)) && (!k.startsWith("hazop") || panel() === k || !!(proj()?.settings.hazop as { nodes?: unknown[] } | undefined)?.nodes?.length) && (k !== "accepted" || panel() === k || !!(proj()?.settings as { accepted?: unknown[] } | undefined)?.accepted?.length) && (k !== "testpacks" || panel() === k || !!(proj()?.settings.testpacks as { packs?: unknown[] } | undefined)?.packs?.length) && (!ADD[k] || panel() === k || !!proj()?.objects.some(o => o.class === ADD[k]))));
+  const [hiddenTabs, setHiddenTabs] = createSignal<string[]>([]);
+  const pickTab = (k: string) => { if (listWhere() === "tab") return openListTab(k); if (panel() === k && panelOpen()) setPanelOpen(false); else { setPanel(k); setPanelOpen(true); } };
   return (
     <section class="bottom" style={{ height: panelOpen() ? `${h()}px` : "30px" }}>
       <Show when={panelOpen()}><div class="bhandle" onMouseDown={resize} /></Show>
-      <nav class="btabs">
-        <For each={[...TABS, ...(proj()?.settings.reports ?? []).map(r => [`report:${r.name}`, r.name] as [string, string])].filter(([k]) => (k !== "streams" || proj()?.sheets.some(s => s.pfd)) && (!k.startsWith("hazop") || panel() === k || !!(proj()?.settings.hazop as { nodes?: unknown[] } | undefined)?.nodes?.length) && (k !== "accepted" || panel() === k || !!(proj()?.settings as { accepted?: unknown[] } | undefined)?.accepted?.length) && (k !== "testpacks" || panel() === k || !!(proj()?.settings.testpacks as { packs?: unknown[] } | undefined)?.packs?.length) && (!ADD[k] || panel() === k || !!proj()?.objects.some(o => o.class === ADD[k])))}>{([k, l]) => <button classList={{ on: panelOpen() && panel() === k }} onClick={() => { if (panel() === k && panelOpen()) setPanelOpen(false); else { setPanel(k); setPanelOpen(true); } }}>{l}{badge(k)}</button>}</For>
-        <Help k={panel() === "checks" ? "checks" : panel() === "comments" ? "review" : panel() === "todo" ? "todo" : panel().startsWith("report:") ? "reports" : "lists"} />
+      <nav class="btabs" ref={el => { const fit = () => { const r = el.getBoundingClientRect().right - 150; const bs = [...el.querySelectorAll<HTMLElement>(":scope > button.bt")]; bs.forEach(b => (b.style.display = "")); const off = bs.filter(b => b.getBoundingClientRect().right > r).map(b => b.dataset.k!); bs.forEach(b => { if (off.includes(b.dataset.k!)) b.style.display = "none"; }); setHiddenTabs(off); }; new ResizeObserver(fit).observe(el); createEffect(on([proj, panel], () => queueMicrotask(fit))); }}>
+        <For each={shownTabs()}>{([k, l]) => <button class="bt" data-k={k} classList={{ on: panelOpen() && panel() === k }} onClick={() => pickTab(k)}>{l}{badge(k)}</button>}</For>
+        <Show when={hiddenTabs().length}><button class="bmore" title="The lists that do not fit" onClick={e => openMenu(e, shownTabs().filter(([k]) => hiddenTabs().includes(k)).map(([k, l]) => ({ label: `${l}${badge(k)}`, on: panelOpen() && panel() === k, run: () => pickTab(k) })))}>More ▾</button></Show>
         <span class="grow" />
+        <button class="bcollapse bdoc" title="Open this list in a tab beside the sheets (full size)" onClick={() => { openListTab(panel()); setPanelOpen(false); }}>⧉</button>
+        <button class="bcollapse bwhere" title="Where lists and big windows open" onClick={e => openMenu(e, [
+          { label: "Lists open in this panel, below the sheet", on: listWhere() === "below", run: () => setListWhere("below") },
+          { label: "Lists open as tabs beside the sheets", on: listWhere() === "tab", run: () => setListWhere("tab") }, "-",
+          { label: "Datasheets, loop diagrams and other big windows open over the sheet", on: bigWhere() === "window", run: () => setBigWhere("window") },
+          { label: "Datasheets, loop diagrams and other big windows open as tabs", on: bigWhere() === "tab", run: () => setBigWhere("tab") }])}>⋯</button>
+        <Help k={panel() === "checks" ? "checks" : panel() === "comments" ? "review" : panel() === "todo" ? "todo" : panel().startsWith("report:") ? "reports" : "lists"} />
         <button class="bcollapse" title={panelOpen() ? "Hide the panel" : "Show the panel"} onClick={() => setPanelOpen(!panelOpen())}>{panelOpen() ? "▾" : "▴"}</button>
       </nav>
       <Show when={panelOpen()}>
-        <Show when={panel() === "checks"} fallback={<Show when={panel() === "comments"} fallback={<Show when={panel() === "todo"} fallback={<ListView kind={panel()} />}><TodoPanel /></Show>}><CommentsPanel /></Show>}><Checks /></Show>
+        <PanelBody k={panel()} />
       </Show>
     </section>
   );

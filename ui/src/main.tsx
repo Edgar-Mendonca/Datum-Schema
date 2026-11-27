@@ -1,7 +1,7 @@
 // Datum Schema window: layout (palette, sheet, inspector, bottom panel), the sheet tab bar, the
 // status bar, keyboard shortcuts, start-up and recovery.
 import { render } from "solid-js/web";
-import { For, Show, onMount } from "solid-js";
+import { For, Show, onMount, createEffect, on, untrack } from "solid-js";
 import "@fontsource/ibm-plex-sans/latin-400.css";
 import "@fontsource/ibm-plex-sans/latin-500.css";
 import "@fontsource/ibm-plex-sans/latin-600.css";
@@ -11,15 +11,15 @@ import "@fontsource/ibm-plex-mono/latin-500.css";
 import "@fontsource/ibm-plex-mono/latin-600.css";
 import "./styles.css";
 import { invoke, listen, Out, Options, Shown } from "./api";
-import { out, setOut, backstage, setBackstage, setOpts, opts, dialogs, toast, loadOut, setThemeRaw, applyTheme, sel, proj, sheet, setSheetId, refreshLibs, derived, tool, setTool, openMenu, hidden } from "./store";
+import { out, setOut, backstage, setBackstage, setOpts, opts, dialogs, toast, loadOut, setThemeRaw, applyTheme, sel, proj, sheet, setSheetId, refreshLibs, derived, tool, setTool, openMenu, hidden, docTabs, activeDoc, setActiveDoc, closeDoc } from "./store";
 import { C, setFit, setCentre, setCopy, setViewCentre } from "./cmds";
 import { TitleBar, Ribbon, palette } from "./ribbon";
 import { Backstage, update, checkUpdate } from "./backstage";
 import { Canvas, fit, fitSheet, goTo, copySelection, viewCenter } from "./canvas";
 import { Palette } from "./palette";
 import { Inspector } from "./inspector";
-import { Bottom } from "./panels";
-import { Menu, Toast } from "./ui";
+import { Bottom, PanelBody } from "./panels";
+import { Menu, Toast, DlgFn, InTab } from "./ui";
 import { setUnitTable } from "./units";
 import * as D from "./dialogs";
 
@@ -31,10 +31,11 @@ setViewCentre(viewCenter);
 /** The sheet tab bar: one tab per sheet; right-click for sheet commands. */
 const SheetTabs = () => (
   <div class="stabs">
-    <For each={proj()?.sheets ?? []}>{s => <button classList={{ on: sheet()?.id === s.id, legend: s.legend }} onClick={() => setSheetId(s.id)} title={s.title}
+    <For each={proj()?.sheets ?? []}>{s => <button classList={{ on: !activeDoc() && sheet()?.id === s.id, legend: s.legend }} onClick={() => { setActiveDoc(null); setSheetId(s.id); }} title={s.title}
       onContextMenu={e => { setSheetId(s.id); openMenu(e, [{ label: "New sheet", run: () => C.addSheet() }, { label: "Legend sheet", run: () => C.addSheet(true) }, "-", { label: "Move left", run: () => C.moveSheet(-1) }, { label: "Move right", run: () => C.moveSheet(1) }, "-", { label: "Delete this sheet", icon: "del", run: C.deleteSheet }]); }}>
       {s.number}</button>}</For>
     <button class="sadd" title="New sheet" onClick={() => C.addSheet()}>+</button>
+    <For each={docTabs()}>{t => <span class="dtab" classList={{ on: activeDoc() === t.id }}><button onClick={() => setActiveDoc(t.id)} title={t.list ? "A list, full size (it stays in step with the drawing)" : t.title}>{t.title}</button><button class="dx" title="Close this tab" onClick={() => closeDoc(t.id)}>×</button></span>}</For>
   </div>
 );
 
@@ -70,6 +71,8 @@ const App = () => {
       listen("close-requested", () => D.confirmClose(() => invoke("quit")));
     } catch (e) { toast(String(e)); }
   });
+  // Back on a sheet from a tab: the drawing measures its room again.
+  createEffect(on(activeDoc, () => queueMicrotask(() => window.dispatchEvent(new Event("resize"))), { defer: true }));
   const keys = (e: KeyboardEvent) => {
     const ctrl = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
     if (dialogs().length) return;
@@ -95,7 +98,9 @@ const App = () => {
         <Palette />
         <div class="content">
           <Show when={out()}>
-            <div class="sheetarea"><Canvas /><SheetTabs /></div>
+            <div class="sheetarea"><div class="canvhold" style={{ display: activeDoc() ? "none" : "contents" }}><Canvas /></div>
+              <For each={docTabs()}>{t => <div class="docview" style={{ display: activeDoc() === t.id ? "flex" : "none" }}><InTab.Provider value={t.id}>{t.list ? <div class="lists docl"><PanelBody k={t.list} /></div> : untrack(() => t.render?.())}</InTab.Provider></div>}</For>
+              <SheetTabs /></div>
             <Bottom />
           </Show>
         </div>
@@ -103,7 +108,7 @@ const App = () => {
       </main>
       <Status />
       <Show when={backstage()}><Backstage /></Show>
-      <For each={dialogs()}>{d => d()}</For>
+      <For each={dialogs()}>{d => <DlgFn.Provider value={d}>{untrack(d)}</DlgFn.Provider>}</For>
       <Menu /><Toast />
     </div>
   );

@@ -19,4 +19,6 @@ zip = { version = "9.0", default-features = false, features = ["deflate"] }
 flate2 = "1"
 # PDFs and pictures kept inside a project as text (MIT or Apache-2.0).
 base64 = "0.22"
+# DWG drawings read into DXF (MPL-2.0, used unmodified as a library); one thread, no extra pool.
+acadrust = { version = "0.6.8", default-features = false }
 

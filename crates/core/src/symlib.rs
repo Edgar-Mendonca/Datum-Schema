@@ -60,7 +60,11 @@ impl Default for CustomSym {
 #[serde(default)]
 pub struct Library {
     pub format: u32,
+    /// What it is called: the user's choice, renamed freely.
     pub name: String,
+    /// What its symbols' keys are made from: set once (from its first name) and never changed, so a
+    /// library can be renamed without its symbols changing.
+    pub id: String,
     /// The file it was read from.
     pub source: String,
     pub symbols: Vec<CustomSym>,
@@ -179,7 +183,7 @@ pub fn builtin_sets() -> Vec<Library> {
             })
         })
         .collect();
-    vec![Library { format: LIB_FORMAT, name: ALT_SET.into(), source: String::new(), symbols }]
+    vec![Library { format: LIB_FORMAT, name: ALT_SET.into(), id: "datum-alt".into(), source: String::new(), symbols }]
 }
 
 /// Registers the built-in sets once, so their symbols are always drawable.
@@ -238,7 +242,13 @@ pub fn validate(mut lib: Library) -> (Library, Vec<String>) {
         w.push(format!("Only the first {MAX_SYMS} symbols were kept."));
         lib.symbols.truncate(MAX_SYMS);
     }
-    let ls = slug(&lib.name);
+    if lib.id.trim().is_empty() || slug(&lib.id) != lib.id {
+        lib.id = slug(if lib.id.trim().is_empty() { &lib.name } else { &lib.id });
+    }
+    if lib.id.is_empty() {
+        lib.id = "library".into();
+    }
+    let ls = lib.id.clone();
     let mut keys = std::collections::HashSet::new();
     let before = lib.symbols.len();
     lib.symbols.retain(|s| !s.draw.trim().is_empty() && s.draw.len() <= MAX_DRAW && !symbols::parse(&s.draw).is_empty());
@@ -478,9 +488,97 @@ fn pretty(block: &str) -> String {
 
 /// Reads a legend sheet (DXF): every block placed on it becomes a symbol, described by the text
 /// beside it (or its attributes, or its block name), with a suggested Datum Schema symbol.
+/// A legend's symbols drawn as loose shapes: shapes within a millimetre of each other are one
+/// symbol (lines longer than 60 mm, such as a table's rules, are left out), 2 to 60 mm across,
+/// with the text to its right on its row as its description; texts inside it (an instrument's
+/// letters) are part of it.
+fn loose_symbols(d: &dxfin::Dxf, texts: &[([f64; 2], f64, String)]) -> Vec<CustomSym> {
+    let mm = d.mm;
+    let mut shapes: Vec<(usize, [f64; 4])> = vec![];
+    for (i, e) in d.ents.iter().enumerate() {
+        let b = match e {
+            Ent::Poly { pts, .. } if pts.len() >= 2 => {
+                let xs = pts.iter().map(|p| p[0] * mm);
+                let ys = pts.iter().map(|p| -p[1] * mm);
+                [xs.clone().fold(f64::MAX, f64::min), ys.clone().fold(f64::MAX, f64::min), xs.fold(f64::MIN, f64::max), ys.fold(f64::MIN, f64::max)]
+            }
+            Ent::Circle { c, r } => [c[0] * mm - r * mm, -c[1] * mm - r * mm, c[0] * mm + r * mm, -c[1] * mm + r * mm],
+            _ => continue,
+        };
+        if (b[2] - b[0]).max(b[3] - b[1]) <= 60.0 {
+            shapes.push((i, b));
+        }
+        if shapes.len() > 6000 {
+            return vec![];
+        }
+    }
+    // Union-find over shapes that touch (within 1 mm).
+    let mut up: Vec<usize> = (0..shapes.len()).collect();
+    fn root(up: &mut [usize], mut i: usize) -> usize {
+        while up[i] != i {
+            up[i] = up[up[i]];
+            i = up[i];
+        }
+        i
+    }
+    let g = 1.0;
+    for a in 0..shapes.len() {
+        for b in a + 1..shapes.len() {
+            let (p, q) = (shapes[a].1, shapes[b].1);
+            if p[0] - g <= q[2] && q[0] - g <= p[2] && p[1] - g <= q[3] && q[1] - g <= p[3] {
+                let (ra, rb) = (root(&mut up, a), root(&mut up, b));
+                if ra != rb {
+                    up[ra] = rb;
+                }
+            }
+        }
+    }
+    let mut groups: std::collections::BTreeMap<usize, Vec<usize>> = Default::default();
+    for k in 0..shapes.len() {
+        let r = root(&mut up, k);
+        groups.entry(r).or_default().push(k);
+    }
+    let mut out = vec![];
+    let mut seen_names = std::collections::HashSet::new();
+    let mut groups: Vec<Vec<usize>> = groups.into_values().collect();
+    groups.sort_by(|a, b| { let (pa, pb) = (shapes[a[0]].1, shapes[b[0]].1); pa[1].total_cmp(&pb[1]).then(pa[0].total_cmp(&pb[0])) });
+    for g in groups {
+        let b = g.iter().fold([f64::MAX, f64::MAX, f64::MIN, f64::MIN], |acc, k| { let s = shapes[*k].1; [acc[0].min(s[0]), acc[1].min(s[1]), acc[2].max(s[2]), acc[3].max(s[3])] });
+        let size = (b[2] - b[0]).max(b[3] - b[1]);
+        if !(2.0..=60.0).contains(&size) {
+            continue;
+        }
+        let (x1, ymid, hh) = (b[2], (b[1] + b[3]) / 2.0, (b[3] - b[1]).max(2.0));
+        let Some(desc) = texts.iter().filter(|t| t.0[0] >= x1 - 0.5 && (t.0[1] - ymid).abs() <= hh.max(t.1 * 1.5) && t.0[0] - x1 < 120.0).min_by(|a, c| (a.0[0] - x1).total_cmp(&(c.0[0] - x1))).map(|t| t.2.trim().to_string()).filter(|t| t.len() > 2) else { continue };
+        if !seen_names.insert(desc.to_lowercase()) {
+            continue;
+        }
+        let mut ents: Vec<Ent> = g.iter().map(|k| d.ents[shapes[*k].0].clone()).collect();
+        // Texts inside it are part of it.
+        for e in &d.ents {
+            if let Ent::Text { p, .. } = e {
+                let q = [p[0] * mm, -p[1] * mm];
+                if q[0] > b[0] && q[0] < b[2] && q[1] > b[1] && q[1] < b[3] {
+                    ents.push(e.clone());
+                }
+            }
+        }
+        let mut ps = vec![];
+        dxfin::flatten(d, &ents, Tf::ID, &mut ps, 0);
+        let block = format!("LEGEND_{}", slug(&desc).to_uppercase());
+        let like = suggest(&desc, "").map(|x| x.0);
+        if let Some(s) = draft(ps, &desc, &block, like) {
+            out.push(s);
+        }
+        if out.len() >= MAX_SYMS {
+            break;
+        }
+    }
+    out
+}
+
 pub fn scan_legend(text: &str, name: &str) -> Result<Scan, String> {
-    let d = dxfin::read(text)?;
-    let mut warnings = vec![];
+    let (d, mut warnings) = dxfin::load(text)?;
     // Texts of the sheet, in millimetres with y down.
     let texts: Vec<([f64; 2], f64, String)> = d
         .ents
@@ -526,8 +624,16 @@ pub fn scan_legend(text: &str, name: &str) -> Result<Scan, String> {
     if big > 0 {
         warnings.push(format!("{big} large blocks (frames or title blocks) were left out."));
     }
+    // No blocks (a PDF, or a drawing whose blocks were exploded): each group of shapes drawn
+    // together, with its description beside it, is a symbol.
     if symbols_out.is_empty() {
-        return Err("No symbols were found: a legend sheet has its symbols as blocks placed on the sheet, each with its description beside it.".into());
+        symbols_out = loose_symbols(&d, &texts);
+        if !symbols_out.is_empty() {
+            warnings.push(format!("The legend has no blocks: {} symbols were read from the shapes drawn beside each description. Check each one's points.", symbols_out.len()));
+        }
+    }
+    if symbols_out.is_empty() {
+        return Err("No symbols were found: a legend sheet has its symbols (blocks, or shapes drawn together) each with its description beside it.".into());
     }
     if !d.skipped.is_empty() {
         warnings.push(format!("Not read: {}.", d.skipped.iter().map(|(k, v)| format!("{v} {k}")).collect::<Vec<_>>().join(", ")));
@@ -536,7 +642,7 @@ pub fn scan_legend(text: &str, name: &str) -> Result<Scan, String> {
     if unmatched > 0 {
         warnings.push(format!("{unmatched} symbols could not be matched to a Datum Schema symbol: choose what each stands for."));
     }
-    let (library, mut w) = validate(Library { format: LIB_FORMAT, name: name.to_string(), source: String::new(), symbols: symbols_out });
+    let (library, mut w) = validate(Library { format: LIB_FORMAT, name: name.to_string(), id: String::new(), source: String::new(), symbols: symbols_out });
     warnings.append(&mut w);
     Ok(Scan { library, warnings })
 }
@@ -642,6 +748,77 @@ pub fn port_at(draw: &str, w: f64, h: f64, x: f64, y: f64) -> CPort {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A library kept in the project: registered when the project is read, renamed freely (its
+    /// symbols keep their keys), left out of the panel by its id, and saved with the file.
+    #[test]
+    fn a_library_kept_in_the_project() {
+        let lib = scan_legend(crate::dxfin::tests::SAMPLE, "Job 4711 legend").unwrap().library;
+        let mut d = crate::doc::Doc::new(crate::model::Project::new());
+        let mut st = d.p.settings.clone();
+        st.libraries.push(lib.clone());
+        st.libs_off.push(lib.id.clone());
+        d.apply(crate::doc::Op::SetSettings { settings: Box::new(st) }).unwrap();
+        let key = d.p.settings.libraries[0].symbols[0].key.clone();
+        assert!(key.starts_with("x.job-4711-legend."), "{key}");
+        assert!(symbols::get(&key).is_some());
+        let mut st = d.p.settings.clone();
+        st.libraries[0].name = "Client B, job 4711".into();
+        d.apply(crate::doc::Op::SetSettings { settings: Box::new(st) }).unwrap();
+        assert_eq!(d.p.settings.libraries[0].symbols[0].key, key);
+        assert_eq!(d.p.settings.libraries[0].symbols[0].library, "Client B, job 4711");
+        let dir = std::env::temp_dir().join(format!("dschema-projlib-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("p.dschema");
+        crate::file::write(&path, &d.p, &[]).unwrap();
+        let (back, _, _) = crate::file::read(&path).unwrap();
+        assert_eq!(back.settings.libraries, d.p.settings.libraries);
+        assert_eq!(back.settings.libs_off, vec![lib.id.clone()]);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// A legend with no blocks: each symbol drawn as loose lines, its description to the right,
+    /// inside a table whose rules are long lines.
+    #[test]
+    fn a_legend_with_no_blocks_is_read_from_its_shapes() {
+        let mut e = String::new();
+        let poly = |e: &mut String, pts: &[[f64; 2]], closed: bool| {
+            e.push_str(&format!("0\nLWPOLYLINE\n8\nLEG\n90\n{}\n70\n{}\n", pts.len(), u8::from(closed)));
+            for p in pts {
+                e.push_str(&format!("10\n{}\n20\n{}\n", p[0], p[1]));
+            }
+        };
+        let text = |e: &mut String, x: f64, y: f64, s: &str| e.push_str(&format!("0\nTEXT\n8\nLEG\n10\n{x}\n20\n{y}\n40\n2.5\n1\n{s}\n"));
+        // Table rules.
+        poly(&mut e, &[[0.0, 0.0], [200.0, 0.0]], false);
+        poly(&mut e, &[[0.0, 60.0], [200.0, 60.0]], false);
+        poly(&mut e, &[[30.0, 0.0], [30.0, 60.0]], false);
+        // A gate valve (bow tie) and its description.
+        poly(&mut e, &[[10.0, 47.5], [10.0, 52.5], [14.0, 50.0]], true);
+        poly(&mut e, &[[18.0, 47.5], [18.0, 52.5], [14.0, 50.0]], true);
+        text(&mut e, 35.0, 49.0, "GATE VALVE");
+        // A centrifugal pump: a circle with its discharge and base.
+        e.push_str("0\nCIRCLE\n8\nLEG\n10\n14\n20\n30\n40\n6\n");
+        poly(&mut e, &[[14.0, 36.0], [22.0, 36.0]], false);
+        poly(&mut e, &[[9.5, 26.0], [8.0, 22.0], [20.0, 22.0], [18.5, 26.0]], false);
+        text(&mut e, 35.0, 29.0, "CENTRIFUGAL PUMP");
+        // A bubble with letters inside, described.
+        e.push_str("0\nCIRCLE\n8\nLEG\n10\n14\n20\n10\n40\n5.5\n");
+        text(&mut e, 12.0, 10.0, "PI");
+        text(&mut e, 35.0, 9.0, "PRESSURE GAUGE, FIELD MOUNTED INSTRUMENT");
+        let dxf = format!("0\nSECTION\n2\nENTITIES\n{e}0\nENDSEC\n0\nEOF\n");
+        let sc = scan_legend(&dxf, "Loose").unwrap();
+        let names: Vec<(&str, &str)> = sc.library.symbols.iter().map(|s| (s.name.as_str(), s.like.as_str())).collect();
+        assert_eq!(sc.library.symbols.len(), 3, "{names:?}");
+        assert!(names.contains(&("GATE VALVE", "gate")), "{names:?}");
+        assert!(names.iter().any(|n| n.0 == "CENTRIFUGAL PUMP" && n.1 == "pump_cent"), "{names:?}");
+        assert!(sc.warnings.iter().any(|w| w.contains("no blocks")));
+        // The pump took its base and discharge with it; the table rules are in none.
+        let pump = sc.library.symbols.iter().find(|s| s.name == "CENTRIFUGAL PUMP").unwrap();
+        assert!(pump.h > 12.0 && pump.w < 30.0, "{} × {}", pump.w, pump.h);
+        // Their block names come from their descriptions.
+        assert!(sc.library.symbols.iter().all(|s| s.block.starts_with("LEGEND_")));
+    }
 
     #[test]
     fn our_own_legend_sheet_reads_as_a_library() {
@@ -779,7 +956,11 @@ mod tests {
         let r = save(&dir, renamed, Some(&v.file)).unwrap();
         let all = load_dir(&dir);
         assert_eq!(all.iter().map(|l| l.file.as_str()).collect::<Vec<_>>(), [r.file.as_str()]);
-        assert!(all[0].library.symbols[0].key.starts_with("x.renamed-lib."));
+        // Renamed, its symbols keep their keys (drawings that use them are untouched).
+        assert_eq!(all[0].library.name, "Renamed lib");
+        assert_eq!(all[0].library.id, "saved-lib");
+        assert!(all[0].library.symbols[0].key.starts_with("x.saved-lib."));
+        assert!(all[0].library.symbols.iter().all(|s| s.library == "Renamed lib"));
         assert!(get(&all[0].library.symbols[0].key).is_some());
         let _ = std::fs::remove_dir_all(&dir);
         // A hand-placed port snaps onto the drawing and points out of the nearer side.

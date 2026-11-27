@@ -28,8 +28,8 @@ const HELP: &str = "datum-schema-cli: Datum Schema on the command line
                                        by the extension: .dschema .dxf .xml (DEXPI) .html (web page)
                                        .zip (handover package) .xlsx or .csv (needs --list) .json
   new <out.dschema> [--example <id>]   a new project, or one of the examples (see `examples`)
-  convert <old.dxf|old.pdf> [<project>] --save <out.dschema> [--map BLOCK=symbol …]
-                                       an old DXF or PDF P&ID as a new live sheet (blocks to symbols by
+  convert <old.dxf|.dwg|.pdf> [<project>] --save <out.dschema> [--map BLOCK=symbol …]
+                                       an old DXF, DWG or PDF P&ID as a new live sheet (blocks to symbols by
                                        their names; --map sets one, --map BLOCK= leaves it out);
                                        without --save, lists the blocks and what each becomes
   examples                             the examples
@@ -245,8 +245,8 @@ pub fn run(args: &[String]) -> Result<String, String> {
             write(&d, need(args, 2, "the file to write")?, args)
         }
         "convert" => {
-            let dxf = need(args, 1, "an old drawing (.dxf or .pdf)")?;
-            let text = std::fs::read(dxf).map(|b| datum_core::dxfin::source(&b)).map_err(|e| format!("Could not open {dxf}: {e}"))?;
+            let dxf = need(args, 1, "an old drawing (.dxf, .dwg or .pdf)")?;
+            let text = datum_core::dxfin::source_checked(&std::fs::read(dxf).map_err(|e| format!("Could not open {dxf}: {e}"))?)?;
             let scan = datum_core::convert::scan(&text)?;
             let mut map = datum_core::convert::suggested(&scan);
             for m in flags(args, "--map") {

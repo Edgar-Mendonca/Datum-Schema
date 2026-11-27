@@ -1,7 +1,7 @@
 // Window state: the open project, the open sheet, what the engine works out from it (the sheet's
 // drawing, the checks, the hydraulics), the selection, the drawing tool, menus, dialogs and messages.
 import { createSignal, createMemo, batch, JSX } from "solid-js";
-import { invoke, Out, Options, Project, Derived, Library, SymInfo, Kind, NoteKind, Item, Line, Obj, LibView } from "./api";
+import { invoke, Out, Options, Project, Derived, Library, SymInfo, Kind, NoteKind, Item, Line, Obj, LibView, SymLibrary } from "./api";
 
 export const [out, setOutRaw] = createSignal<Out | null>(null);
 export const proj = (): Project | undefined => out()?.p;
@@ -16,6 +16,21 @@ export const refreshLibs = async () => {
     setLibs(await invoke<LibView[]>("libraries"));
     setLib(await invoke<Library>("library"));
   } catch (e) { toast(String(e)); }
+};
+/** Every library the user can use here: those on this computer and those kept in this project,
+ *  one entry for a library that is both (by its id), with where it lives and whether it is ticked. */
+export type LibEntry = { library: SymLibrary; file: string; onComputer: boolean; inProject: boolean; shown: boolean; svgs: string[] };
+export const allLibs = (): LibEntry[] => {
+  const st = out()?.p.settings, off = new Set(st?.libs_off ?? []);
+  const svgOf = (k: string) => lib()?.symbols.find(s => s.key === k)?.svg ?? "";
+  const idOf = (l: SymLibrary) => l.id || l.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const v: LibEntry[] = libs().map(x => ({ library: x.library, file: x.file, onComputer: true, inProject: false, shown: !off.has(idOf(x.library)), svgs: x.svgs }));
+  for (const l of st?.libraries ?? []) {
+    const e = v.find(x => idOf(x.library) === idOf(l));
+    if (e) { e.inProject = true; e.library = l; }
+    else v.push({ library: l, file: "", onComputer: false, inProject: true, shown: !off.has(idOf(l)), svgs: l.symbols.map(s => svgOf(s.key)) });
+  }
+  return v.sort((a, b) => a.library.name.localeCompare(b.library.name));
 };
 /** Old drawings behind sheets, as SVG, by fingerprint: fetched once each. */
 export const [bgs, setBgs] = createSignal<Record<string, string>>({});
@@ -54,7 +69,7 @@ export const setSheetId = (id: number) => {
 export const setOut = (o: Out | null | undefined) => {
   if (!o) return;
   // A symbol the window does not know yet (a nozzle just added, a project's own): read them again.
-  if (lib() && o.p.items.some(i => !symMap().has(i.sym))) void refreshLibs();
+  if (lib() && (o.p.items.some(i => !symMap().has(i.sym)) || (o.p.settings.libraries ?? []).some(l => l.symbols.some(s => !symMap().has(s.key))))) void refreshLibs();
   batch(() => {
     setOutRaw(o);
     if (!o.p.sheets.some(s => s.id === sheetId())) setSheetIdRaw(o.p.sheets[0]?.id ?? 0);
@@ -127,3 +142,19 @@ export const openMenu = (e: MouseEvent | { x: number; y: number }, items: MenuIt
 export const [dialogs, setDialogs] = createSignal<(() => JSX.Element)[]>([]);
 export const openDialog = (d: () => JSX.Element) => setDialogs(v => [...v, d]);
 export const closeDialog = () => setDialogs(v => v.slice(0, -1));
+
+// ---------- tabs beside the sheets (0.11.2): a list or a big window opened full size ----------
+/** A tab beside the sheet tabs: a list (its bottom-panel key) or a window moved there. */
+export type DocTab = { id: string; title: string; list?: string; render?: () => JSX.Element };
+export const [docTabs, setDocTabs] = createSignal<DocTab[]>([]);
+export const [activeDoc, setActiveDoc] = createSignal<string | null>(null);
+export const openDoc = (t: DocTab) => { setDocTabs(v => (v.some(x => x.id === t.id) ? v : [...v, t])); setActiveDoc(t.id); };
+export const closeDoc = (id: string) => { const v = docTabs(), i = v.findIndex(x => x.id === id); setDocTabs(v.filter(x => x.id !== id)); if (activeDoc() === id) setActiveDoc(v[i + 1]?.id ?? v[i - 1]?.id ?? null); };
+const keepPref = (k: string, d: string) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
+const savePref = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* private window */ } };
+/** Where lists open (the user's choice, kept): in the panel below the sheet, or as tabs beside the sheets. */
+export const [listWhere, setListWhereRaw] = createSignal<"below" | "tab">(keepPref("ds.lists.where", "below") === "tab" ? "tab" : "below");
+export const setListWhere = (v: "below" | "tab") => { setListWhereRaw(v); savePref("ds.lists.where", v); };
+/** Where big windows (datasheets, loop diagrams, reports…) open: over the sheet, or as tabs. */
+export const [bigWhere, setBigWhereRaw] = createSignal<"window" | "tab">(keepPref("ds.big.where", "window") === "tab" ? "tab" : "window");
+export const setBigWhere = (v: "window" | "tab") => { setBigWhereRaw(v); savePref("ds.big.where", v); };

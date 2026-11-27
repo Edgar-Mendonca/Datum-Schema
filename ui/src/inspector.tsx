@@ -1,6 +1,7 @@
 // The inspector: the selected item's or line's data with units, its connections and (for lines)
 // the hydraulics; with nothing selected, the sheet and the title block.
-import { For, Show, JSX, createMemo, createResource } from "solid-js";
+import { For, Show, JSX, createMemo, createResource, createSignal } from "solid-js";
+import { grip } from "./palette";
 import { Field, Item, Line, Note, Rev, Val, Change, Underlay, num, parseNum } from "./api";
 import { sel, proj, sheet, itemOf, lineOf, objOf, symOf, lib, act, derived, setSel, toast, call, setTool } from "./store";
 import { toU, fromU, unit, fmt } from "./units";
@@ -290,15 +291,45 @@ const Calcs = (p: { obj: number }) => {
 /** The project's pipe classes, offered on a line's Pipe class field. */
 const SpecNames = () => <datalist id="specnames"><For each={proj()?.settings.specs ?? []}>{s => <option value={s.name}>{s.desc}</option>}</For></datalist>;
 
+/** Where the Inspector is (the user's choice, kept): docked at the side, floating over the sheet, or
+ *  folded to a strip. Its width, and a floating window's place and height, are kept too. */
+const keep = (k: string, d: string) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
+const store = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* private window */ } };
+export const [inspMode, setInspModeRaw] = createSignal<"dock" | "float" | "fold">((["dock", "float", "fold"].includes(keep("ds.insp.mode", "dock")) ? keep("ds.insp.mode", "dock") : "dock") as "dock" | "float" | "fold");
+export const setInspMode = (m: "dock" | "float" | "fold") => { setInspModeRaw(m); store("ds.insp.mode", m); window.dispatchEvent(new Event("resize")); };
+const [inspW, setInspW] = createSignal(Math.min(560, Math.max(240, +keep("ds.insp.w", "290") || 290)));
+const [inspPos, setInspPos] = createSignal<[number, number, number]>((() => { try { const v = JSON.parse(keep("ds.insp.pos", "null")); if (Array.isArray(v) && v.length === 3 && v.every(Number.isFinite)) return v as [number, number, number]; } catch { /* default */ } return [Math.max(0, innerWidth - 640), 40, 460]; })());
+/** A floating Inspector moved by its title bar, kept inside the window. */
+const moveFloat = (e: PointerEvent) => {
+  if (inspMode() !== "float" || (e.target as HTMLElement).closest("button")) return;
+  const el = e.currentTarget as HTMLElement, box = el.closest(".work")?.getBoundingClientRect();
+  const [x0, y0] = [e.clientX, e.clientY], [l0, t0, h] = inspPos();
+  el.setPointerCapture(e.pointerId);
+  const mv = (m: PointerEvent) => setInspPos([Math.max(0, Math.min((box?.width ?? innerWidth) - 80, l0 + m.clientX - x0)), Math.max(0, Math.min((box?.height ?? innerHeight) - 30, t0 + m.clientY - y0)), h]);
+  const up = () => { el.removeEventListener("pointermove", mv); el.removeEventListener("pointerup", up); store("ds.insp.pos", JSON.stringify(inspPos())); };
+  el.addEventListener("pointermove", mv); el.addEventListener("pointerup", up);
+};
+/** A floating Inspector resized by its corner. */
+const sizeFloat = (e: PointerEvent) => {
+  const el = e.currentTarget as HTMLElement, [x0, y0, w0] = [e.clientX, e.clientY, inspW()], [l, t, h0] = inspPos();
+  el.setPointerCapture(e.pointerId);
+  const mv = (m: PointerEvent) => { setInspW(Math.min(700, Math.max(240, w0 + m.clientX - x0))); setInspPos([l, t, Math.max(160, h0 + m.clientY - y0)]); };
+  const up = () => { el.removeEventListener("pointermove", mv); el.removeEventListener("pointerup", up); store("ds.insp.pos", JSON.stringify(inspPos())); store("ds.insp.w", String(inspW())); };
+  el.addEventListener("pointermove", mv); el.addEventListener("pointerup", up);
+};
 export const Inspector = () => {
   const one = createMemo(() => (sel().length === 1 ? sel()[0] : null));
   const it = () => (one() !== null ? itemOf(one()!) : undefined);
   const ln = () => (one() !== null ? lineOf(one()!) : undefined);
   const nt = () => (one() !== null ? proj()?.notes.find(n => n.id === one()) : undefined);
   return (
-    <aside class="insp">
+    <Show when={inspMode() !== "fold"} fallback={<aside class="irail" aria-label="Inspector (folded)"><button title="Show the Inspector" onClick={() => setInspMode("dock")}>«</button><span class="vlabel" onClick={() => setInspMode("dock")}>Inspector</span></aside>}>
+    <aside class="insp" classList={{ float: inspMode() === "float" }} style={inspMode() === "float" ? { left: `${inspPos()[0]}px`, top: `${inspPos()[1]}px`, width: `${inspW()}px`, height: `${inspPos()[2]}px` } : { width: `${inspW()}px` }}>
+      <Show when={inspMode() === "dock"}><div class="vgrip igrip" title="Drag to widen or narrow this panel" onPointerDown={e => grip(e, inspW, setInspW, "ds.insp.w", -1, 240, 560)} /></Show>
       <SpecNames />
-      <header>Inspector<Help k="inspector" /></header>
+      <header onPointerDown={moveFloat}>Inspector<Help k="inspector" /><span class="grow" />
+        <button class="ifold" title={inspMode() === "float" ? "Dock it at the side again" : "Float it as a window over the sheet (move it by its title, resize it by its corner)"} onClick={() => setInspMode(inspMode() === "float" ? "dock" : "float")}>{inspMode() === "float" ? "⇥" : "⧉"}</button>
+        <button class="ifold" title="Fold it to a strip (more room for the sheet)" onClick={() => setInspMode("fold")}>»</button></header>
       <div class="ibody">
         <Show when={proj() && sheet()}>
           <Show when={sel().length > 1}>
@@ -312,6 +343,8 @@ export const Inspector = () => {
           <Show when={!sel().length}><SheetPanel /></Show>
         </Show>
       </div>
+      <Show when={inspMode() === "float"}><div class="icorner" title="Drag to resize" onPointerDown={sizeFloat} /></Show>
     </aside>
+    </Show>
   );
 };

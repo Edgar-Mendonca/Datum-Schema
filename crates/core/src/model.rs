@@ -569,6 +569,11 @@ pub struct Settings {
     pub testpacks: crate::testpack::Packs,
     /// Problems accepted with a reason (kept for audit).
     pub accepted: Vec<crate::checks::Accepted>,
+    /// Symbol libraries kept in this project only (a client's legend for this job), named as the
+    /// user likes; they travel with the file.
+    pub libraries: Vec<crate::symlib::Library>,
+    /// Libraries (by id) left out of the Symbols panel for this project (unticked).
+    pub libs_off: Vec<String>,
 }
 
 /// A drawing standard: a library's name and, for each of Datum Schema's symbols, the library
@@ -602,7 +607,7 @@ pub const MAX_LOGO: usize = 280_000;
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), specs: vec![], tag_format: crate::tags::TagFormat::default(), rules: vec![], reports: vec![], arrangements: crate::arrange::starter(), safety: crate::safety::starter(), cases: crate::cases::default_cases(), case: "Normal".into(), assemblies: vec![], labels: vec![], components: vec![], hazop: crate::hazop::Study::default(), testpacks: crate::testpack::Packs::default(), accepted: vec![] }
+        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), specs: vec![], tag_format: crate::tags::TagFormat::default(), rules: vec![], reports: vec![], arrangements: crate::arrange::starter(), safety: crate::safety::starter(), cases: crate::cases::default_cases(), case: "Normal".into(), assemblies: vec![], labels: vec![], components: vec![], hazop: crate::hazop::Study::default(), testpacks: crate::testpack::Packs::default(), accepted: vec![], libraries: vec![], libs_off: vec![] }
     }
 }
 
@@ -766,7 +771,16 @@ impl Project {
         if self.units != "SI" && self.units != "US" {
             self.units = "SI".into();
         }
-        // Library symbols this project carries are known before anything is drawn.
+        // The project's own libraries, then the library symbols it carries, are known before anything
+        // is drawn. A library's own notes (symbols left out) are not problems with the edit.
+        let mut ids = HashSet::new();
+        let libs: Vec<crate::symlib::Library> = std::mem::take(&mut self.settings.libraries).into_iter().take(50).map(|l| crate::symlib::validate(l).0).filter(|l| ids.insert(l.id.clone())).collect();
+        for l in &libs {
+            l.symbols.iter().for_each(crate::symlib::register);
+        }
+        self.settings.libraries = libs;
+        self.settings.libs_off.retain(|x| !x.trim().is_empty());
+        self.settings.libs_off.dedup();
         let (copies, mut lw) = crate::symlib::check_copies(std::mem::take(&mut self.custom_syms));
         w.append(&mut lw);
         self.custom_syms = copies;

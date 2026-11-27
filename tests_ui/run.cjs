@@ -120,6 +120,12 @@ const shots = process.env.SHOTS;
   await p.click(".theme"); await p.click(".theme"); await p.waitForTimeout(200);
 
   // 10. Find the faults: the Checks panel lists the planted faults; the status bar counts them.
+  // A bottom tab: on the bar, or under More when the bar is full.
+  const btab = async name => {
+    const b = await p.$(`.btabs button.bt:has-text("${name}")`);
+    if (b && await b.isVisible()) return b.click();
+    await p.click(".btabs .bmore"); await p.click(`.menu button:has-text("${name}")`);
+  };
   const openEx = async name => {
     await p.evaluate(() => document.querySelector(".tabs .file").click()); await p.waitForTimeout(200);
     await p.click(`.tile:has(b:text-is("${name}"))`); await p.waitForTimeout(300);
@@ -146,7 +152,7 @@ const shots = process.env.SHOTS;
   void pumpB;
 
   // 12. The line list: rows from the drawing, hydraulics; export it to CSV.
-  await p.click(".btabs button:has-text('Line list')"); await p.waitForTimeout(500);
+  await btab('Line list'); await p.waitForTimeout(500);
   const lrows = await p.$$eval(".lists tbody tr.f td:first-child", els => els.map(e => e.textContent));
   check("the line list lists the line numbers", lrows.includes('3"-P-1003-A1A') && lrows.includes('4"-P-1001-A1A'), JSON.stringify(lrows));
   await p.click(".cfilter button:has-text('CSV')"); await p.waitForTimeout(400);
@@ -157,7 +163,7 @@ const shots = process.env.SHOTS;
   await cell.fill("Receiver outlet, edited"); await cell.press("Enter"); await p.waitForTimeout(400);
   pr2 = await project();
   check("editing the list edits the line", pr2.objects.some(o => o.data.service === "Receiver outlet, edited"));
-  await p.click(".btabs button:has-text('Equipment')"); await p.waitForTimeout(400);
+  await btab('Equipment'); await p.waitForTimeout(400);
   check("the equipment list", (await p.$$eval(".lists tbody tr.f td:first-child input", els => els.map(e => e.value))).includes("V-101"));
 
   // 13. DXF of the sheet.
@@ -227,7 +233,7 @@ const shots = process.env.SHOTS;
 
   // 19. US units: the Inspector and the lists follow; the file keeps SI.
   await p.click(".tabs button:text-is('Home')"); await p.click(".ribbon button:has-text('US: psi')"); await p.waitForTimeout(400);
-  await p.click(".btabs button:has-text('Line list')"); await p.waitForTimeout(400);
+  await btab('Line list'); await p.waitForTimeout(400);
   const heads = await p.$$eval(".lists thead th", els => els.map(e => e.textContent));
   check("US units in the line list", heads.some(h => h.includes("(gpm)")) && heads.some(h => h.includes("(psi)")), JSON.stringify(heads));
   check("the file keeps SI", (await project()).objects.find(o => o.data.flow)?.data.flow < 0.01);
@@ -262,7 +268,7 @@ const shots = process.env.SHOTS;
   await p.click(".addattr button"); await p.waitForTimeout(400);
   check("a project attribute is added to a class", (await project()).settings.user_attrs.some(u => u.class === "Pump" && u.attr.key === "seal_plan" && u.attr.required));
   await p.click(".bs .back"); await p.waitForTimeout(400);
-  await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
+  await btab('Checks'); await p.waitForTimeout(300);
   check("check 6 asks for the required attribute", (await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("seal plan")));
   const pq = await project(); const pa = pq.items.find(i => tagOf(pq, i) === "P-101A");
   const [sx, sy] = await scr(pa.x, pa.y + 2); await p.mouse.click(sx, sy); await p.waitForTimeout(300);
@@ -413,7 +419,7 @@ const shots = process.env.SHOTS;
   { const q = await project(); const hv = q.items.find(i => tagOf(q, i) === "HV-103");
     const [hx, hy] = await scr(hv.x, hv.y);
     await p.mouse.click(hx, hy, { button: "right" }); await p.click(".menu button:has-text('Turn round')"); await p.waitForTimeout(400);
-    await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
+    await btab('Checks'); await p.waitForTimeout(300);
     check("check 8 finds a check valve fitted the wrong way round", (await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("wrong way round")));
     await p.mouse.click(hx, hy, { button: "right" }); await p.click(".menu button:has-text('Turn round')"); await p.waitForTimeout(400);
     check("Turn round puts it right", !(await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("wrong way round"))); }
@@ -504,12 +510,12 @@ const shots = process.env.SHOTS;
     check("the stream table is on the sheet", frame.some(t => t.startsWith("Mass flow")) && frame.includes("Flash vapour") && frame.includes("36000"), JSON.stringify(frame.slice(-30)));
     const marks = await p.$$eval(".dsvg .lines text", els => els.map(e => e.textContent));
     check("each stream has its number beside it", ["1", "2", "3", "4", "5", "6", "7", "8"].every(n => marks.includes(n)), JSON.stringify(marks)); }
-  await p.click(".btabs button:has-text('Streams')"); await p.waitForTimeout(400);
+  await btab('Streams'); await p.waitForTimeout(400);
   check("the stream list lists the streams", (await p.$$eval(".lists tbody tr.f", els => els.length)) === 8);
   { check("streams in number order", (await p.$$eval(".lists tbody tr.f td:first-child input", els => els.map(e => e.value))).join(",") === "1,2,3,4,5,6,7,8");
     const cell = p.locator(".lists tbody tr.f >> nth=4").locator("td:nth-child(6) input");
     await cell.fill("9000"); await cell.press("Enter"); await p.waitForTimeout(400); }
-  await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
+  await btab('Checks'); await p.waitForTimeout(300);
   check("a wrong flow breaks the mass balance at the separator", (await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("Mass does not balance at V-301")));
   await p.keyboard.press("Control+z"); await p.waitForTimeout(400);
   check("undo puts it right", (await p.textContent(".status")).includes("0 errors"));
@@ -544,26 +550,26 @@ const shots = process.env.SHOTS;
   check("the components are listed in Options", await (async () => { await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Options')"); await p.waitForTimeout(300); const v = await p.inputValue(".compsec textarea"); await p.click(".bs .back"); await p.waitForTimeout(300); return v.split("\n").length === 4 && v.includes("Naphtha"); })());
   check("the stream table has a row per component", (await p.$$eval(".dsvg .frame text", els => els.map(e => e.textContent.trim()))).includes("Naphtha"));
   check("the compositions balance", (await p.textContent(".status")).includes("0 errors · 0 warnings"));
-  await p.click(".btabs button:has-text('Streams')"); await p.waitForTimeout(400);
+  await btab('Streams'); await p.waitForTimeout(400);
   { const ci = (await p.$$eval(".lists thead th", els => els.map(e => e.textContent))).findIndex(t => t.startsWith("Naphtha"));
     const cell = p.locator(".lists tbody tr.f >> nth=4").locator(`td:nth-child(${ci + 1}) input`);
     await cell.fill("0.4"); await cell.press("Enter"); await p.waitForTimeout(400); }
-  await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
+  await btab('Checks'); await p.waitForTimeout(300);
   { const t = await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent));
     check("a wrong fraction breaks the component balance and the sum", t.some(x => x.includes("Naphtha does not balance at V-301")) && t.some(x => x.includes("stream 5 adds up to 0.9"))); }
   await p.keyboard.press("Control+z"); await p.waitForTimeout(400);
 
   // 38. The I/O summary, and an instrument range that does not cover its line.
   await openEx("Pump transfer");
-  await p.click(".btabs button:has-text('I/O summary')"); await p.waitForTimeout(400);
+  await btab('I/O summary'); await p.waitForTimeout(400);
   { const rows = await p.$$eval(".lists tbody tr.f", els => els.map(e => [...e.querySelectorAll("td")].map(td => td.textContent)));
     check("the I/O summary counts inputs and outputs", rows.length >= 1 && rows.some(r => r[0] === "(not assigned)" && +r[1] >= 1 && +r[2] >= 1), JSON.stringify(rows)); }
-  await p.click(".btabs button:has-text('Instruments')"); await p.waitForTimeout(400);
+  await btab('Instruments'); await p.waitForTimeout(400);
   { const ci = (await p.$$eval(".lists thead th", els => els.map(e => e.textContent))).findIndex(t => t.startsWith("Range"));
     const ri = await p.$$eval(".lists tbody tr.f", els => els.findIndex(e => e.querySelector("td input")?.value === "PI-102"));
     const cell = p.locator(`.lists tbody tr.f >> nth=${ri}`).locator(`td:nth-child(${ci + 1}) input`);
     await cell.fill("0–2 bar"); await cell.press("Enter"); await p.waitForTimeout(400); }
-  await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
+  await btab('Checks'); await p.waitForTimeout(300);
   check("check 18 finds a range below the operating pressure", (await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(x => x.includes("range of PI-102")));
 
   // 39. The valve and fitting take-off: counted by type, size and class; export to CSV.
@@ -632,23 +638,23 @@ const shots = process.env.SHOTS;
   await p.waitForTimeout(500);
   { const sp = (await project()).settings.specs; check("a CSV table is read into the specs", sp.length === 2 && sp[0].items.length === 1 && sp[1].name === "B3A", JSON.stringify(sp.map(s => [s.name, s.items.length]))); }
   await p.click(".bs .back"); await p.waitForTimeout(300);
-  await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
+  await btab('Checks'); await p.waitForTimeout(300);
   { const t = await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent));
     check("check 22 finds valves the class no longer allows", t.some(x => x.includes("HV-104") && x.includes("outside pipe class A1A")) && t.some(x => x.includes("is not in pipe class A1A"))); }
   await p.keyboard.press("Control+z"); await p.waitForTimeout(400);
-  await p.click(".btabs button:has-text('Take-off')"); await p.waitForTimeout(400);
+  await btab('Take-off'); await p.waitForTimeout(400);
   check("the take-off gives each component its commodity code", (await p.$$eval(".lists tbody tr.f", els => els.map(e => e.textContent))).some(t => t.includes("VGA150-01")));
   { const rows = await p.$$eval(".lists tbody tr.f", els => els.map(e => [...e.querySelectorAll("td")].map(td => td.textContent)));
     check("flanges, gaskets and bolts are implied", rows.some(r => r[0] === "Gasket" && r[1] === '3"' && r[4] === "14" && r[8] === "GSW150-01"), JSON.stringify(rows.filter(r => r[0] === "Gasket"))); }
 
   // 44. Values passed along: a valve takes its line's size; one typed differently goes on To do.
   await openEx("Pump transfer");
-  await p.click(".btabs button:has-text('Valves')"); await p.waitForTimeout(400);
+  await btab('Valves'); await p.waitForTimeout(400);
   { const ri = await p.$$eval(".lists tbody tr.f", els => els.findIndex(e => e.querySelector("td input")?.value === "HV-104"));
     const cell = p.locator(`.lists tbody tr.f >> nth=${ri}`).locator("td:nth-child(3) input");
     check("the valve has its line's size and pipe class", (await cell.inputValue()) === "3" && (await p.locator(`.lists tbody tr.f >> nth=${ri}`).locator("td:nth-child(4)").textContent()) === "A1A");
     await cell.fill("2"); await cell.press("Enter"); await p.waitForTimeout(400); }
-  await p.click(".btabs button:has-text('To do')"); await p.waitForTimeout(400);
+  await btab('To do'); await p.waitForTimeout(400);
   check("an override goes on the To do list", (await p.$$eval(".todo .tw", els => els.map(e => e.textContent))).some(t => t.includes("HV-104's size is 2, its line's is 3")));
   await p.click(".todo button:has-text('Take the line')"); await p.waitForTimeout(400);
   check("taking the line's size clears it", (await p.$$(".todo")).length === 0 && (await project()).objects.find(o => o.tag === "HV-104").data.size === "3");
@@ -661,10 +667,9 @@ const shots = process.env.SHOTS;
   await p.fill(".dlg input", "Spare pump"); await p.click(".dlg footer button:has-text('Save')"); await p.waitForTimeout(400);
   check("the selection is saved as an assembly", (await project()).settings.assemblies.some(a => a.name === "Spare pump" && a.items.length === 1));
   await p.keyboard.press("Escape");
-  await p.click(".palette header button:has-text('Assemblies')"); await p.click(".asmrow:has-text('Spare pump')");
+  await p.fill(".psearch", "Spare"); await p.click(".asmrow:has-text('Spare pump')"); await p.fill(".psearch", "");
   { const [cx, cy] = await scr(200, 150); await p.mouse.click(cx, cy); await p.waitForTimeout(400); }
   { const q = await project(); check("the assembly is placed with the next free tag", q.items.some(i => tagOf(q, i) === "P-101C")); }
-  await p.click(".palette header button:has-text('Symbols')");
   await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Options')"); await p.waitForTimeout(300);
   await p.click(".lblsec button:has-text('Add a label rule')"); await p.waitForTimeout(300);
   await p.click(".bs .back"); await p.waitForTimeout(400);
@@ -679,7 +684,7 @@ const shots = process.env.SHOTS;
   await p.selectOption(".tagsec select >> nth=1", "project"); await p.waitForTimeout(300);
   check("the tag format shows the new tags", (await p.textContent(".tagsec")).includes("P-001, P-002"));
   await p.click(".bs .back"); await p.waitForTimeout(300);
-  await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
+  await btab('Checks'); await p.waitForTimeout(300);
   { const t = await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent)); const st = (await project()).settings.rules;
     check("check 24 runs the company rule", t.some(x => x.includes("material must be Titanium")), JSON.stringify([st, t.slice(0, 6), await p.textContent(".status")])); }
 
@@ -698,7 +703,7 @@ const shots = process.env.SHOTS;
   await wire("LT-101", "AI-01/1");
   check("the allocation shows the transmitter on channel 1", (await p.$$eval(".lists tbody tr.f", els => els.map(e => e.textContent))).some(t => t.includes("LT-101") && t.includes("used")));
   await wire("LV-101", "AI-01/2");
-  await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
+  await btab('Checks'); await p.waitForTimeout(300);
   check("check 25 finds a valve on an AI card", (await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("LV-101 needs an AO channel")));
 
   // 48. A pump's calculation sheet in Datum Calc, filled from its data.
@@ -731,7 +736,7 @@ const shots = process.env.SHOTS;
 
   // 51. A simulator's stream results imported into the PFD's streams, with a preview.
   await openEx("Crude preheat (PFD)");
-  await p.click(".btabs button:has-text('Streams')"); await p.waitForTimeout(300);
+  await btab('Streams'); await p.waitForTimeout(300);
   await p.click(".cfilter button:has-text('Import results')"); await p.waitForSelector(".dlg .imtbl");
   check("the preview lists the stream values", (await p.$$eval(".dlg .imtbl tbody tr", els => els.length)) >= 4);
   await p.click(".dlg footer button:has-text('Import')"); await p.waitForTimeout(400);
@@ -773,13 +778,13 @@ const shots = process.env.SHOTS;
   await openEx("Crude preheat (PFD)");
   await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title^='A new P&ID sheet from this process']"); await p.waitForTimeout(800);
   { const q = await project(); const st = q.objects.find(o => o.class === "Stream" && String(o.data.number) === "2");
-    await p.click(".btabs button:has-text('Streams')"); await p.waitForTimeout(400);
+    await btab('Streams'); await p.waitForTimeout(400);
     { const heads = await p.$$eval(".lists thead th", els => els.map(e => e.textContent));
       const col = heads.findIndex(h => h.startsWith("Pressure")) + 1;
       const row = p.locator(".lists tbody tr.f").nth(1);
       const inp = row.locator(`td:nth-child(${col}) input`); await inp.fill("13"); await inp.press("Tab"); await p.waitForTimeout(400); }
     void st;
-    await p.click(".btabs button:has-text('To do')"); await p.waitForTimeout(400);
+    await btab('To do'); await p.waitForTimeout(400);
     check("To do says the stream changed", (await p.$$eval(".todo .tw", els => els.map(e => e.textContent))).some(t => t.includes("Stream 2's operating pressure is now 13 bar")));
     await p.click(".todo:has-text('Stream 2') button:has-text(\"Take the stream's value\")"); await p.waitForTimeout(400);
     const r = await project(); const line = r.objects.find(o => o.class === "PipingNetworkSystem" && String(o.data.stream) === "2");
@@ -808,7 +813,7 @@ const shots = process.env.SHOTS;
     const shown = await p.$$eval(".lists tbody tr.f", els => els.map(e => e.textContent));
     check("the register lists it as not drawn", shown.length === 1 && shown[0].includes("Not drawn"), JSON.stringify(shown));
     await p.locator(".lists tbody tr.f td:nth-child(4)").first().click(); await p.waitForTimeout(200);
-    await p.click(".bcollapse"); await p.waitForTimeout(200);
+    await p.click(".bcollapse:not(.bdoc):not(.bwhere)"); await p.waitForTimeout(200);
     { const [x, y] = await scr(200, 150); await p.mouse.click(x, y); await p.waitForTimeout(400); }
     const r = await project(); check("the registered tag is drawn as the same object", r.items.some(i => i.obj === o.id), await p.textContent(".status")); }
   await p.keyboard.press("Escape");
@@ -820,13 +825,13 @@ const shots = process.env.SHOTS;
     check("the line list has insulation and tracing columns", heads.some(t => t.startsWith("Insulation")) && heads.some(t => t.startsWith("Tracing")));
     const col = heads.findIndex(t => t.startsWith("Tracing")) + 1;
     const inp = p.locator(`.lists tbody tr.f >> nth=0 >> td:nth-child(${col}) input`); await inp.fill("Steam"); await inp.press("Tab"); await p.waitForTimeout(400); }
-  await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
+  await btab('Checks'); await p.waitForTimeout(300);
   check("check 26 finds a traced line not insulated", (await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("traced (Steam) but not insulated")));
 
   // 61. A fix chosen from the Checks panel puts a problem right; problems marked on the sheet.
   await openEx("Find the faults");
-  await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
-  if (!(await p.$(".ctbl"))) { await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300); }
+  await btab('Checks'); await p.waitForTimeout(300);
+  if (!(await p.$(".ctbl"))) { await btab('Checks'); await p.waitForTimeout(300); }
   { const row = p.locator(".ctbl tbody tr", { hasText: "has no check valve on its discharge" }).first();
     await row.locator("button.fixb").click(); await p.waitForTimeout(300);
     await p.click(".menu button:has-text('Put a check valve in the discharge')"); await p.waitForTimeout(500);
@@ -860,8 +865,8 @@ const shots = process.env.SHOTS;
   await p.click(".tabs button:text-is('Lists')"); await p.click(".ribbon button:has-text('Safety')"); await p.waitForTimeout(400);
   { const rows = await p.$$eval(".lists tbody tr.f", els => els.map(e => e.textContent));
     check("the safety analysis lists what V-101 has and lacks", rows.some(t => t.startsWith("V-101") && t.includes("PSV") && t.includes("PSV-101") && t.includes("Provided")) && rows.some(t => t.startsWith("V-101") && t.includes("PSH") && t.includes("Missing")), rows.slice(0, 6).join(" | ")); }
-  await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300);
-  if (!(await p.$(".ctbl"))) { await p.click(".btabs button:has-text('Checks')"); await p.waitForTimeout(300); }
+  await btab('Checks'); await p.waitForTimeout(300);
+  if (!(await p.$(".ctbl"))) { await btab('Checks'); await p.waitForTimeout(300); }
   check("check 27 notes the missing protections", (await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("V-101 has no PSH (high pressure)")));
 
   // 65. The electrical load list with its total, and the data completeness.
@@ -1055,6 +1060,28 @@ const shots = process.env.SHOTS;
   await p.waitForSelector(".dsvg .underlay image");
   check("a scan goes behind the sheet as a picture", ((await p.getAttribute(".dsvg .underlay image", "href")) ?? "").startsWith("data:image/png;base64,"));
   await p.keyboard.press("Escape"); await p.waitForTimeout(200);
+
+  // 79. The workspace: the left pane folds to a strip, the Inspector floats and folds, the bottom
+  // tabs never spill, a list opens as a tab beside the sheets.
+  await openEx("Compressor package");
+  check("the symbols are a tree with folding branches", (await p.$$(".palette .tgrp")).length >= 8 && (await p.$$(".palette .ti.psym")).length >= 20);
+  await p.click(".pfold"); await p.waitForTimeout(300);
+  check("the left pane folds to a strip", !!(await p.$(".prail")) && !(await p.$(".palette")));
+  await p.click(".prail button[title='Show the panel']"); await p.waitForTimeout(300);
+  await p.click(".insp button[title^='Float it']"); await p.waitForTimeout(300);
+  check("the Inspector floats over the sheet", !!(await p.$(".insp.float")));
+  await p.click(".insp button[title^='Dock it']"); await p.waitForTimeout(300);
+  await p.click(".insp button[title^='Fold it']"); await p.waitForTimeout(300);
+  check("the Inspector folds to a strip", !!(await p.$(".irail")) && !(await p.$(".insp")));
+  await p.click(".irail button"); await p.waitForTimeout(300);
+  { const nav = await p.$eval(".btabs", el => [el.getBoundingClientRect().right, Math.max(...[...el.querySelectorAll("button")].filter(b => b.offsetParent).map(b => b.getBoundingClientRect().right))]);
+    check("the bottom tabs stay inside their bar", nav[1] <= nav[0] + 1, JSON.stringify(nav)); }
+  await btab('Equipment'); await p.waitForTimeout(300);
+  await p.click(".btabs button[title^='Open this list in a tab']"); await p.waitForTimeout(500);
+  check("a list opens as a tab beside the sheets", ((await p.textContent(".stabs .dtab.on")) ?? "").includes("Equipment") && ((await p.textContent(".docview .egrid")) ?? "").includes("K-201"));
+  await p.click(".stabs button:text-is('PID-200')"); await p.waitForTimeout(300);
+  check("and the sheet comes back", await p.isVisible(".canvhold svg"));
+  await p.click(".stabs .dtab .dx"); await p.waitForTimeout(200);
 
   // 53. No commercial product name anywhere in the window (FAMILY §13): the built bundle, and the
   // text shown on each ribbon tab. The names are kept in ROT13 so this file does not name them.

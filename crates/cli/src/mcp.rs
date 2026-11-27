@@ -30,7 +30,7 @@ fn tools() -> Value {
         { "name": "get_list", "description": "A list as rows: lines, equipment, instruments, valves, register, safety, loads, testpacks, hazop… (see `datum-schema-cli lists`).", "inputSchema": obj(json!({ "kind": { "type": "string" } }), &["kind"]) },
         { "name": "find", "description": "Find anything with a plain query: \"control valves without a bypass\", \"lines with velocity above 3 m/s\", \"pumps without a check valve\", \"instruments without a range\", \"equipment with errors\", a tag pattern like FT-1*. Says what it understood and any words it did not.", "inputSchema": obj(json!({ "query": { "type": "string" } }), &["query"]) },
         { "name": "plan_isolation", "description": "The valves and blinds that isolate symbols or lines (by id), the vents and drains inside, and what stops a safe isolation. A planning aid.", "inputSchema": obj(json!({ "ids": ids }), &["ids"]) },
-        { "name": "convert_dxf", "description": "Turn an old P&ID (DXF, or a PDF drawn by a CAD program) into a new live sheet of the open project (or a new project): blocks become symbols by their names, and instrument bubbles, bow-tie valves and pumps drawn as loose lines by their shapes (map overrides: {\"BLOCK\": \"gate\"}, \"\" leaves a block out), lines are traced and joined to the symbols, line numbers read. Without convert: true, only lists the blocks and what each would become.", "inputSchema": obj(json!({ "path": { "type": "string" }, "map": { "type": "object" }, "convert": { "type": "boolean" } }), &["path"]) },
+        { "name": "convert_dxf", "description": "Turn an old P&ID (DXF, DWG, or a PDF drawn by a CAD program) into a new live sheet of the open project (or a new project): blocks become symbols by their names, and instrument bubbles, bow-tie valves and pumps drawn as loose lines by their shapes (map overrides: {\"BLOCK\": \"gate\"}, \"\" leaves a block out), lines are traced and joined to the symbols, line numbers read. Without convert: true, only lists the blocks and what each would become.", "inputSchema": obj(json!({ "path": { "type": "string" }, "map": { "type": "object" }, "convert": { "type": "boolean" } }), &["path"]) },
         { "name": "list_symbols", "description": "The symbol keys AddItem takes, with their connection points.", "inputSchema": obj(json!({}), &[]) },
         { "name": "list_operations", "description": "The named operations that change a project, each with an example.", "inputSchema": obj(json!({}), &[]) },
         { "name": "apply_operation", "description": "Change the open project with one named operation (see list_operations), e.g. {\"SetTag\":{\"id\":11,\"tag\":\"HV-101\"}}. Numbers are SI base units. A failed operation changes nothing. Returns the ids it created and the checks now open.", "inputSchema": obj(json!({ "operation": { "type": ["object", "string"] } }), &["operation"]) },
@@ -115,10 +115,10 @@ fn call(doc: &mut Option<Doc>, name: &str, a: &Value) -> Result<Value, String> {
         "list_examples" => Ok(json!(examples::list())),
         "convert_dxf" => {
             let path = s("path").ok_or("path is needed")?;
-            if ![".dxf", ".pdf"].iter().any(|x| path.to_lowercase().ends_with(x)) {
-                return Err("Give a .dxf or .pdf drawing.".into());
+            if ![".dxf", ".dwg", ".pdf"].iter().any(|x| path.to_lowercase().ends_with(x)) {
+                return Err("Give a .dxf, .dwg or .pdf drawing.".into());
             }
-            let text = std::fs::read(&path).map(|b| datum_core::dxfin::source(&b)).map_err(|e| format!("Could not open {path}: {e}"))?;
+            let text = datum_core::dxfin::source_checked(&std::fs::read(&path).map_err(|e| format!("Could not open {path}: {e}"))?)?;
             let scan = datum_core::convert::scan(&text)?;
             let mut map = datum_core::convert::suggested(&scan);
             if let Some(m) = a["map"].as_object() {

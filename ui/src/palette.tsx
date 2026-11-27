@@ -2,8 +2,8 @@
 // instrument functions ready-lettered. Drag a symbol onto the sheet, or click it and then click the
 // sheet.
 import { AssembliesPanel } from "./assemblies";
-import { For, Show, createSignal, createMemo } from "solid-js";
-import { lib, setTool, tool, libs, proj } from "./store";
+import { For, Show, createSignal, createMemo, JSX } from "solid-js";
+import { lib, setTool, tool, allLibs, proj } from "./store";
 import { SymInfo, Cat } from "./api";
 import { PrimEl } from "./canvas";
 import { Help } from "./help";
@@ -30,13 +30,36 @@ export const SymPic = (p: { s: SymInfo; size?: number; letters?: string }) => {
   </svg>;
 };
 
+/** The left pane's width (dragged, kept) and whether it is folded to a strip (as in every Datum app). */
+const keep = (k: string, d: string) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
+const store = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* private window */ } };
+export const [paneW, setPaneW] = createSignal(Math.min(480, Math.max(190, +keep("ds.pane.w", "250") || 250)));
+export const [paneFolded, setPaneFolded] = createSignal(keep("ds.pane.folded", "0") === "1");
+export const foldPane = (v: boolean) => { setPaneFolded(v); store("ds.pane.folded", v ? "1" : "0"); window.dispatchEvent(new Event("resize")); };
+/** A side panel's edge, dragged to widen or narrow it (Datum Mesh's grip). */
+export const grip = (e: PointerEvent, w: () => number, set: (v: number) => void, key: string, dir: 1 | -1, lo: number, hi: number) => {
+  const x0 = e.clientX, w0 = w(), el = e.currentTarget as HTMLElement; el.setPointerCapture(e.pointerId);
+  const mv = (m: PointerEvent) => set(Math.min(hi, Math.max(lo, w0 + dir * (m.clientX - x0))));
+  const up = () => { el.removeEventListener("pointermove", mv); el.removeEventListener("pointerup", up); store(key, String(w())); window.dispatchEvent(new Event("resize")); };
+  el.addEventListener("pointermove", mv); el.addEventListener("pointerup", up);
+};
+
+/** A branch of the tree (Datum Mesh's): a heading with its count that folds. */
+const Branch = (p: { t: string; n: number; open: boolean; toggle: () => void; children: JSX.Element }) => (
+  <div class="tgrp" classList={{ open: p.open }}>
+    <button class="tsum" onClick={p.toggle}><span class="tt">{p.t}</span><span class="pill">{p.n}</span></button>
+    <Show when={p.open}><div class="tlist">{p.children}</div></Show>
+  </div>
+);
+
 export const Palette = () => {
   const [q, setQ] = createSignal("");
-  const [open, setOpen] = createSignal<Record<string, boolean>>({ vessel: true, rotating: true, valve: true, presets: true });
+  const [open, setOpen] = createSignal<Record<string, boolean>>(JSON.parse(keep("ds.pane.open", '{"vessel":true,"rotating":true,"valve":true,"presets":true}')));
+  const toggle = (k: string) => { const v = { ...open(), [k]: !open()[k] }; setOpen(v); store("ds.pane.open", JSON.stringify(v)); };
+  const isOpen = (k: string) => !!q().trim() || !!open()[k];
+  const match = (x: { name: string; cat_name?: string; key?: string }) => { const s = q().trim().toLowerCase(); return !s || x.name.toLowerCase().includes(s) || (x.cat_name ?? "").toLowerCase().includes(s) || (x.key ?? "").includes(s); };
   const groups = createMemo(() => {
-    const s = q().trim().toLowerCase();
     const all = lib()?.symbols.filter(x => x.key !== "unknown" && !x.key.startsWith("x.")) ?? [];
-    const match = (x: SymInfo) => !s || x.name.toLowerCase().includes(s) || x.cat_name.toLowerCase().includes(s) || x.key.includes(s);
     return CATS.map(c => ({ c, name: all.find(x => x.cat === c)?.cat_name ?? c, syms: all.filter(x => x.cat === c && match(x)).sort((a, b) => Number(a.rare) - Number(b.rare)) })).filter(g => g.syms.length);
   });
   const presets = createMemo(() => { const s = q().trim().toLowerCase(); return PRESETS.filter(p => !s || p[0].toLowerCase().includes(s) || p[2].toLowerCase().includes(s)); });
@@ -44,43 +67,40 @@ export const Palette = () => {
   const drag = (e: DragEvent, sym: string, tag?: string) => { e.dataTransfer?.setData("text/x-datum-sym", sym); if (tag) e.dataTransfer?.setData("text/x-datum-tag", tag); e.dataTransfer!.effectAllowed = "copy"; };
   const on = (sym: string, tag?: string) => { const t = tool(); return t.k === "place" && t.sym === sym && (t.tag ?? "") === (tag ?? ""); };
   const sym = (k: string) => lib()?.symbols.find(s => s.key === k);
-  const [side, setSide] = createSignal<"symbols" | "library" | "assemblies" | "plant">("symbols");
+  const [side, setSide] = createSignal<"symbols" | "plant">("symbols");
   // With a drawing standard, our symbols are shown as the library draws them.
   const shown = (s: SymInfo) => { const k = proj()?.settings.standard.map[s.key]; return (k && sym(k)) || s; };
-  const libGroups = createMemo(() => libs().map(v => ({ name: v.library.name, syms: v.library.symbols.map(c => sym(c.key)).filter(Boolean) as SymInfo[] })).filter(g => g.syms.length));
+  const libGroups = createMemo(() => allLibs().filter(v => v.shown).map(v => ({ name: v.library.name, syms: v.library.symbols.map(c => sym(c.key)).filter((x): x is SymInfo => !!x && match(x)) })).filter(g => g.syms.length));
+  const asm = () => (proj()?.settings.assemblies ?? []).filter(a => match({ name: a.name }));
+  const Row = (r: { s: SymInfo; pic: SymInfo; label: string; tag?: string; title?: string }) => (
+    <button class="ti psym" classList={{ on: on(r.s.key, r.tag), rare: r.s.rare }} draggable={true} title={r.title ?? `${r.s.name}${r.s.inline ? " (goes in a line)" : ""}`} onDragStart={e => drag(e, r.s.key, r.tag)} onClick={() => pick(r.s.key, r.tag)}>
+      <SymPic s={r.pic} size={20} letters={r.tag} /><span>{r.label}</span></button>
+  );
   return (
-    <aside class="palette">
-      <header><button classList={{ on: side() === "symbols" }} onClick={() => setSide("symbols")}>Symbols</button><Show when={libs().length}><button classList={{ on: side() === "library" }} onClick={() => setSide("library")}>Library</button></Show><Show when={proj()?.settings.assemblies.length}><button classList={{ on: side() === "assemblies" }} onClick={() => setSide("assemblies")}>Assemblies</button></Show><button classList={{ on: side() === "plant" }} onClick={() => setSide("plant")}>Plant</button><Help k={side() === "plant" ? "plant" : "palette"} /></header>
+    <Show when={!paneFolded()} fallback={
+      <aside class="prail" aria-label="Symbols and plant (folded)">
+        <button title="Show the panel" onClick={() => foldPane(false)}>»</button>
+        <button title="Symbols" classList={{ on: side() === "symbols" }} onClick={() => { setSide("symbols"); foldPane(false); }}><svg class="ic"><use href="#i-plus" /></svg></button>
+        <button title="Plant" classList={{ on: side() === "plant" }} onClick={() => { setSide("plant"); foldPane(false); }}><svg class="ic"><use href="#i-tag" /></svg></button>
+      </aside>}>
+    <aside class="palette" style={{ width: `${paneW()}px` }}>
+      <header class="ttabs" role="tablist"><button role="tab" classList={{ on: side() === "symbols" }} onClick={() => setSide("symbols")}>Symbols</button><button role="tab" classList={{ on: side() === "plant" }} onClick={() => setSide("plant")}>Plant</button><Help k={side() === "plant" ? "plant" : "palette"} /><button class="pfold" title="Fold the panel to a strip (more room for the sheet)" onClick={() => foldPane(true)}>«</button></header>
       <Show when={side() === "plant"}><PlantPanel /></Show>
-      <Show when={side() === "assemblies"}><AssembliesPanel /></Show>
-      <Show when={side() === "library"}>
-        <div class="pbody"><For each={libGroups()}>{g => <section>
-          <div class="pcat"><span>▾</span>{g.name}<small>{g.syms.length}</small></div>
-          <div class="pgrid"><For each={g.syms}>{s => <button class="psym" classList={{ on: on(s.key) }} draggable={true} title={s.name} onDragStart={e => drag(e, s.key)} onClick={() => pick(s.key)}><SymPic s={s} /><span>{s.name}</span></button>}</For></div>
-        </section>}</For>
-        <p class="muted small plhint">A library's symbols, to place one by one. To draw the whole project to a client's standard, use File › Options › Drawing standard.</p></div>
-      </Show>
       <Show when={side() === "symbols"}>
-      <input class="psearch" placeholder="Find a symbol (ball valve, pump…)" value={q()} onInput={e => setQ(e.currentTarget.value)} />
-      <div class="pbody">
-        <For each={groups()}>{g => <section>
-          <button class="pcat" onClick={() => setOpen({ ...open(), [g.c]: !(open()[g.c] || !!q()) })}><span>{open()[g.c] || q() ? "▾" : "▸"}</span>{g.name}<small>{g.syms.length}</small></button>
-          <Show when={open()[g.c] || q()}>
-            <div class="pgrid">
-              <For each={g.syms}>{s => <button class="psym" classList={{ on: on(s.key), rare: s.rare }} draggable={true} title={`${s.name}${s.inline ? " (goes in a line)" : ""}`} onDragStart={e => drag(e, s.key)} onClick={() => pick(s.key)}>
-                <SymPic s={shown(s)} /><span>{s.name}</span></button>}</For>
-            </div>
-          </Show>
-        </section>}</For>
-        <Show when={presets().length}><section>
-          <button class="pcat" onClick={() => setOpen({ ...open(), presets: !open().presets })}><span>{open().presets || q() ? "▾" : "▸"}</span>Common instruments<small>{presets().length}</small></button>
-          <Show when={open().presets || q()}>
-            <div class="pgrid presets"><For each={presets()}>{([l, k, name]) => <Show when={sym(k)}>{s => <button class="psym" classList={{ on: on(k, l) }} draggable={true} title={`${name} (${l})`} onDragStart={e => drag(e, k, l)} onClick={() => pick(k, l)}><SymPic s={s()} letters={l} /><span>{name}</span></button>}</Show>}</For></div>
-          </Show>
-        </section></Show>
-        <Show when={!groups().length && !presets().length}><p class="muted pnone">No symbol is called that.</p></Show>
+      <label class="tfilter"><svg class="ic"><use href="#i-search" /></svg><input class="psearch" type="search" placeholder="Find a symbol (ball valve, pump…)" value={q()} onInput={e => setQ(e.currentTarget.value)} /></label>
+      <div class="pbody tbody">
+        <For each={groups()}>{g => <Branch t={g.name} n={g.syms.length} open={isOpen(g.c)} toggle={() => toggle(g.c)}>
+          <For each={g.syms}>{s => <Row s={s} pic={shown(s)} label={s.name} />}</For></Branch>}</For>
+        <Show when={presets().length}><Branch t="Common instruments" n={presets().length} open={isOpen("presets")} toggle={() => toggle("presets")}>
+          <For each={presets()}>{([l, k, name]) => <Show when={sym(k)}>{s => <Row s={s()} pic={s()} label={name} tag={l} title={`${name} (${l})`} />}</Show>}</For></Branch></Show>
+        <For each={libGroups()}>{g => <Branch t={g.name} n={g.syms.length} open={isOpen(`lib:${g.name}`)} toggle={() => toggle(`lib:${g.name}`)}>
+          <For each={g.syms}>{s => <Row s={s} pic={s} label={s.name} />}</For></Branch>}</For>
+        <Show when={asm().length}><Branch t="Assemblies" n={asm().length} open={isOpen("asm")} toggle={() => toggle("asm")}><AssembliesPanel /></Branch></Show>
+        <Show when={!groups().length && !presets().length && !libGroups().length && !asm().length}><p class="muted pnone">No symbol is called that.</p></Show>
       </div>
       </Show>
+      <div class="vgrip pgrip" title="Drag to widen or narrow this panel" onPointerDown={e => grip(e, paneW, setPaneW, "ds.pane.w", 1, 190, 480)} />
     </aside>
+    </Show>
   );
 };

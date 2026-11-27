@@ -214,6 +214,13 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             let old = a["old"].as_str().map(str::to_string);
             serde_json::to_value(datum_core::symlib::save(&lib_dir(), lib, old.as_deref())?).unwrap()
         }
+        "library_validate" => {
+            let lib: datum_core::symlib::Library = serde_json::from_value(a["lib"].clone()).map_err(|e| e.to_string())?;
+            let (lib, w) = datum_core::symlib::validate(lib);
+            serde_json::to_value(datum_core::symlib::view("", lib, w)).unwrap()
+        }
+        "symbol_draw" => json!(datum_core::symbols::get(&str_("key")).map(|s| s.draw.to_string()).ok_or("There is no such symbol.")?),
+        "symbol_svg" => json!(datum_core::symbols::svg(&datum_core::symbols::parse(&str_("draw")))),
         "library_delete" => {
             let _ = std::fs::remove_file(lib_dir().join(str_("file")));
             Value::Null

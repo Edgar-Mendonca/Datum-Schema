@@ -385,11 +385,11 @@ fn builtin_sets() -> Vec<LibView> {
     symlib::builtin_views()
 }
 
-/// Reads a client's legend sheet (DXF) into a library to review; nothing is saved yet.
+/// Reads a client's legend sheet (DXF, DWG or PDF) into a library to review; nothing is saved yet.
 #[tauri::command]
 async fn legend_scan(app: AppHandle, path: Option<String>) -> R<Option<LibView>> {
-    let Some(path) = path.map(PathBuf::from).or_else(|| pick(&app, "DXF drawing (save a DWG as DXF from any CAD program)", &["dxf"])) else { return Ok(None) };
-    let text = String::from_utf8_lossy(&std::fs::read(&path).map_err(|e| format!("Could not open {}: {e}", path.display()))?).into_owned();
+    let Some(path) = path.map(PathBuf::from).or_else(|| pick(&app, "Legend sheet (DXF, DWG or PDF)", &["dxf", "dwg", "pdf"])) else { return Ok(None) };
+    let text = datum_core::dxfin::source_checked(&std::fs::read(&path).map_err(|e| format!("Could not open {}: {e}", path.display()))?)?;
     let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("Library").to_string();
     let scan = guard(|| symlib::scan_legend(&text, &name))?;
     let mut lib = scan.library;
@@ -404,8 +404,8 @@ static PENDING: std::sync::Mutex<Option<(String, String)>> = std::sync::Mutex::n
 /// Reads an old P&ID (DXF or PDF) for the review: its blocks and shapes with the symbols suggested.
 #[tauri::command]
 async fn convert_scan(app: AppHandle, path: Option<String>) -> R<Option<(String, datum_core::convert::Scan)>> {
-    let Some(path) = path.map(PathBuf::from).or_else(|| pick(&app, "Old P&ID (DXF, or a PDF drawn by a CAD program)", &["dxf", "pdf"])) else { return Ok(None) };
-    let text = datum_core::dxfin::source(&std::fs::read(&path).map_err(|e| format!("Could not open {}: {e}", path.display()))?);
+    let Some(path) = path.map(PathBuf::from).or_else(|| pick(&app, "Old P&ID (DXF, DWG, or a PDF drawn by a CAD program)", &["dxf", "dwg", "pdf"])) else { return Ok(None) };
+    let text = datum_core::dxfin::source_checked(&std::fs::read(&path).map_err(|e| format!("Could not open {}: {e}", path.display()))?)?;
     let name = path.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
     let scan = guard(|| datum_core::convert::scan(&text))?;
     *PENDING.lock().unwrap_or_else(|e| e.into_inner()) = Some((name.clone(), text));
@@ -431,8 +431,8 @@ fn convert_apply(st: State<St>, map: std::collections::BTreeMap<String, String>)
 /// Puts an old drawing (DXF, PDF, or a scan as PNG or JPEG) behind a sheet.
 #[tauri::command]
 async fn underlay_import(app: AppHandle, st: State<'_, St>, sheet: u32) -> R<Option<Out>> {
-    let Some(path) = pick(&app, "Old drawing (DXF, PDF, or a scan as PNG or JPEG)", &["dxf", "pdf", "png", "jpg", "jpeg"]) else { return Ok(None) };
-    let text = datum_core::dxfin::source(&std::fs::read(&path).map_err(|e| format!("Could not open {}: {e}", path.display()))?);
+    let Some(path) = pick(&app, "Old drawing (DXF, DWG, PDF, or a scan as PNG or JPEG)", &["dxf", "dwg", "pdf", "png", "jpg", "jpeg"]) else { return Ok(None) };
+    let text = datum_core::dxfin::source_checked(&std::fs::read(&path).map_err(|e| format!("Could not open {}: {e}", path.display()))?)?;
     let name = path.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
     guard(|| {
         let mut a = st.lock();
@@ -529,6 +529,26 @@ fn underlay_svg(st: State<St>, sheet: u32) -> String {
 fn library_save(app: AppHandle, lib: Library, old: Option<String>) -> R<LibView> {
     let d = lib_dir(&app)?;
     guard(|| symlib::save(&d, lib, old.as_deref()))
+}
+
+/// A library checked as it would be saved (its id, keys and symbols), and its pictures, to keep
+/// in a project.
+#[tauri::command]
+fn library_validate(lib: Library) -> LibView {
+    let (lib, w) = symlib::validate(lib);
+    symlib::view("", lib, w)
+}
+
+/// A symbol's drawing (the symbol language), to start a new symbol from a copy of it.
+#[tauri::command]
+fn symbol_draw(key: String) -> R<String> {
+    datum_core::symbols::get(&key).map(|s| s.draw.to_string()).ok_or_else(|| "There is no such symbol.".into())
+}
+
+/// A symbol's drawing as SVG, for the symbol editor's picture.
+#[tauri::command]
+fn symbol_svg(draw: String) -> String {
+    datum_core::symbols::svg(&datum_core::symbols::parse(&datum_core::clip(&draw, 200_000)))
 }
 
 #[tauri::command]
@@ -895,7 +915,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, import_streams, import_list, fixes, nozzles, sheet_manager, isolation, test_packs, handover_summary, convert_scan, convert_apply, report_sources, report_preview, arrangement_starter, register_read, register_file, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, builtin_sets, legend_scan, library_save, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, tags_to_place, send, sheet_compare, title_preview, title_standard, spec_starter, specs_csv, todo, calc_sheets, sizing, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
+            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, import_streams, import_list, fixes, nozzles, sheet_manager, isolation, test_packs, handover_summary, convert_scan, convert_apply, report_sources, report_preview, arrangement_starter, register_read, register_file, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, builtin_sets, legend_scan, library_save, library_validate, symbol_draw, symbol_svg, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, tags_to_place, send, sheet_compare, title_preview, title_standard, spec_starter, specs_csv, todo, calc_sheets, sizing, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
             options, set_options, autosave, recovery, recover, recent, startup_file, open_url, version, quit, check_update, install_update
         ])
         .run(tauri::generate_context!())

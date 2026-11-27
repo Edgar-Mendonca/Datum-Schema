@@ -1247,3 +1247,90 @@ tr.behind td { background: var(--err-bg); }
 
 /* Nozzles (0.8.0) */
 .noztbl input { width: 100%; min-width: 0; }
+
+/* ---------------------------------------------------------------- 0.11.2 workspace
+   The left pane as a tree (Datum Mesh's tree: tabs, a filter, branches that fold, one row per symbol),
+   resizable, folded to a strip; the Inspector docked, floating or folded; the bottom tabs never
+   hidden; lists and big windows opened as tabs beside the sheets. */
+.palette { position: relative; background: var(--bg2); }
+.palette .ttabs, .insp .ttabs { display: flex; align-items: stretch; border-bottom: 1px solid var(--line); flex: none; padding: 0; gap: 0; letter-spacing: 0; text-transform: none; font: inherit; }
+.palette .ttabs button[role=tab] { flex: 1; padding: 6px 0 5px; color: var(--muted); border-bottom: 2px solid transparent; font: 500 12px var(--sans); }
+.palette .ttabs button[role=tab].on { color: var(--blue); border-bottom-color: var(--blue); }
+.palette .ttabs .help { flex: none; margin: auto 4px; }
+.pfold, .ifold { flex: none; width: 24px; color: var(--muted); font-size: 13px; padding: 0; }
+.pfold:hover, .ifold:hover { color: var(--blue); background: var(--pale); }
+.tfilter { display: flex; align-items: center; gap: 6px; margin: 6px 8px 4px; padding: 0 8px; height: 24px; border: 1px solid var(--line); background: var(--panel); flex: none; }
+.tfilter:focus-within { border-color: var(--blue); }
+.tfilter .ic { width: 13px; height: 13px; color: var(--muted); flex: none; }
+.tfilter input, .tfilter input:focus { border: 0 !important; outline: 0; border-radius: 0; background: none; flex: 1; min-width: 0; font: inherit; font-size: 12px; padding: 0; height: 22px; margin: 0; color: var(--text); box-shadow: none; }
+.palette .tbody { padding: 2px 0 10px; font-size: 12px; }
+.tgrp .tsum { display: flex; align-items: center; gap: 6px; width: 100%; padding: 4px 8px 3px 6px; font: 600 12px var(--sans); letter-spacing: 0; text-transform: none; color: var(--text); text-align: left; }
+.tgrp .tsum:hover { background: var(--pale); }
+.tgrp .tsum::before { content: ""; width: 0; height: 0; border-left: 4px solid var(--muted); border-top: 3.5px solid transparent; border-bottom: 3.5px solid transparent; transition: transform .12s; flex: none; }
+.tgrp.open > .tsum::before { transform: rotate(90deg); }
+.tgrp .tsum .tt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tgrp .tsum .pill { margin-left: auto; font: 500 9.5px var(--mono); padding: 0 5px; color: var(--muted); border: 0; background: none; }
+.tlist { margin-left: 11px; border-left: 1px solid var(--line); }
+.palette .ti.psym { flex-direction: row; align-items: center; gap: 7px; padding: 1px 8px 1px 8px; min-height: 24px; font-size: 12px; line-height: 1.2; color: var(--text); text-align: left; border: 0; border-left: 2px solid transparent; cursor: grab; }
+.palette .ti.psym span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; -webkit-line-clamp: unset; }
+.palette .ti.psym .sympic { flex: none; }
+.palette .ti.psym:hover { background: var(--pale); }
+.palette .ti.psym.on { background: var(--sel); border-left-color: var(--blue); }
+.asmlist { padding: 2px 6px 2px 4px; }
+.vgrip { width: 5px; flex: none; cursor: col-resize; z-index: 3; }
+.vgrip:hover, .vgrip:active { background: var(--blue); opacity: .35; }
+.pgrip { position: absolute; top: 0; bottom: 0; right: -3px; }
+.prail, .irail { width: 30px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; background: var(--panel); }
+.prail { border-right: 1px solid var(--line); }
+.irail { border-left: 1px solid var(--line); }
+.prail button, .irail button { width: 24px; height: 24px; padding: 0; color: var(--muted); display: grid; place-items: center; }
+.prail button.on { color: var(--blue); }
+.prail button:hover, .irail button:hover { background: var(--pale); color: var(--blue); }
+.prail .ic, .irail .ic { width: 15px; height: 15px; }
+.irail .vlabel { writing-mode: vertical-rl; font: 500 10px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-top: 6px; cursor: pointer; }
+.insp { position: relative; }
+.insp header .grow { flex: 1; }
+.insp header .ifold { height: 20px; }
+.igrip { position: absolute; top: 0; bottom: 0; left: -3px; }
+.insp.float { position: absolute; z-index: 20; max-height: calc(100% - 8px); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0, 0, 0, .2); }
+.insp.float header { cursor: move; background: var(--panel2, var(--panel)); }
+.insp.float .ibody { flex: 1; overflow: auto; min-height: 0; }
+.icorner { position: absolute; right: 0; bottom: 0; width: 14px; height: 14px; cursor: nwse-resize; background: linear-gradient(135deg, transparent 50%, var(--line3, var(--line)) 50%); }
+.btabs { overflow: hidden; }
+.btabs > button { white-space: nowrap; flex: none; }
+.btabs .bmore { padding: 6px 10px; font: 500 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--blue); }
+.docview { flex: 1; min-height: 0; flex-direction: column; background: var(--bg2); overflow: hidden; }
+.docview > .lists { flex: 1; }
+.dlg.intab { position: static; flex: 1; width: auto !important; max-width: none !important; max-height: none !important; height: 100%; margin: 0; box-shadow: none; border: 0; display: flex; flex-direction: column; min-height: 0; }
+.dlg.intab .bd { flex: 1; overflow: auto; min-height: 0; max-height: none; }
+.dlg header .grow { flex: 1; }
+.dlg header .totab { font-size: 14px; }
+.stabs .dtab { display: flex; align-items: stretch; border-left: 1px solid var(--line); }
+.stabs .dtab button { padding: 0 6px 0 12px; font: 500 11px var(--sans); color: var(--text2); border-bottom: 2px solid transparent; white-space: nowrap; }
+.stabs .dtab button.dx { padding: 0 8px 0 2px; color: var(--muted); }
+.stabs .dtab.on button { color: var(--blue); background: var(--bg2); border-bottom-color: var(--blue); }
+.stabs .dtab button.dx:hover { color: var(--crit, #c00); }
+.palette .ttabs button[role=tab] { text-transform: none; letter-spacing: 0; }
+.palette .ttabs .pfold { font-size: 14px; }
+/* symbol libraries and the symbol editor (0.11.2) */
+.libwhere { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 6px 0 4px; font-size: 12px; }
+.libwhere .chk, .libhead .chk { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.libcard .libname { font-weight: 600; border: 1px solid transparent; background: none; padding: 2px 4px; margin-left: -4px; width: 100%; }
+.libcard .libname:hover, .libcard .libname:focus { border-color: var(--line); background: var(--bg2); }
+.symed { display: grid; grid-template-columns: minmax(320px, 1fr) minmax(280px, 340px); grid-template-rows: auto 1fr; gap: 8px 16px; }
+.symtools { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.symtools .btn.on { background: var(--sel); border-color: var(--blue); color: var(--blue); }
+.symedsvg { width: 100%; aspect-ratio: 1; max-height: 60vh; border: 1px solid var(--line); background: var(--bg2); cursor: crosshair; outline: none; }
+.symedsvg .symgridl { stroke: var(--line); stroke-width: .04; }
+.symedsvg .symaxis { stroke: var(--blue); stroke-width: .06; opacity: .45; }
+.symedsvg .symcur { fill: none; stroke: var(--blue); stroke-width: .25; stroke-dasharray: .6 .4; }
+.symedsvg .symhov { fill: var(--blue); opacity: .6; }
+.symprops { align-content: start; }
+.symed { grid-template-columns: minmax(0, 1fr) 330px; }
+.symprops.form { grid-template-columns: 100px minmax(0, 1fr); }
+.symprops select, .symprops input:not([type=checkbox]) { width: 100%; min-width: 0; }
+.libhead .libwhere { margin: 0 6px; flex-wrap: nowrap; }
+.libhead .libwhere label { flex-direction: row; }
+.libhead input[type=checkbox] { width: auto; margin: 0; }
+.symprops > p, .symprops > label:empty + div { grid-column: 1 / -1; }
+.symprops > label:empty { display: none; }

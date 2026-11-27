@@ -24,7 +24,7 @@ export const saveAssembly = () => {
 export const AssembliesPanel = () => {
   const list = () => proj()?.settings.assemblies ?? [];
   return (
-    <div class="pbody">
+    <div class="asmlist">
       <For each={list()} fallback={<p class="muted small plhint">No assemblies yet: select a group on the sheet, then Format › Save as Assembly.</p>}>{a => (
         <button class="asmrow" classList={{ on: tool().k === "assembly" && (tool() as { name: string }).name === a.name }} onClick={() => setTool({ k: "assembly", name: a.name })} title="Click, then click the sheet where it goes">
           <b>{a.name}</b><span class="muted small">{a.items.length} symbols · {a.lines.length} lines</span>

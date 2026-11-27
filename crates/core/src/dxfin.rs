@@ -598,9 +598,49 @@ pub fn transform(ps: &mut [Prim], by: [f64; 2], k: f64) {
 /// How a PDF is kept as text (in an edit, or between reading and converting).
 pub const PDF_DATA: &str = "data:application/pdf;base64,";
 
-/// A drawing file as text: a DXF as it is, a PDF or a picture (PNG, JPEG) as a data URL.
+/// Is this a DWG file (its version magic: "AC1015" for 2000, "AC1032" for 2018, "AC1.50" and the
+/// like for the oldest)? A DXF never starts that way.
+pub fn is_dwg(b: &[u8]) -> bool {
+    b.len() >= 6 && b.starts_with(b"AC1") && b[3..6].iter().all(|c| c.is_ascii_digit() || *c == b'.')
+}
+
+/// A DWG drawing as DXF text, through the acadrust library. Versions before R13 are refused, and a
+/// file the library cannot read (or that makes it fail) is an error, never a crash.
+pub fn dwg_to_dxf(bytes: &[u8]) -> Result<String, String> {
+    if bytes.starts_with(b"AC1.") || bytes.starts_with(b"AC1001") || bytes.starts_with(b"AC1002") || bytes.starts_with(b"AC1003") || bytes.starts_with(b"AC1004") || bytes.starts_with(b"AC1006") || bytes.starts_with(b"AC1009") {
+        return Err("That DWG is from before release 13, which Datum Schema cannot read: save it as DXF from the CAD program and use the DXF.".into());
+    }
+    if bytes.len() as u64 > crate::doc::MAX_FILE {
+        return Err("That drawing is too large to read.".into());
+    }
+    let owned = bytes.to_vec();
+    let run = std::panic::catch_unwind(move || -> Result<Vec<u8>, String> {
+        let doc = acadrust::DwgReader::from_stream(std::io::Cursor::new(owned)).read().map_err(|e| e.to_string())?;
+        acadrust::DxfWriter::new(&doc).write_to_vec().map_err(|e| e.to_string())
+    });
+    match run {
+        Ok(Ok(dxf)) => Ok(String::from_utf8_lossy(&dxf).into_owned()),
+        Ok(Err(e)) => Err(format!("That DWG could not be read ({}): save it as DXF from the CAD program and use the DXF.", crate::clip(&e, 160))),
+        Err(_) => Err("That DWG could not be read: save it as DXF from the CAD program and use the DXF.".into()),
+    }
+}
+
+/// A drawing file as text: a DXF as it is, a DWG as the DXF it reads as, a PDF or a picture (PNG,
+/// JPEG) as a data URL. A DWG that cannot be read gives the reason as an error.
+pub fn source_checked(bytes: &[u8]) -> Result<String, String> {
+    if is_dwg(bytes) {
+        return dwg_to_dxf(bytes);
+    }
+    Ok(source(bytes))
+}
+
+/// A drawing file as text: a DXF as it is, a PDF or a picture (PNG, JPEG) as a data URL (a DWG reads
+/// as its DXF, or as nothing when it cannot be read: use `source_checked` for the reason).
 pub fn source(bytes: &[u8]) -> String {
     use base64::Engine;
+    if is_dwg(bytes) {
+        return dwg_to_dxf(bytes).unwrap_or_default();
+    }
     let b64 = |b: &[u8]| base64::engine::general_purpose::STANDARD.encode(b);
     if bytes.starts_with(b"%PDF") {
         format!("{PDF_DATA}{}", b64(bytes))
@@ -707,6 +747,30 @@ pub(crate) mod tests {
     /// A small DXF by hand: inches, a block with a bulged polyline (a half circle), MTEXT, a nested
     /// insert, a solid hatch, and an entity we skip.
     pub(crate) const SAMPLE: &str = "0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n70\n1\n0\nENDSEC\n0\nSECTION\n2\nBLOCKS\n0\nBLOCK\n2\nDOT\n10\n0\n20\n0\n0\nCIRCLE\n10\n0\n20\n0\n40\n0.05\n0\nENDBLK\n0\nBLOCK\n2\nVLV-GATE\n10\n0\n20\n0\n0\nLWPOLYLINE\n90\n4\n70\n1\n10\n-0.2\n20\n-0.1\n10\n0.2\n20\n0.1\n10\n0.2\n20\n-0.1\n10\n-0.2\n20\n0.1\n0\nLWPOLYLINE\n90\n2\n70\n0\n10\n-0.1\n20\n0.2\n42\n1\n10\n0.1\n20\n0.2\n0\nINSERT\n2\nDOT\n10\n0\n20\n0\n0\nHATCH\n70\n1\n10\n0\n20\n0\n10\n0\n20\n0\n10\n0.1\n20\n0\n10\n0\n20\n0.1\n0\nENDBLK\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n0\nINSERT\n2\nVLV-GATE\n10\n1\n20\n5\n0\nMTEXT\n10\n1.5\n20\n5.05\n40\n0.1\n1\n{\\fArial|b1;GATE VALVE}\\PFLANGED\n0\nDIMENSION\n0\nENDSEC\n0\nEOF\n";
+
+    #[test]
+    fn a_dwg_reads_as_its_dxf() {
+        // A DWG made with the same library: a line, a circle and a tag.
+        let mut doc = acadrust::CadDocument::new();
+        doc.add_entity(acadrust::EntityType::Line(acadrust::Line::from_coords(0.0, 0.0, 0.0, 100.0, 0.0, 0.0))).unwrap();
+        doc.add_entity(acadrust::EntityType::Circle(acadrust::Circle::from_coords(50.0, 20.0, 0.0, 5.5))).unwrap();
+        doc.add_entity(acadrust::EntityType::Text(acadrust::Text::with_value("P-101A", acadrust::Vector3::new(40.0, 30.0, 0.0)))).unwrap();
+        let dwg = acadrust::DwgWriter::write_to_vec(&doc).unwrap();
+        assert!(is_dwg(&dwg));
+        let text = source_checked(&dwg).unwrap();
+        let d = read(&text).unwrap();
+        assert!(d.ents.iter().any(|e| matches!(e, Ent::Text { s, .. } if s == "P-101A")));
+        assert!(d.ents.iter().any(|e| matches!(e, Ent::Circle { r, .. } if (r - 5.5).abs() < 1e-9)));
+        assert!(d.ents.iter().any(|e| matches!(e, Ent::Poly { pts, .. } if pts.len() == 2 && (pts[1][0] - 100.0).abs() < 1e-9)));
+        // Damaged or old DWGs are errors, not crashes.
+        assert!(source_checked(&dwg[..dwg.len() / 3]).is_err());
+        assert!(source_checked(b"AC1009 an old one").is_err());
+        let mut bad = dwg.clone();
+        for k in (200..bad.len()).step_by(97) {
+            bad[k] ^= 0x5a;
+        }
+        let _ = source_checked(&bad);
+    }
 
     #[test]
     fn a_hand_written_dxf_reads() {
