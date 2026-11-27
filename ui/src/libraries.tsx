@@ -3,7 +3,7 @@
 // as the user likes, kept in a project, on this computer, or both, and shared as a file. A project's drawing standard draws Datum Schema's symbols with a library's (engine:
 // symlib.rs; the window only edits and shows).
 import { For, Show, createMemo, createSignal, createEffect, on } from "solid-js";
-import { CPort, CustomSym, LibView, SymLibrary, Settings, Cat, invoke } from "./api";
+import { CPort, CustomSym, LibView, SymLibrary, Settings, Cat, Code, CodeList, invoke } from "./api";
 import { call, act, proj, lib, refreshLibs, openDialog, toast, allLibs, LibEntry } from "./store";
 import { Dialog, Pick, Check } from "./ui";
 import { Help } from "./help";
@@ -176,7 +176,7 @@ const Editor = (p: { view: LibView; inProject?: boolean; onComputer?: boolean; b
     else if (p.view.file) await call("library_delete", { file: p.view.file });
     if (proj()) {
       const st = proj()!.settings, others = (st.libraries ?? []).filter(x => x.id !== kept.id);
-      if (inProject() || (st.libraries ?? []).some(x => x.id === kept.id)) await act({ SetSettings: { settings: { ...st, libraries: inProject() ? [...others, kept] : others } } });
+      if ((inProject() || (st.libraries ?? []).some(x => x.id === kept.id)) && !(await act({ SetSettings: { settings: { ...st, libraries: inProject() ? [...others, kept] : others } } }))) return;
     }
     await refreshLibs();
     toast(`Saved the library “${kept.name}” with ${kept.symbols.length} symbols${inProject() && onComputer() ? ", in this project and for all your projects" : inProject() ? ", in this project only" : ", for all your projects"}.${v.warnings.length ? " " + v.warnings.join(" ") : ""}`, true);
@@ -216,6 +216,10 @@ const Editor = (p: { view: LibView; inProject?: boolean; onComputer?: boolean; b
  *  with tick boxes for where it is kept and whether this project's Symbols panel shows it. */
 export const LibrariesPage = () => {
   const [editing, setEditing] = createSignal<{ v: LibView; inProject?: boolean; onComputer?: boolean } | null>(null);
+  const [codesEdit, setCodesEdit] = createSignal<{ list: CodeList; warnings: string[]; file: string; inProject: boolean; onComputer: boolean } | null>(null);
+  const [savedCodes, setSavedCodes] = createSignal<[string, CodeList][]>([]);
+  const reloadCodes = () => invoke<[string, CodeList][]>("codes_saved").then(setSavedCodes, () => {});
+  reloadCodes();
   const scan = async () => { const v = await call<LibView | null>("legend_scan"); if (v) setEditing({ v }); };
   const add = async () => { const v = await call<LibView | null>("library_import"); if (v) { await refreshLibs(); toast(`Added the library “${v.library.name}”.`, true); } };
   const fresh = () => setEditing({ v: { file: "", library: { format: 1, name: "", id: "", source: "", symbols: [] }, svgs: [], warnings: [] } });
@@ -241,6 +245,7 @@ export const LibrariesPage = () => {
   const show = (e: LibEntry, on: boolean) => { const off = (proj()!.settings.libs_off ?? []).filter(x => x !== idOf(e)); setSt({ libs_off: on ? off : [...off, idOf(e)] }); };
   return (
     <div class="libraries">
+      <Show when={!codesEdit()} fallback={<CodesEditor {...codesEdit()!} back={() => setCodesEdit(null)} saved={reloadCodes} />}>
       <Show when={editing()} fallback={<>
         <h1>Symbol libraries <Help k="libraries" /></h1>
         <p class="muted">A client's or company's own symbols: read from their legend sheet (DXF, DWG or PDF), or drawn here. Name each library as you like. Keep it in this project only (it travels with the project file), for all your projects (on this computer; send it to a colleague as a file), or both, and tick the ones this project's Symbols panel shows.</p>
@@ -261,8 +266,98 @@ export const LibrariesPage = () => {
             </div>
           </div>}</For></div>
         </Show>
+        <CodesSection edit={setCodesEdit} saved={savedCodes} reload={reloadCodes} />
       </>}>{x => <Editor view={x().v} inProject={x().inProject} onComputer={x().onComputer} back={() => setEditing(null)} />}</Show>
+      </Show>
     </div>
+  );
+};
+
+const CODE_KINDS: [string, string][] = [["fluid", "Fluid and service codes"], ["class", "Pipe classes"], ["insulation", "Insulation and tracing codes"], ["equipment", "Equipment tag prefixes"], ["instrument", "Instrument letters"], ["other", "Other abbreviations"]];
+const idOfList = (l: CodeList) => l.id || l.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+/** A list of codes to check and correct: kind, code and meaning per row; where it is kept. */
+const CodesEditor = (p: { list: CodeList; warnings: string[]; file: string; inProject: boolean; onComputer: boolean; back: () => void; saved: () => void }) => {
+  const [l, setL] = createSignal<CodeList>(structuredClone(p.list));
+  const [inProject, setInProject] = createSignal(p.inProject);
+  const [onComputer, setOnComputer] = createSignal(p.onComputer);
+  const setRow = (i: number, c: Code) => setL({ ...l(), codes: l().codes.map((x, j) => (j === i ? c : x)) });
+  const csv = () => ["Kind,Code,Meaning", ...l().codes.map(c => [CODE_KINDS.find(k => k[0] === c.kind)?.[1] ?? c.kind, c.code, c.meaning].map(x => /[",;\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x).join(","))].join("\r\n");
+  const save = async () => {
+    if (!inProject() && !onComputer()) { toast("Tick where to keep it: this project, all your projects, or both."); return; }
+    const list = { ...l(), id: idOfList(l()) };
+    if (onComputer()) { if (!(await call<string>("codes_save", { list }))) return; }
+    else if (p.file) await call("codes_delete", { file: p.file });
+    if (proj()) {
+      const st = proj()!.settings, others = (st.codes ?? []).filter(x => x.id !== list.id);
+      if ((inProject() || (st.codes ?? []).some(x => x.id === list.id)) && !(await act({ SetSettings: { settings: { ...st, codes: inProject() ? [...others, list] : others } } }))) return;
+    }
+    p.saved();
+    toast(`Saved “${list.name}”: ${list.codes.length} codes${inProject() ? "; this project's drawing is checked against them (check 28) and its legend sheet lists the ones it uses" : ""}.`, true);
+    p.back();
+  };
+  return (
+    <div class="libedit">
+      <div class="libhead">
+        <label>Name <input value={l().name} placeholder="Client A codes, Job 4711…" onInput={e => setL({ ...l(), name: e.currentTarget.value })} /></label>
+        <span class="muted small">{l().source ? `From ${l().source} · ` : ""}{l().codes.length} codes</span>
+        <span class="grow" />
+        <span class="libwhere"><label class="chk"><input type="checkbox" checked={inProject()} disabled={!proj()} onChange={e => setInProject(e.currentTarget.checked)} /> This project</label>
+        <label class="chk"><input type="checkbox" checked={onComputer()} onChange={e => setOnComputer(e.currentTarget.checked)} /> All my projects</label></span>
+        <button class="btn" onClick={async () => { const f = await call<string | null>("save_file", { name: `${l().name || "Codes"}.csv`, data: csv() }); if (f) toast(`Saved ${f}: open it in Excel, change it, and import it again.`, true); }}>Save as CSV…</button>
+        <button class="btn" onClick={p.back}>Cancel</button><button class="btn pri" onClick={save}>Save codes</button>
+      </div>
+      <Show when={p.warnings.length}><p class="small warnline">{p.warnings.join(" ")}</p></Show>
+      <p class="muted small">Check each code: its kind (from the table's heading), the code and its meaning. Fluid codes, pipe classes and insulation codes are checked on every line number, equipment prefixes and instrument first letters on every tag; the Inspector suggests them as you type.</p>
+      <p class="libbtns"><button class="btn sm" onClick={() => setL({ ...l(), codes: [...l().codes, { kind: "fluid", code: "", meaning: "" }] })}>Add a code</button></p>
+      <div class="libscroll"><table class="tbl libtbl codetbl">
+        <thead><tr><th>Kind</th><th>Code</th><th>Meaning</th><th /></tr></thead>
+        <tbody><For each={l().codes}>{(c, i) => <tr>
+          <td><Pick value={c.kind} set={v => setRow(i(), { ...c, kind: v })} options={CODE_KINDS} /></td>
+          <td><input class="mono" value={c.code} onChange={e => setRow(i(), { ...c, code: e.currentTarget.value })} /></td>
+          <td><input value={c.meaning} onChange={e => setRow(i(), { ...c, meaning: e.currentTarget.value })} /></td>
+          <td><button class="x" title="Remove this code" onClick={() => setL({ ...l(), codes: l().codes.filter((_, j) => j !== i()) })}>×</button></td>
+        </tr>}</For></tbody>
+      </table></div>
+    </div>
+  );
+};
+
+/** File › Libraries › Abbreviations and codes: lists named as the user likes, in this project, on
+ *  this computer, or both. */
+export const CodesSection = (p: { edit: (x: { list: CodeList; warnings: string[]; file: string; inProject: boolean; onComputer: boolean }) => void; saved: () => [string, CodeList][] ; reload: () => void }) => {
+  const entries = createMemo(() => {
+    const v: { list: CodeList; file: string; inProject: boolean; onComputer: boolean }[] = p.saved().map(([file, list]) => ({ list, file, inProject: false, onComputer: true }));
+    for (const l of proj()?.settings.codes ?? []) { const e = v.find(x => idOfList(x.list) === idOfList(l)); if (e) { e.inProject = true; e.list = l; } else v.push({ list: l, file: "", inProject: true, onComputer: false }); }
+    return v.sort((a, b) => a.list.name.localeCompare(b.list.name));
+  });
+  const read = async () => { const r = await call<[CodeList, string[]] | null>("codes_read"); if (r) p.edit({ list: r[0], warnings: r[1], file: "", inProject: !!proj(), onComputer: !proj() }); };
+  const toProject = async (e: { list: CodeList; onComputer: boolean }, on: boolean) => {
+    const st = proj()!.settings, others = (st.codes ?? []).filter(x => x.id !== idOfList(e.list));
+    if (on || e.onComputer) await act({ SetSettings: { settings: { ...st, codes: on ? [...others, { ...e.list, id: idOfList(e.list) }] : others } } });
+    else D.confirm(`Take “${e.list.name}” out of this project? It is kept nowhere else: tick All my projects first to keep it.`, "Take it out", () => act({ SetSettings: { settings: { ...st, codes: others } } }));
+  };
+  const toComputer = async (e: { list: CodeList; file: string; inProject: boolean }, on: boolean) => {
+    if (on) { if (await call<string>("codes_save", { list: { ...e.list, id: idOfList(e.list) } })) p.reload(); }
+    else D.confirm(`Delete “${e.list.name}” from this computer?${e.inProject ? " This project keeps its own copy." : ""}`, "Delete", async () => { await call("codes_delete", { file: e.file }); p.reload(); });
+  };
+  const count = (l: CodeList) => CODE_KINDS.map(([k, n]) => [n, l.codes.filter(c => c.kind === k).length] as [string, number]).filter(x => x[1]).map(([n, c]) => `${c} ${n.toLowerCase()}`).join(" · ");
+  return (
+    <section class="codesec">
+      <h2>Abbreviations and codes <Help k="codes" /></h2>
+      <p class="muted">A company's or client's fluid and service codes, pipe classes, insulation codes, equipment prefixes and instrument letters: read from the table on their legend sheet (DXF, DWG or PDF) or from Excel or CSV, checked here, named as you like. A project's drawing is checked against the lists it keeps, and its legend sheet lists the codes it uses.</p>
+      <p class="libbtns"><button class="btn pri" onClick={read}>Import codes (DXF, DWG, PDF, Excel or CSV)…</button><button class="btn" onClick={() => p.edit({ list: { name: "", id: "", source: "", codes: [] }, warnings: [], file: "", inProject: !!proj(), onComputer: !proj() })}>New list…</button></p>
+      <Show when={entries().length} fallback={<p class="muted">No code lists yet.</p>}>
+        <div class="libcards"><For each={entries()}>{e => <div class="libcard codecard">
+          <b>{e.list.name}</b><span class="muted small">{count(e.list) || "no codes"}</span>
+          <div class="libwhere">
+            <label class="chk" title="This project's drawing follows it"><input type="checkbox" checked={e.inProject} disabled={!proj()} onChange={ev => toProject(e, ev.currentTarget.checked)} /> This project</label>
+            <label class="chk" title="Kept on this computer, for every project"><input type="checkbox" checked={e.onComputer} onChange={ev => toComputer(e, ev.currentTarget.checked)} /> All my projects</label>
+          </div>
+          <div class="libcbtns"><button class="btn sm" onClick={() => p.edit({ list: e.list, warnings: [], file: e.file, inProject: e.inProject, onComputer: e.onComputer })}>Review…</button></div>
+        </div>}</For></div>
+      </Show>
+    </section>
   );
 };
 

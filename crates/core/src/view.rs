@@ -75,6 +75,8 @@ pub struct LegendRow {
     pub x: f64,
     pub y: f64,
     pub name: String,
+    /// A code from the project's abbreviations, shown where a symbol would be ("" for none).
+    pub code: String,
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -528,33 +530,41 @@ pub fn legend(p: &Project, s: &Sheet) -> Vec<LegendRow> {
     let used: BTreeSet<String> = p.items.iter().filter(|i| !i.virt && p.sheet(i.sheet).is_some_and(|x| !x.legend)).map(|i| if i.sym.starts_with("x.nozzles.") { i.base_key() } else { i.sym.clone() }).collect();
     let kinds: BTreeSet<Kind> = p.lines.iter().map(|l| l.kind).collect();
     let mut by_cat: BTreeMap<Cat, Vec<&symbols::Sym>> = BTreeMap::new();
-    for sym in symbols::all().iter().filter(|x| used.contains(x.key)) {
+    // Ours in their usual order, then library symbols (a client's or one drawn for the job).
+    for sym in symbols::all().iter().filter(|x| used.contains(x.key)).chain(used.iter().filter(|k| k.starts_with("x.")).filter_map(|k| symbols::get(k))) {
         by_cat.entry(sym.cat).or_default().push(sym);
     }
     let (x0, y0, _, _) = frame::inner(s);
     let (rx, ry) = frame::reserved(p, s);
     let col_w = 95.0;
     let (mut x, mut y) = (x0 + 8.0, y0 + 14.0);
-    let mut out = vec![LegendRow { sym: None, kind: None, x, y: y0 + 8.0, name: "LEGEND".into() }];
-    let mut put = |out: &mut Vec<LegendRow>, sym: Option<String>, kind: Option<Kind>, name: String, hgt: f64| {
+    let mut out = vec![LegendRow { sym: None, kind: None, x, y: y0 + 8.0, name: "LEGEND".into(), code: String::new() }];
+    let mut put = |out: &mut Vec<LegendRow>, sym: Option<String>, kind: Option<Kind>, name: String, hgt: f64, code: String| {
         let bottom = if x + col_w > rx { ry } else { s.dims().1 - 30.0 };
         if y + hgt > bottom {
             x += col_w;
             y = y0 + 14.0;
         }
-        out.push(LegendRow { sym, kind, x, y: y + hgt / 2.0, name });
+        out.push(LegendRow { sym, kind, x, y: y + hgt / 2.0, name, code });
         y += hgt + 3.0;
     };
     for (cat, syms) in &by_cat {
-        put(&mut out, None, None, cat.name().to_uppercase(), 5.0);
+        put(&mut out, None, None, cat.name().to_uppercase(), 5.0, String::new());
         for sym in syms {
-            put(&mut out, Some(sym.key.to_string()), None, sym.name.to_string(), sym.h.clamp(6.0, 40.0));
+            put(&mut out, Some(sym.key.to_string()), None, sym.name.to_string(), sym.h.clamp(6.0, 40.0), String::new());
         }
     }
     if !kinds.is_empty() {
-        put(&mut out, None, None, "LINES".into(), 5.0);
+        put(&mut out, None, None, "LINES".into(), 5.0, String::new());
         for k in kinds {
-            put(&mut out, None, Some(k), k.name().to_string(), 5.0);
+            put(&mut out, None, Some(k), k.name().to_string(), 5.0, String::new());
+        }
+    }
+    // The codes the drawing uses, as the project's lists explain them.
+    for (head, codes) in crate::abbrev::for_legend(p) {
+        put(&mut out, None, None, head.to_uppercase(), 5.0, String::new());
+        for (c, m) in codes {
+            put(&mut out, None, None, m, 4.0, c);
         }
     }
     out
@@ -580,7 +590,10 @@ pub fn legend_prims(r: &LegendRow) -> Vec<Prim> {
         v.push(Prim::Poly { pts: path.to_vec(), closed: false, fill: false, dash: k == Kind::Electric, w: line_width(k) });
         v.extend(line_marks(k, &path, true));
     }
-    let header = r.sym.is_none() && r.kind.is_none();
+    if !r.code.is_empty() {
+        v.push(text([r.x + 2.0, r.y + 0.9], 2.5, r.code.clone(), 0, true));
+    }
+    let header = r.sym.is_none() && r.kind.is_none() && r.code.is_empty();
     v.push(text([if header { r.x } else { r.x + 36.0 }, r.y + 0.9], if header { 3.0 } else { 2.5 }, r.name.clone(), 0, header));
     v
 }

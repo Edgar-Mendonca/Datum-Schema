@@ -158,7 +158,10 @@ pub fn page(p: &Project, stamp: &str) -> String {
             if let Some(k) = r.kind {
                 b += &format!("<polyline points=\"{},{} {},{}\" stroke-width=\"{}\"/>", n(r.x), n(r.y), n(r.x + 30.0), n(r.y), n(width(k)));
             }
-            let head = r.sym.is_none() && r.kind.is_none();
+            if !r.code.is_empty() {
+                b += &prim(&Prim::Text { p: [r.x + 2.0, r.y], h: 2.5, s: r.code.clone(), anchor: 0, bold: true });
+            }
+            let head = r.sym.is_none() && r.kind.is_none() && r.code.is_empty();
             b += &prim(&Prim::Text { p: [if head { r.x } else { r.x + 36.0 }, r.y], h: if head { 3.0 } else { 2.5 }, s: r.name.clone(), anchor: 0, bold: head });
         }
         sheets.push(json!({ "number": s.number, "title": s.title, "rev": s.rev, "w": v.w, "h": v.h, "svg": b }));

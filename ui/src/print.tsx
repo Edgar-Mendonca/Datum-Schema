@@ -61,7 +61,8 @@ export const svgString = (v: SheetView, opts: { width?: number; height?: number 
     const s = r.sym ? symOf(r.sym) : undefined;
     if (s) { const sc = Math.min(1, 30 / s.w); body.push(`<g transform="translate(${n(r.x + 15)} ${n(r.y)}) scale(${n(sc)})"><use href="#s-${s.key}"/>${s.texts.map(t => prim(t)).join("")}</g>`); }
     if (r.kind) body.push(`<polyline points="${n(r.x)},${n(r.y)} ${n(r.x + 30)},${n(r.y)}" stroke-width="${WIDTH[r.kind] ?? 0.35}"${r.kind === "electric" ? ' stroke-dasharray="1.5 1"' : ""}/>`);
-    const header = !r.sym && !r.kind;
+    if (r.code) body.push(`<text x="${n(r.x + 2)}" y="${n(r.y)}" font-size="2.5" dominant-baseline="central" fill="#000" stroke="none" font-weight="600">${esc(r.code)}</text>`);
+    const header = !r.sym && !r.kind && !r.code;
     body.push(`<text x="${n(header ? r.x : r.x + 36)}" y="${n(r.y)}" font-size="${header ? 3 : 2.5}" dominant-baseline="central" fill="#000" stroke="none"${header ? ' font-weight="600"' : ""}>${esc(r.name)}</text>`);
   }
   const w = opts.width ?? v.w, h = opts.height ?? v.h;

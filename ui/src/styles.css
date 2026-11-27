@@ -1334,3 +1334,11 @@ tr.behind td { background: var(--err-bg); }
 .libhead input[type=checkbox] { width: auto; margin: 0; }
 .symprops > p, .symprops > label:empty + div { grid-column: 1 / -1; }
 .symprops > label:empty { display: none; }
+.codesec { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--line); }
+.codesec h2 { font-size: 18px; margin: 0 0 6px; }
+.codetbl td:nth-child(1) { width: 230px; }
+.codetbl td:nth-child(2) { width: 140px; }
+.codetbl td input { width: 100%; }
+.dlg header .totab { color: var(--muted); padding: 0 6px; font-size: 14px; }
+.dlg header .totab:hover { color: var(--blue); }
+.dlg header .totab + .x { margin-left: 0; }

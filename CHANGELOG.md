@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.11.2 — 2026-11-27
+
+Your own symbols and codes, DWG drawings, and a workspace you arrange.
+
+**A workspace you arrange.**
+- **The Symbols panel is a tree**: branches that fold (Vessels, Rotating equipment, Manual valves…), one row per symbol, a filter that opens the branches holding a match; libraries and assemblies are branches of the same tree. Plant is its other tab.
+- **The left panel folds** to a strip (« and »), and is widened or narrowed by its edge; it stays as you left it.
+- **The Inspector** stays docked at the side, **floats** as a window over the sheet (moved by its title, resized by its corner), or **folds** to a strip.
+- **The bottom tabs never spill**: those that do not fit are under More.
+- **Lists and big windows open where you want them**: ⧉ opens a list, a datasheet, a loop diagram or any big window as a **tab beside the sheets**, full size; the ⋯ menu makes that the way they always open, or keeps them in the panel below and over the sheet.
+
+**Symbols of your own.**
+- **Libraries named as you like**, renamed at any time (the drawings that use them are untouched).
+- **Kept where you choose**, by tick boxes: **This project** (inside the project file: a client's legend for one job travels with it), **All my projects** (on this computer), or both; and **Shown in the Symbols panel** for the libraries a project uses.
+- **The symbol editor**: draw a symbol on a millimetre grid (lines, shapes, filled shapes, dashed lines, rectangles, circles, dots, text), or start from a copy of any symbol; place its connection points.
+- **New kinds of object**: a symbol that is nothing of ours says what kind of object it is (equipment, a valve, an instrument… from the class library), its category and its tag prefix, so it has the right data and appears in the right lists.
+- **Legends from DXF, DWG or PDF**, including legends with no blocks: each group of shapes drawn together, with its description beside it, becomes a symbol.
+
+**Abbreviations and codes** (File › Libraries): a company's or client's fluid and service codes, pipe classes, insulation codes, equipment tag prefixes and instrument letters.
+- **Read from the tables on their legend sheet** (DXF, DWG or PDF, tables side by side too, the kind from each table's heading) or **from Excel or CSV**; checked and corrected in a table; saved as CSV to edit in Excel.
+- Named as you like, kept in this project, on this computer, or both.
+- **Check 28**: a code on the drawing that the project's list does not have. The Inspector suggests the codes as you type a line's fluid, class or insulation, and **the legend sheet lists the codes the drawing uses** with their meanings (and now the library symbols it uses too).
+
+**DWG drawings** are read wherever DXF is: Convert Old P&ID, Old Drawing, legends and code tables, and the command line and assistant's convert. DWG from release 13 on (2000 to 2018 tested); older ones are asked for as DXF.
+
 ## 0.11.1 — 2026-11-27
 
 Old PDF P&IDs, and help tracing scanned ones.

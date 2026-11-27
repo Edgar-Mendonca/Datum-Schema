@@ -34,7 +34,7 @@ export interface Line { id: number; sheet: number; kind: Kind; a: End; b: End; p
 export type NoteKind = "note" | "leader" | "hold";
 export interface Note { id: number; sheet: number; kind: NoteKind; x: number; y: number; w: number; h: number; text: string; to: Pt }
 export interface Limit { service: string; name: string; vmin: number; vmax: number; dp: number }
-export interface Settings { line_format: string; off: number[]; limits: Limit[]; roughness: number; grid: number; hidden: string[]; user_attrs: UserAttr[]; ds_layout: DsLayout; standard: Standard; title_block: TitleBlock; specs: PipeSpec[]; tag_format: TagFormat; rules: UserRule[]; reports: Report[]; arrangements: Arrangement[]; safety: { class: string; codes: string[] }[]; cases: string[]; case: string; assemblies: Assembly[]; labels: LabelRule[]; components: string[]; hazop: unknown; testpacks: unknown; accepted: unknown; libraries: SymLibrary[]; libs_off: string[] }
+export interface Settings { line_format: string; off: number[]; limits: Limit[]; roughness: number; grid: number; hidden: string[]; user_attrs: UserAttr[]; ds_layout: DsLayout; standard: Standard; title_block: TitleBlock; specs: PipeSpec[]; tag_format: TagFormat; rules: UserRule[]; reports: Report[]; arrangements: Arrangement[]; safety: { class: string; codes: string[] }[]; cases: string[]; case: string; assemblies: Assembly[]; labels: LabelRule[]; components: string[]; hazop: unknown; testpacks: unknown; accepted: unknown; libraries: SymLibrary[]; libs_off: string[]; codes: CodeList[] }
 /** A pipe class: limits in SI (Pa, K, m), sizes as NPS text, and the components it allows by size. */
 /** A saved group of symbols, lines and notes round (0, 0), with copies of their objects. */
 export interface Assembly { name: string; items: Item[]; lines: Line[]; notes: Note[]; objs: Obj[] }
@@ -54,6 +54,8 @@ export interface Standard { library: string; map: Record<string, string> }
 export interface CPort { x: number; y: number; dir: number; name: string; signal: boolean }
 /** A library symbol: drawn from a client's legend; `like` is the Datum Schema symbol it stands for. */
 export interface CustomSym { key: string; name: string; library: string; block: string; like: string; class: string; cat: Cat; w: number; h: number; draw: string; ports: CPort[]; prefix: string; inline: boolean; terminal: boolean }
+export interface Code { kind: string; code: string; meaning: string }
+export interface CodeList { name: string; id: string; source: string; codes: Code[] }
 export interface SymLibrary { format: number; name: string; id: string; source: string; symbols: CustomSym[] }
 /** A library as listed: its file (empty: not saved yet), the library, each symbol's picture, notes. */
 export interface LibView { file: string; library: SymLibrary; svgs: string[]; warnings: string[] }
@@ -77,7 +79,7 @@ export interface PortView { p: Pt; dir: number; signal: boolean; used: boolean }
 export interface ItemView { id: number; obj: number; sym: string; cat: Cat; x: number; y: number; rot: number; flip: boolean; scale: number; tag: string; texts: Prim[]; bbox: [number, number, number, number]; ports: PortView[]; layer: string }
 export interface LineView { id: number; obj: number; kind: Kind; path: Pt[]; segs: Pt[][]; marks: Prim[]; number: string; badge: number | null; run: number | null; layer: string }
 export interface NoteView { id: number; kind: NoteKind; prims: Prim[]; bbox: [number, number, number, number] }
-export interface LegendRow { sym: string | null; kind: Kind | null; x: number; y: number; name: string }
+export interface LegendRow { sym: string | null; kind: Kind | null; x: number; y: number; name: string; code: string }
 export interface SheetView { id: number; number: string; title: string; w: number; h: number; legend: boolean; frame: Prim[]; items: ItemView[]; lines: LineView[]; notes: NoteView[]; legend_rows: LegendRow[]; underlay: Underlay | null; clouds: Prim[]; hazop: Prim[]; logo: [number, number, number, number] | null; pins: Pin[] }
 export interface Issue { rule: number; level: "error" | "warning" | "note" | "accepted"; msg: string; ids: number[]; sheet: number; at: Pt }
 export interface Hyd { id: number; v: number; re: number; f: number; dp100: number; dp: number; length: number; service: string; service_name: string; vmin: number; vmax: number; dpmax: number; status: number; reason: string }

@@ -9,7 +9,7 @@
     "Datum Schema draws piping and instrument diagrams where every symbol and line carries its data and knows what it is connected to. You place real symbols (vessels, pumps, exchangers, valves, instruments) and join them with lines that route themselves; drop a valve on a line and it goes into it, carry a line to another sheet with a pair of off-page connectors.",
     "Because the drawing knows its connections, Datum Schema writes the line list, the equipment list, the instrument index and the valve list for you, always in step with the drawing; it checks the drawing as you work (duplicate tags, open ends, size changes without a reducer, pumps without check valves and more); and it sizes every line, with its velocity and pressure drop against limits for its service. Hydraulic results are a sizing aid, checked by the engineer.",
     "Every symbol is a view of a plant object (equipment, valve, instrument, line number) in a plant › unit › area hierarchy, defined by a class library you can extend with your company's attributes. Every change is recorded in the project file, and every piece of equipment, instrument, control valve and relief device has a datasheet whose process conditions come straight from the P&ID.",
-    "Process flow diagrams sit beside the P&IDs: streams with their flows and conditions, a stream table on the sheet, and heat and mass balance checks. A client's legend sheet (DXF) becomes a symbol library to draw a project to their standard; an old P&ID (DXF or PDF) becomes a live sheet, its blocks and drawn symbols recognised, and a scan can sit behind a sheet to trace over; issued sheets are compared and the changes clouded. Lines go to Datum Pipe for stress analysis and control loops to Datum Sim for tuning."
+    "Process flow diagrams sit beside the P&IDs: streams with their flows and conditions, a stream table on the sheet, and heat and mass balance checks. A client's legend sheet (DXF, DWG or PDF) becomes a symbol library to draw a project to their standard, symbols that are missing are drawn in the symbol editor, and their abbreviations and codes are checked on the drawing; an old P&ID (DXF or PDF) becomes a live sheet, its blocks and drawn symbols recognised, and a scan can sit behind a sheet to trace over; issued sheets are compared and the changes clouded. Lines go to Datum Pipe for stress analysis and control loops to Datum Sim for tuning."
   ],
   "steps": [
     {
@@ -28,7 +28,7 @@
   "highlights": [
     "About 80 symbols of our own, following ISO 10628-2 and ISA-5.1",
     "Process flow diagrams: streams in diamonds, a stream table on the sheet, heat and mass balance checks",
-    "A client's legend (DXF) becomes a symbol library; draw a project to their standard and back",
+    "A client's legend (DXF, DWG or PDF) becomes a symbol library, kept in one project or for all; draw a project to their standard and back, or draw the symbols that are missing",
     "Old drawings (DXF) behind a sheet to trace over; revision clouds round what changed since an issue",
     "Send a line to Datum Pipe, a control loop to Datum Sim, and equipment and lines to Datum Calc as calculation sheets",
     "Sizing of control valves (IEC 60534-2-1), orifice plates (ISO 5167-2) and relief valves (API 520), written to their datasheets",
@@ -155,8 +155,9 @@
       "items": [
         "0.11.0: old DXF P&IDs turned into live drawings: blocks mapped to symbols, lines traced and connected, with a review (done)",
         "0.11.1: vector PDF P&IDs the same way; scanned drawings traced with help (done)",
-        "0.11.2: DEXPI in both current schema versions, tested with the official examples; tested on a 50-sheet project",
-        "0.11.3: recorded steps replayed, and design variants: a working copy compared and merged back"
+        "0.11.2: your own symbols and codes (symbol editor, libraries per project or for all projects, abbreviations from the legend sheet), DWG drawings, and a workspace you arrange (done)",
+        "0.11.3: DEXPI in both current schema versions, tested with the official examples; tested on a 50-sheet project",
+        "0.11.4: recorded steps replayed, and design variants: a working copy compared and merged back"
       ]
     },
     {

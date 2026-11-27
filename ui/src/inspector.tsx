@@ -34,7 +34,7 @@ const FieldInput = (p: { f: Field; v: Val | undefined; ids: number[]; placeholde
   };
   return (
     <Row label={p.f.required ? `${p.f.label} *` : p.f.label} unit={p.f.q ? unit(p.f.q) : undefined}>
-      <Show when={p.f.choices.length} fallback={<input value={shown()} placeholder={p.placeholder} class={p.f.q ? "mono" : undefined} list={p.f.key === "class" && proj()?.settings.specs.length ? "specnames" : undefined} onChange={e => set(e.currentTarget.value)} />}>
+      <Show when={p.f.choices.length} fallback={<input value={shown()} placeholder={p.placeholder} class={p.f.q ? "mono" : undefined} list={p.f.key === "class" && proj()?.settings.specs.length ? "specnames" : ["fluid", "class", "insulation"].includes(p.f.key) && codesOf(p.f.key).length ? `codes-${p.f.key}` : undefined} onChange={e => set(e.currentTarget.value)} />}>
         <Pick value={shown()} set={set} options={[["", "—"], ...p.f.choices.filter(c => c).map(c => [c, c] as [string, string])]} />
       </Show>
     </Row>
@@ -289,7 +289,10 @@ const Calcs = (p: { obj: number }) => {
 };
 
 /** The project's pipe classes, offered on a line's Pipe class field. */
-const SpecNames = () => <datalist id="specnames"><For each={proj()?.settings.specs ?? []}>{s => <option value={s.name}>{s.desc}</option>}</For></datalist>;
+/** The project's codes of a kind (its abbreviation lists), for suggestions as the user types. */
+const codesOf = (kind: string) => (proj()?.settings.codes ?? []).flatMap(l => l.codes).filter(c => c.kind === kind);
+const SpecNames = () => <><datalist id="specnames"><For each={proj()?.settings.specs ?? []}>{s => <option value={s.name}>{s.desc}</option>}</For></datalist>
+  <For each={["fluid", "class", "insulation"]}>{k => <datalist id={`codes-${k}`}><For each={codesOf(k)}>{c => <option value={c.code}>{c.meaning}</option>}</For></datalist>}</For></>;
 
 /** Where the Inspector is (the user's choice, kept): docked at the side, floating over the sheet, or
  *  folded to a strip. Its width, and a floating window's place and height, are kept too. */

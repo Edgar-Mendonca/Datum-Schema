@@ -64,7 +64,7 @@ export const Dialog = (p: { title: string; wide?: boolean; children: JSX.Element
   });
   const body = () => (
     <div class="dlg" classList={{ wide: p.wide, intab: !!tab }} ref={el} onKeyDown={tab ? key : undefined}>
-      <header>{p.title}{p.help && <Help k={p.help} />}<span class="grow" /><Show when={!tab && p.wide && fn}><button class="x totab" title="Open in a tab beside the sheets (full size)" onClick={toTab}>⧉</button></Show><button class="x" title={tab ? "Close this tab" : "Close"} onClick={close}>×</button></header>
+      <header>{p.title}{p.help && <Help k={p.help} />}<span class="grow" /><Show when={!tab && p.wide && fn}><button class="totab" title="Open in a tab beside the sheets (full size)" onClick={toTab}>⧉</button></Show><button class="x" title={tab ? "Close this tab" : "Close"} onClick={close}>×</button></header>
       <div class="bd">{p.children}</div>
       <footer>{p.extra}<span class="grow" />{p.ok && <button class="btn pri" onClick={done}>{p.okText ?? "OK"}</button>}<button class="btn" onClick={close}>{p.cancel ?? (p.ok ? "Cancel" : "Close")}</button></footer>
     </div>

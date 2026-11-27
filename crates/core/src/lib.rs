@@ -2,6 +2,7 @@
 //! checks, line hydraulics, the lists, the sheet frame, routing and the DXF writer. Pure Rust, no
 //! I/O apart from reading and writing files the shell names.
 
+pub mod abbrev;
 pub mod api;
 pub mod arrange;
 pub mod cause;

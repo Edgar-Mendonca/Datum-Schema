@@ -487,12 +487,13 @@ const zoneOf = (p: Pt) => {
 };
 
 /** One legend row: the symbol (scaled to fit) or a sample of the line type, and its name. */
-export const LegendEl = (p: { r: { sym: string | null; kind: Kind | null; x: number; y: number; name: string } }) => {
+export const LegendEl = (p: { r: { sym: string | null; kind: Kind | null; x: number; y: number; name: string; code?: string } }) => {
   const s = () => (p.r.sym ? symOf(p.r.sym) : undefined);
-  const header = () => !p.r.sym && !p.r.kind;
+  const header = () => !p.r.sym && !p.r.kind && !p.r.code;
   return <g>
     <Show when={s()}>{sym => { const sc = Math.min(1, 30 / sym().w); return <g transform={`translate(${p.r.x + 15} ${p.r.y}) scale(${sc})`} class="sym"><use href={`#s-${sym().key}`} /><For each={sym().texts}>{t => <PrimEl p={t} />}</For></g>; }}</Show>
     <Show when={p.r.kind}>{k => <g class={`ln ${k()}`}><polyline points={`${p.r.x},${p.r.y} ${p.r.x + 30},${p.r.y}`} class="lstroke" /></g>}</Show>
+    <Show when={p.r.code}><text x={p.r.x + 2} y={p.r.y} font-size="2.5" class="pt b" dominant-baseline="central">{p.r.code}</text></Show>
     <text x={header() ? p.r.x : p.r.x + 36} y={p.r.y} font-size={header() ? "3" : "2.5"} class="pt" classList={{ b: header() }} dominant-baseline="central">{p.r.name}</text>
   </g>;
 };

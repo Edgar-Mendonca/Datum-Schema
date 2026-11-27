@@ -574,6 +574,8 @@ pub struct Settings {
     pub libraries: Vec<crate::symlib::Library>,
     /// Libraries (by id) left out of the Symbols panel for this project (unticked).
     pub libs_off: Vec<String>,
+    /// Lists of abbreviations and codes this project follows (fluid codes, pipe classes…).
+    pub codes: Vec<crate::abbrev::CodeList>,
 }
 
 /// A drawing standard: a library's name and, for each of Datum Schema's symbols, the library
@@ -607,7 +609,7 @@ pub const MAX_LOGO: usize = 280_000;
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), specs: vec![], tag_format: crate::tags::TagFormat::default(), rules: vec![], reports: vec![], arrangements: crate::arrange::starter(), safety: crate::safety::starter(), cases: crate::cases::default_cases(), case: "Normal".into(), assemblies: vec![], labels: vec![], components: vec![], hazop: crate::hazop::Study::default(), testpacks: crate::testpack::Packs::default(), accepted: vec![], libraries: vec![], libs_off: vec![] }
+        Self { line_format: "<size>-<fluid>-<seq>-<class>".into(), off: vec![], limits: default_limits(), roughness: 4.5e-5, grid: 2.5, hidden: vec![], user_attrs: vec![], ds_layout: DsLayout::default(), standard: Standard::default(), title_block: TitleBlock::default(), specs: vec![], tag_format: crate::tags::TagFormat::default(), rules: vec![], reports: vec![], arrangements: crate::arrange::starter(), safety: crate::safety::starter(), cases: crate::cases::default_cases(), case: "Normal".into(), assemblies: vec![], labels: vec![], components: vec![], hazop: crate::hazop::Study::default(), testpacks: crate::testpack::Packs::default(), accepted: vec![], libraries: vec![], libs_off: vec![], codes: vec![] }
     }
 }
 
@@ -780,6 +782,8 @@ impl Project {
         }
         self.settings.libraries = libs;
         self.settings.libs_off.retain(|x| !x.trim().is_empty());
+        let mut cids = HashSet::new();
+        self.settings.codes = std::mem::take(&mut self.settings.codes).into_iter().take(50).map(crate::abbrev::validate).filter(|l| cids.insert(l.id.clone())).collect();
         self.settings.libs_off.dedup();
         let (copies, mut lw) = crate::symlib::check_copies(std::mem::take(&mut self.custom_syms));
         w.append(&mut lw);

@@ -219,6 +219,21 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             let (lib, w) = datum_core::symlib::validate(lib);
             serde_json::to_value(datum_core::symlib::view("", lib, w)).unwrap()
         }
+        "codes_saved" => serde_json::to_value(datum_core::abbrev::load_dir(&lib_dir())).unwrap(),
+        "codes_save" => {
+            let l: datum_core::abbrev::CodeList = serde_json::from_value(a["list"].clone()).map_err(|e| e.to_string())?;
+            json!(datum_core::abbrev::save(&lib_dir(), l)?)
+        }
+        "codes_delete" => {
+            let _ = std::fs::remove_file(lib_dir().join(str_("file")));
+            Value::Null
+        }
+        "codes_read" => {
+            // The test cannot pick a file: a client's codes as CSV.
+            let mut l = datum_core::abbrev::read_table(b"Code,Meaning,Kind\nP,Process,fluid\nCW,Cooling water,fluid\nH,Hot insulation,insulation\nT,Tank,equipment\n", "Client codes")?;
+            l.source = "client-codes.csv".into();
+            json!([l, Vec::<String>::new()])
+        }
         "symbol_draw" => json!(datum_core::symbols::get(&str_("key")).map(|s| s.draw.to_string()).ok_or("There is no such symbol.")?),
         "symbol_svg" => json!(datum_core::symbols::svg(&datum_core::symbols::parse(&str_("draw")))),
         "library_delete" => {

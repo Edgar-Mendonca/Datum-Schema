@@ -436,8 +436,10 @@ const shots = process.env.SHOTS;
     await p.mouse.click(bx.x + bx.width * 0.5, bx.y + bx.height * 0.2); await p.waitForTimeout(200);
     check("a click adds a connection point", (await p.$$eval(".pedport", els => els.length)) === n0 + 1);
     await p.click(".pedside button:has-text('Remove')"); await p.click(".dlg footer button:has-text('Use these')"); await p.waitForTimeout(200); }
+  // Kept for all projects (the next step opens the example afresh).
+  await p.check(".libhead .libwhere label:has-text('All my projects') input");
   await p.click(".libhead button:has-text('Save library')"); await p.waitForSelector(".libcard");
-  check("the library is saved", (await p.textContent(".libcard")).includes("Client legend"));
+  check("the library is saved", (await p.$$eval(".libcard input.libname", els => els.map(e => e.value))).includes("Client legend"));
   await openEx("Pump transfer");
   const syms0 = (await project()).items.map(i => i.sym).join(",");
   const tied = q => q.lines.flatMap(l => [l.a, l.b]).filter(e => e.at === "port").length;
@@ -618,7 +620,7 @@ const shots = process.env.SHOTS;
   { const n = await p.$$eval(".guide .gmain .gtopic", els => els.length);
     const helpBtns = await p.$$eval(".gtoc a", els => els.map(e => e.textContent));
     check("the guide has every chapter and many topics", n >= 40 && helpBtns.includes("Glossary") && helpBtns.some(t => t.includes("Process flow diagrams")), `${n} topics; ${helpBtns.join(" / ")}`);
-    check("the guide lists every check rule", (await p.$$eval(".guide .grules tr", els => els.length)) === 27);
+    check("the guide lists every check rule", (await p.$$eval(".guide .grules tr", els => els.length)) === 28);
     await p.fill(".gsearch", "revision cloud"); await p.waitForTimeout(200);
     const found = await p.$$eval(".guide .gmain .gtopic h3", els => els.map(e => e.textContent));
     check("search narrows the guide", found.length >= 1 && found.length < 6 && found.some(t => t.includes("Revisions")), JSON.stringify(found));
@@ -1078,10 +1080,38 @@ const shots = process.env.SHOTS;
     check("the bottom tabs stay inside their bar", nav[1] <= nav[0] + 1, JSON.stringify(nav)); }
   await btab('Equipment'); await p.waitForTimeout(300);
   await p.click(".btabs button[title^='Open this list in a tab']"); await p.waitForTimeout(500);
-  check("a list opens as a tab beside the sheets", ((await p.textContent(".stabs .dtab.on")) ?? "").includes("Equipment") && ((await p.textContent(".docview .egrid")) ?? "").includes("K-201"));
+  await p.waitForSelector(".docview:visible .egrid tbody tr.f").catch(() => {});
+  { const tab = (await p.textContent(".stabs .dtab.on").catch(() => "")) ?? "", grid = (await p.textContent(".docview:visible .egrid").catch(() => "")) ?? "";
+    check("a list opens as a tab beside the sheets", tab.includes("Equipment") && grid.includes("Air cooler"), `${tab} | ${grid.slice(0, 120)}`); }
   await p.click(".stabs button:text-is('PID-200')"); await p.waitForTimeout(300);
   check("and the sheet comes back", await p.isVisible(".canvhold svg"));
   await p.click(".stabs .dtab .dx"); await p.waitForTimeout(200);
+
+  // 80. A library of the project's own: a symbol drawn in the symbol editor, kept in this project
+  // only, shown as a branch of the Symbols tree; a client's codes kept in the project and checked.
+  await openEx("Pump transfer");
+  await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Libraries')"); await p.waitForTimeout(300);
+  await p.click(".libraries button:has-text('New library')"); await p.waitForTimeout(200);
+  await p.fill(".libhead input >> nth=0", "Job 4711 symbols");
+  await p.click(".libbtns button:has-text('New symbol')"); await p.waitForSelector(".symedsvg");
+  { const bx = await p.$(".symedsvg").then(e => e.boundingBox()); const at = (x, y) => [bx.x + bx.width * (x + 20) / 40, bx.y + bx.height * (y + 20) / 40];
+    await p.click(".symtools button:text-is('Rectangle')");
+    for (const q of [[-8, -6], [8, 6]]) { const [x, y] = at(...q); await p.mouse.click(x, y); await p.waitForTimeout(80); }
+    await p.click(".symtools button:text-is('Circle')");
+    for (const q of [[0, 0], [3, 0]]) { const [x, y] = at(...q); await p.mouse.click(x, y); await p.waitForTimeout(80); } }
+  await p.fill(".symprops input >> nth=0", "Skid package"); await p.waitForTimeout(200);
+  await p.click(".dlg footer button:has-text('Use this symbol')"); await p.waitForTimeout(400);
+  check("the symbol editor adds a symbol to the library", (await p.$$(".libtbl tbody tr")).length === 1);
+  await p.click(".libhead button:has-text('Save library')"); await p.waitForTimeout(600);
+  { const q = await project(); check("the library is kept in this project", (q.settings.libraries ?? []).some(l => l.name === "Job 4711 symbols" && l.symbols.length === 1 && l.symbols[0].draw.includes("r -8 -6 16 12"))); }
+  await p.click(".codesec button:has-text('Import codes')"); await p.waitForSelector(".codetbl tbody tr");
+  check("codes are read for review", (await p.$$(".codetbl tbody tr")).length === 4);
+  await p.click(".libhead button:has-text('Save codes')"); await p.waitForTimeout(600);
+  check("the codes are kept in this project", ((await project()).settings.codes ?? []).some(l => l.codes.length === 4));
+  await p.click(".bs .back"); await p.waitForTimeout(400);
+  check("the project's library is a branch of the Symbols tree", ((await p.textContent(".palette .tbody")) ?? "").includes("Job 4711 symbols"));
+  await btab('Checks'); await p.waitForTimeout(400);
+  check("check 28 finds codes the project's list does not have", (await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("not in the project's list")));
 
   // 53. No commercial product name anywhere in the window (FAMILY §13): the built bundle, and the
   // text shown on each ribbon tab. The names are kept in ROT13 so this file does not name them.

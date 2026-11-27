@@ -539,6 +539,41 @@ fn library_validate(lib: Library) -> LibView {
     symlib::view("", lib, w)
 }
 
+/// The code lists kept on this computer, with their files.
+#[tauri::command]
+fn codes_saved(app: AppHandle) -> R<Vec<(String, datum_core::abbrev::CodeList)>> {
+    Ok(datum_core::abbrev::load_dir(&lib_dir(&app)?))
+}
+
+/// Saves a code list on this computer for every project; returns its file.
+#[tauri::command]
+fn codes_save(app: AppHandle, list: datum_core::abbrev::CodeList) -> R<String> {
+    let d = lib_dir(&app)?;
+    guard(|| datum_core::abbrev::save(&d, list))
+}
+
+/// Deletes a code list from this computer.
+#[tauri::command]
+fn codes_delete(app: AppHandle, file: String) -> R<()> {
+    if file.contains(['/', '\\']) || !file.ends_with(".dschemacodes") {
+        return Err("That is not a code list.".into());
+    }
+    let _ = std::fs::remove_file(lib_dir(&app)?.join(file));
+    Ok(())
+}
+
+/// Reads codes from a legend sheet's tables (DXF, DWG, PDF) or a workbook (Excel, CSV), to review.
+#[tauri::command]
+async fn codes_read(app: AppHandle, path: Option<String>) -> R<Option<(datum_core::abbrev::CodeList, Vec<String>)>> {
+    let Some(path) = path.map(PathBuf::from).or_else(|| pick(&app, "Abbreviations and codes (a legend sheet as DXF, DWG or PDF, or Excel or CSV)", &["dxf", "dwg", "pdf", "xlsx", "csv"])) else { return Ok(None) };
+    let bytes = std::fs::read(&path).map_err(|e| format!("Could not open {}: {e}", path.display()))?;
+    let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("Codes").to_string();
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+    let (mut list, warnings) = guard(|| if ext == "xlsx" || ext == "csv" { datum_core::abbrev::read_table(&bytes, &name).map(|l| (l, vec![])) } else { datum_core::abbrev::read_drawing(&datum_core::dxfin::source_checked(&bytes)?, &name) })?;
+    list.source = path.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    Ok(Some((list, warnings)))
+}
+
 /// A symbol's drawing (the symbol language), to start a new symbol from a copy of it.
 #[tauri::command]
 fn symbol_draw(key: String) -> R<String> {
@@ -915,7 +950,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, import_streams, import_list, fixes, nozzles, sheet_manager, isolation, test_packs, handover_summary, convert_scan, convert_apply, report_sources, report_preview, arrangement_starter, register_read, register_file, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, builtin_sets, legend_scan, library_save, library_validate, symbol_draw, symbol_svg, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, tags_to_place, send, sheet_compare, title_preview, title_standard, spec_starter, specs_csv, todo, calc_sheets, sizing, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
+            state, apply, history, changes, datasheet, datasheets_all, import_datasheets, import_streams, import_list, fixes, nozzles, sheet_manager, isolation, test_packs, handover_summary, convert_scan, convert_apply, report_sources, report_preview, arrangement_starter, register_read, register_file, loops, loop_diagram, layout_rows, cause_effect, import_dexpi, libraries, builtin_sets, legend_scan, library_save, codes_saved, codes_save, codes_delete, codes_read, library_validate, symbol_draw, symbol_svg, library_delete, library_export, library_import, port_at, symbol_like, underlay_import, underlay_svg, tags_to_place, send, sheet_compare, title_preview, title_standard, spec_starter, specs_csv, todo, calc_sheets, sizing, comments_import, derived, list, views, examples_list, new_project, library, unit_table, open, save, save_file, export,
             options, set_options, autosave, recovery, recover, recent, startup_file, open_url, version, quit, check_update, install_update
         ])
         .run(tauri::generate_context!())

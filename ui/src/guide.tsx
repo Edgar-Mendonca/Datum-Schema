@@ -11,13 +11,13 @@ type Chapter = { id: string; t: string; intro: string; keys: string[] };
 
 /** The chapters and the help topics in each; topics not named here go into "More". */
 const CHAPTERS: Chapter[] = [
-  { id: "drawing", t: "Drawing the plant", intro: "Place symbols, draw lines that route themselves, carry lines between sheets, and mark up the drawing.", keys: ["palette", "draw", "edit", "select", "lines", "signals", "offpage", "notes", "tags", "isa", "sheets", "view", "layers"] },
+  { id: "drawing", t: "Drawing the plant", intro: "Place symbols, draw lines that route themselves, carry lines between sheets, and mark up the drawing.", keys: ["palette", "workspace", "draw", "edit", "select", "lines", "signals", "offpage", "notes", "tags", "isa", "sheets", "view", "layers"] },
   { id: "data", t: "Data and objects", intro: "Every symbol and line is a view of a plant object with its data, in a plant › unit › area hierarchy, with every change recorded.", keys: ["inspector", "plant", "history", "units"] },
   { id: "checks", t: "Checks and hydraulics", intro: "The drawing is checked on every change; every line with a flow is sized. Hydraulic results are a sizing aid, checked by the engineer.", keys: ["checks", "rules", "hydraulics"] },
   { id: "lists", t: "Lists and reports", intro: "Lists written from the drawing, always in step with it: edit them, export them to Excel or CSV, print them.", keys: ["lists", "io", "takeoff", "export"] },
   { id: "instruments", t: "Instruments", intro: "Datasheets with their process conditions from the P&ID, loop diagrams, and the cause-and-effect matrix.", keys: ["datasheets", "import", "loops", "cause"] },
   { id: "pfd", t: "Process flow diagrams", intro: "Streams with their flows, conditions and compositions, a stream table on the sheet, and heat, mass and component balances.", keys: ["pfd"] },
-  { id: "standards", t: "Symbols, standards and title blocks", intro: "A client's own symbols, old drawings to trace over, and your company's title block.", keys: ["libraries", "underlay", "titleblock"] },
+  { id: "standards", t: "Symbols, standards and title blocks", intro: "A client's own symbols, old drawings to trace over, and your company's title block.", keys: ["libraries", "symboleditor", "codes", "underlay", "titleblock"] },
   { id: "review", t: "Revisions and review", intro: "Issue sheets at revisions, compare and cloud what changed, and review with comments.", keys: ["revisions", "review"] },
   { id: "family", t: "Working with other programs", intro: "Send lines and loops to the other Datum apps; exchange drawings as DXF and DEXPI.", keys: ["send", "cli", "ai"] },
   { id: "examples", t: "Examples", intro: "Worked projects to learn from and to show.", keys: ["examples"] },
