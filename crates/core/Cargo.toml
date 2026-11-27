@@ -1,6 +1,6 @@
 [package]
 name = "datum-core"
-version = "0.11.0"
+version = "0.11.1"
 license = "MIT"
 edition = "2021"
 description = "Datum Schema engine: the P&ID model and its edits, the symbol library, connectivity, tags, checks, line hydraulics, lists, the sheet frame and the DXF writer."
@@ -15,4 +15,8 @@ calamine = { version = "0.38", default-features = false }
 quick-xml = "0.42.0"
 # The handover package (MIT); the same version and features the Excel writer already uses.
 zip = { version = "9.0", default-features = false, features = ["deflate"] }
+# PDF streams (MIT or Apache-2.0); already built for the zip and Excel writers.
+flate2 = "1"
+# PDFs and pictures kept inside a project as text (MIT or Apache-2.0).
+base64 = "0.22"
 

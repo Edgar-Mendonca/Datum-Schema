@@ -1037,6 +1037,25 @@ const shots = process.env.SHOTS;
     const q = await project(); const s = q.sheets[q.sheets.length - 1];
     check("the old drawing is a new live sheet", q.sheets.length === n0 + 1 && q.items.filter(i => i.sheet === s.id).length >= 15 && q.lines.filter(l => l.sheet === s.id).length >= 10 && !!s.underlay, `${q.items.filter(i => i.sheet === s.id).length} symbols`); }
 
+  // 78. A PDF behind a sheet, its tags placed; a scan behind a sheet.
+  await openEx("Pump transfer");
+  await inv("test_pick", { kind: "pdf" });
+  await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button:has-text('Old Drawing')"); await p.waitForTimeout(600);
+  await p.waitForFunction(() => document.querySelectorAll(".dsvg .underlay text").length > 2);
+  await p.click(".ribbon button:has-text('Tags to Place')"); await p.waitForSelector(".dlg table");
+  check("Tags to Place lists the PDF's tags the project lacks", ((await p.textContent(".dlg table")) ?? "").includes("FIC-101"));
+  { const n0 = (await project()).items.length;
+    await p.click(".dlg table tr:has-text('FIC-101') button:has-text('Place')"); await p.waitForTimeout(500);
+    const q = await project();
+    check("Place puts the tag on the sheet as its symbol", q.items.length === n0 + 1 && q.objects.some(o => o.tag === "FIC-101"));
+    check("and the list no longer has it", !((await p.textContent(".dlg")) ?? "").includes("FIC-101")); }
+  await p.click(".dlg footer .btn:not(.pri)"); await p.waitForTimeout(300);
+  await inv("test_pick", { kind: "png" });
+  await p.click(".ribbon button:has-text('Old Drawing')"); await p.waitForTimeout(600);
+  await p.waitForSelector(".dsvg .underlay image");
+  check("a scan goes behind the sheet as a picture", ((await p.getAttribute(".dsvg .underlay image", "href")) ?? "").startsWith("data:image/png;base64,"));
+  await p.keyboard.press("Escape"); await p.waitForTimeout(200);
+
   // 53. No commercial product name anywhere in the window (FAMILY §13): the built bundle, and the
   // text shown on each ribbon tab. The names are kept in ROT13 so this file does not name them.
   { const rot = s => s.replace(/[a-z]/gi, c => String.fromCharCode((c <= "Z" ? 65 : 97) + ((c.toUpperCase().charCodeAt(0) - 65 + 13) % 26)));

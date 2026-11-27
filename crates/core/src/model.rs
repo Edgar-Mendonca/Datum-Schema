@@ -198,6 +198,15 @@ pub struct Underlay {
 /// Underlays larger than this (in the symbol language) are refused.
 pub const MAX_UNDERLAY: usize = 16 << 20;
 
+/// How an underlay that is a picture starts: then a data URL of a PNG or JPEG.
+pub const IMAGE: &str = "IMG ";
+
+/// Is a picture underlay's data URL one we wrote (nothing but base64 after the header)?
+pub fn image_ok(draw: &str) -> bool {
+    let Some(url) = draw.strip_prefix(IMAGE) else { return true };
+    ["data:image/png;base64,", "data:image/jpeg;base64,"].iter().any(|h| url.strip_prefix(h).is_some_and(|b| b.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'+' || c == b'/' || c == b'=')))
+}
+
 impl Underlay {
     pub fn fingerprint(draw: &str) -> String {
         // FNV-1a.
@@ -207,9 +216,23 @@ impl Underlay {
         }
         format!("{h:016x}")
     }
-    /// Its shapes placed on the sheet.
+    /// A scanned drawing (a picture) rather than shapes.
+    pub fn is_image(&self) -> bool {
+        self.draw.starts_with(IMAGE)
+    }
+    /// The drawing as SVG in its own millimetres (placed by the window with x, y and k).
+    pub fn svg(&self) -> String {
+        match self.draw.strip_prefix(IMAGE) {
+            Some(url) => format!("<image href=\"{url}\" x=\"0\" y=\"0\" width=\"{}\" height=\"{}\" preserveAspectRatio=\"none\" opacity=\"0.55\"/>", self.w, self.h),
+            None => crate::symbols::svg(&crate::symbols::parse(&self.draw)),
+        }
+    }
+    /// Its shapes placed on the sheet (none for a picture).
     pub fn prims(&self) -> Vec<crate::symbols::Prim> {
         use crate::symbols::Prim;
+        if self.is_image() {
+            return vec![];
+        }
         let (k, x, y) = (self.k, self.x, self.y);
         let at = |p: [f64; 2]| [x + p[0] * k, y + p[1] * k];
         crate::symbols::parse(&self.draw)
@@ -812,7 +835,7 @@ impl Project {
             if let Some(u) = s.underlay.as_mut() {
                 u.normalize();
             }
-            if s.underlay.as_ref().is_some_and(|u| u.draw.is_empty() || u.draw.len() > MAX_UNDERLAY) {
+            if s.underlay.as_ref().is_some_and(|u| u.draw.is_empty() || u.draw.len() > MAX_UNDERLAY || !image_ok(&u.draw)) {
                 s.underlay = None;
             }
             // Snapshots without their contents (never issued here) are dropped; one per revision.

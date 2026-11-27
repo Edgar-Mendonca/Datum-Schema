@@ -28,8 +28,8 @@ const HELP: &str = "datum-schema-cli: Datum Schema on the command line
                                        by the extension: .dschema .dxf .xml (DEXPI) .html (web page)
                                        .zip (handover package) .xlsx or .csv (needs --list) .json
   new <out.dschema> [--example <id>]   a new project, or one of the examples (see `examples`)
-  convert <old.dxf> [<project>] --save <out.dschema> [--map BLOCK=symbol …]
-                                       an old DXF P&ID as a new live sheet (blocks to symbols by
+  convert <old.dxf|old.pdf> [<project>] --save <out.dschema> [--map BLOCK=symbol …]
+                                       an old DXF or PDF P&ID as a new live sheet (blocks to symbols by
                                        their names; --map sets one, --map BLOCK= leaves it out);
                                        without --save, lists the blocks and what each becomes
   examples                             the examples
@@ -245,8 +245,8 @@ pub fn run(args: &[String]) -> Result<String, String> {
             write(&d, need(args, 2, "the file to write")?, args)
         }
         "convert" => {
-            let dxf = need(args, 1, "an old drawing (.dxf)")?;
-            let text = std::fs::read(dxf).map(|b| String::from_utf8_lossy(&b).into_owned()).map_err(|e| format!("Could not open {dxf}: {e}"))?;
+            let dxf = need(args, 1, "an old drawing (.dxf or .pdf)")?;
+            let text = std::fs::read(dxf).map(|b| datum_core::dxfin::source(&b)).map_err(|e| format!("Could not open {dxf}: {e}"))?;
             let scan = datum_core::convert::scan(&text)?;
             let mut map = datum_core::convert::suggested(&scan);
             for m in flags(args, "--map") {
@@ -328,6 +328,11 @@ mod tests {
         let conv = run(&a(&["convert", &f("old.dxf"), "--save", &f("conv.dschema"), "--map", "SYM_VENT="])).unwrap();
         assert!(conv.starts_with("Saved") && conv.contains("Left out: 1 × SYM_VENT"), "{conv}");
         assert!(load(&f("conv.dschema")).unwrap().p.items.iter().any(|i| i.sym == "pump_cent"));
+        // A PDF too, its drawn bubble and valve recognised.
+        std::fs::write(dir.join("old.pdf"), datum_core::pdfin::sample(true)).unwrap();
+        assert!(run(&a(&["convert", &f("old.pdf")])).unwrap().contains("~inst_field"));
+        assert!(run(&a(&["convert", &f("old.pdf"), "--save", &f("pdf.dschema")])).unwrap().starts_with("Saved"));
+        assert!(load(&f("pdf.dschema")).unwrap().p.objects.iter().any(|o| o.tag == "FIC-101"));
         assert!(run(&a(&["export", &f("pump.dschema"), &f("e.csv")])).is_err());
         assert!(run(&a(&["export", &f("pump.dschema"), &f("e.exe")])).is_err());
         // DEXPI read back as a project.

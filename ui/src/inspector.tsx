@@ -193,7 +193,7 @@ const SheetPanel = () => {
     <Row label="Scale"><input value={s().scale} onChange={e => setS("scale", e.currentTarget.value)} /></Row>
     <Show when={!s().legend}><Check label="Process flow diagram (lines are streams, with a stream table)" value={s().pfd} set={v => setS("pfd", v)} /></Show>
     <h4>Old drawing behind <Help k="underlay" /></h4>
-    <Show when={s().underlay} fallback={<div class="ibtns"><button class="btn sm" onClick={C.underlay}>Put a DXF behind this sheet…</button></div>}>{u => {
+    <Show when={s().underlay} fallback={<div class="ibtns"><button class="btn sm" onClick={C.underlay}>Put an old drawing behind this sheet…</button></div>}>{u => {
       const setU = (patch: Partial<Underlay>) => setS("underlay", { ...u(), ...patch });
       const mm = (v: string, d: number) => (Number.isFinite(parseFloat(v)) ? parseFloat(v) : d);
       return <div class="ubox">
@@ -204,7 +204,7 @@ const SheetPanel = () => {
           <Row label="Left" unit="mm"><input class="mono" value={+u().x.toFixed(1)} onChange={e => setU({ x: mm(e.currentTarget.value, u().x) })} /></Row>
           <Row label="Top" unit="mm"><input class="mono" value={+u().y.toFixed(1)} onChange={e => setU({ y: mm(e.currentTarget.value, u().y) })} /></Row>
         </div>
-        <div class="ibtns"><button class="btn sm" onClick={C.underlay}>Replace…</button><button class="btn sm" onClick={() => setS("underlay", null)}>Remove</button></div>
+        <div class="ibtns"><Show when={!u().name.match(/\.(png|jpe?g)$/i)}><button class="btn sm" title="The tags in the old drawing that the project lacks, placed as the symbols their letters suggest" onClick={() => import("./placetags").then(m => m.openTagsToPlace())}>Tags to place…</button></Show><button class="btn sm" onClick={C.underlay}>Replace…</button><button class="btn sm" onClick={() => setS("underlay", null)}>Remove</button></div>
       </div>;
     }}</Show>
     <h4>Revisions <button class="btn sm" title="Issue this sheet at a new revision: a row in the table, and a copy kept to compare later changes with" onClick={() => issueRevision(s())}>Issue…</button><button class="btn sm" title="A row in the revision table only" onClick={() => setS("revs", [...s().revs, { rev: String.fromCharCode(65 + s().revs.length), date: new Date().toLocaleDateString(), desc: "", by: p().title.by, checked: "", approved: "" }])}>Add row</button><Help k="revisions" /></h4>

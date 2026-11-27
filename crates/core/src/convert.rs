@@ -54,6 +54,10 @@ pub struct Report {
 /// The symbol a block stands for: a library symbol of that block name, else a suggestion from the
 /// block's name (and a description attribute), else none.
 fn choose(block: &str, desc: &str) -> (String, &'static str) {
+    // A shape recognised from loose lines names its symbol.
+    if let Some(k) = block.strip_prefix(crate::recognise::SHAPE) {
+        return if symbols::builtin(k).is_some() { (k.to_string(), "shape") } else { (String::new(), "none") };
+    }
     if let Some(d) = crate::symlib::registered().iter().filter_map(|s| crate::symlib::definition(s.key)).find(|d| d.block.eq_ignore_ascii_case(block) && !d.like.is_empty()) {
         return (d.like, "library");
     }
@@ -122,12 +126,13 @@ fn kind_of(layer: &str) -> Kind {
 /// Layers that are not process or signal lines.
 fn skip_layer(layer: &str) -> bool {
     let u = layer.to_uppercase();
-    ["FRAME", "BORDER", "TITLE", "TEXT", "DIM", "NOTE", "MARK", "BACKGROUND", "REVISION", "HAZOP", "HATCH", "DEFPOINTS", "VIEWPORT", "SYM-"].iter().any(|w| u.contains(w))
+    ["FRAME", "BORDER", "TITLE", "TEXT", "FILL", "SHAPES", "DIM", "NOTE", "MARK", "BACKGROUND", "REVISION", "HAZOP", "HATCH", "DEFPOINTS", "VIEWPORT", "SYM-"].iter().any(|w| u.contains(w))
 }
 
 /// Reads a drawing for the review: its blocks with the symbols suggested, its lines and texts.
 pub fn scan(text: &str) -> Result<Scan, String> {
-    let d = dxfin::read(text)?;
+    let (mut d, mut warnings) = dxfin::load(text)?;
+    crate::recognise::recognise(&mut d);
     let mut by: BTreeMap<String, (usize, String, String)> = BTreeMap::new();
     let (mut lines, mut texts) = (0, 0);
     for (k, e) in d.ents.iter().enumerate() {
@@ -146,9 +151,8 @@ pub fn scan(text: &str) -> Result<Scan, String> {
     }
     let mut blocks: Vec<BlockUse> = by.into_iter().map(|(block, (count, desc, sample))| { let (sym, how) = choose(&block, &desc); BlockUse { block, count, sym, how, sample } }).collect();
     blocks.sort_by(|a, b| b.count.cmp(&a.count).then(a.block.cmp(&b.block)));
-    let mut warnings = vec![];
     if blocks.is_empty() {
-        warnings.push("The drawing has no blocks: its symbols are loose lines that cannot be recognised. Put it behind a sheet (Sheets › Old Drawing) and trace over it.".into());
+        warnings.push("No symbols were found: neither blocks nor shapes Datum Schema knows (instrument bubbles, bow-tie valves, pumps). Put it behind a sheet (Sheets › Old Drawing) and trace over it; Tags to Place helps.".into());
     }
     if !d.skipped.is_empty() {
         warnings.push(format!("Not read: {}.", d.skipped.iter().map(|(k, v)| format!("{v} {k}")).collect::<Vec<_>>().join(", ")));
@@ -244,7 +248,7 @@ fn simplify(pts: &[[f64; 2]]) -> Vec<[f64; 2]> {
 /// Converts a DXF drawing into a new sheet of the project, the blocks becoming the symbols `map`
 /// names (block → symbol key; "" or missing: left out).
 pub fn convert(p: &mut Project, text: &str, name: &str, map: &BTreeMap<String, String>, created: &mut Vec<u32>) -> Result<Report, String> {
-    let d = dxfin::read(text)?;
+    let (mut d, mut notes) = dxfin::load(text)?;
     let mut prims = vec![];
     dxfin::flatten(&d, &d.ents, Tf::ID, &mut prims, 0);
     let b = dxfin::bbox(&prims).ok_or("That drawing has nothing to convert.")?;
@@ -259,8 +263,11 @@ pub fn convert(p: &mut Project, text: &str, name: &str, map: &BTreeMap<String, S
         }
     }
     // The old drawing behind it, and the same placement for what is converted.
-    let (u, mut notes) = dxfin::underlay(text, name, &sheet)?;
+    let (u, w) = dxfin::underlay_from(&d, name, &sheet)?;
+    notes.extend(w);
     let (k, ux, uy) = (u.k, u.x, u.y);
+    // Symbols drawn as loose lines, recognised by their shape (after the underlay took them all).
+    crate::recognise::recognise(&mut d);
     sheet.underlay = Some(u);
     let to = |q: [f64; 2]| [(q[0] * d.mm - b[0]) * k + ux, (-q[1] * d.mm - b[1]) * k + uy];
     let mut out = vec![];
@@ -482,6 +489,87 @@ fn next_number(p: &Project) -> String {
     (1..).map(|n| format!("CNV-{n:03}")).find(|n| !p.sheets.iter().any(|s| s.number.eq_ignore_ascii_case(n))).unwrap_or_else(|| "CNV".into())
 }
 
+/// A tag read from the old drawing behind a sheet that the project does not have yet, with the
+/// symbol it most likely is and where to put it.
+#[derive(Clone, Debug, Serialize, PartialEq)]
+pub struct Place {
+    pub tag: String,
+    pub sym: String,
+    pub name: String,
+    pub x: f64,
+    pub y: f64,
+}
+
+/// The symbol a tag's letters suggest: a symbol with that tag prefix, else an ISA instrument
+/// (a control valve when the letters end in V).
+fn sym_for(tag: &str) -> Option<&'static str> {
+    let (letters, _, _) = crate::tags::split(tag);
+    let l = letters.trim_end_matches(['-', '_', ' ']).to_uppercase();
+    if l.is_empty() {
+        return None;
+    }
+    if let Some(s) = symbols::all().iter().filter(|s| s.prefix.eq_ignore_ascii_case(&l)).min_by_key(|s| (s.rare, s.cat.instrument())) {
+        return Some(s.key);
+    }
+    let isa = (2..=5).contains(&l.len()) && l.chars().all(|c| c.is_ascii_uppercase());
+    isa.then_some(if l.ends_with('V') { "cv_pneu" } else { "inst_field" })
+}
+
+/// The tags in a sheet's old drawing (its underlay) not yet in the project: texts that look like
+/// tags, and an instrument bubble's letters over its number joined. Each at its text (a bubble's
+/// at its middle), with the symbol its letters suggest. A picture has no text to read.
+pub fn to_place(p: &Project, sheet: u32) -> Vec<Place> {
+    let Some(u) = p.sheets.iter().find(|s| s.id == sheet).and_then(|s| s.underlay.as_ref()) else { return vec![] };
+    let texts: Vec<([f64; 2], f64, String)> = u.prims().into_iter().filter_map(|x| match x { symbols::Prim::Text { p, h, s, .. } => Some((p, h, s.trim().to_string())), _ => None }).collect();
+    let have: HashSet<String> = p.objects.iter().map(|o| o.tag.to_uppercase()).filter(|t| !t.is_empty()).collect();
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut used = vec![false; texts.len()];
+    let mut out = vec![];
+    let mut push = |tag: String, at: [f64; 2], out: &mut Vec<Place>| {
+        if have.contains(&tag) || !seen.insert(tag.clone()) {
+            return;
+        }
+        if let Some(k) = sym_for(&tag) {
+            let name = symbols::get(k).map(|s| s.name.to_string()).unwrap_or_default();
+            out.push(Place { tag, sym: k.into(), name, x: at[0], y: at[1] });
+        }
+    };
+    // Letters over a number (y down: the number below).
+    for (i, a) in texts.iter().enumerate() {
+        if !((1..=5).contains(&a.2.len()) && a.2.chars().all(|c| c.is_ascii_alphabetic())) {
+            continue;
+        }
+        let below = texts.iter().enumerate().filter(|(j, b)| *j != i && !used[*j] && b.2.chars().next().is_some_and(|c| c.is_ascii_digit()) && b.2.len() <= 8 && b.2.chars().all(|c| c.is_ascii_alphanumeric()) && b.0[1] > a.0[1] && b.0[1] - a.0[1] < 2.5 * a.1.max(1.0) && (b.0[0] - a.0[0]).abs() < 1.5 * a.1.max(1.0)).min_by(|x, y| dist(x.1 .0, a.0).total_cmp(&dist(y.1 .0, a.0)));
+        if let Some((j, b)) = below {
+            used[i] = true;
+            used[j] = true;
+            push(format!("{}-{}", a.2.to_uppercase(), b.2), [(a.0[0] + b.0[0]) / 2.0, (a.0[1] + b.0[1]) / 2.0], &mut out);
+        }
+    }
+    for (i, t) in texts.iter().enumerate() {
+        if !used[i] && tag_like(&t.2) {
+            push(t.2.replace(' ', "-").to_uppercase(), t.0, &mut out);
+        }
+    }
+    out.sort_by(|a, b| { let (x, y) = (crate::tags::split(&a.tag), crate::tags::split(&b.tag)); x.0.cmp(&y.0).then(x.1.cmp(&y.1)).then(x.2.cmp(&y.2)) });
+    out
+}
+
+/// Places the tags `to_place` finds on a sheet (only those named; none named: all of them).
+pub fn place_tags(p: &mut Project, sheet: u32, tags: &[String], created: &mut Vec<u32>) -> Result<usize, String> {
+    let want: HashSet<String> = tags.iter().map(|t| t.to_uppercase()).collect();
+    let mut n = 0;
+    for pl in to_place(p, sheet).into_iter().filter(|x| want.is_empty() || want.contains(&x.tag)) {
+        let item = Item { sheet, sym: pl.sym, x: pl.x, y: pl.y, ..Item::default() };
+        exec_op(p, Op::AddItem { item, on: None, tag: pl.tag, obj: None }, created)?;
+        n += 1;
+    }
+    if n == 0 {
+        return Err("No tags to place: the old drawing behind this sheet has no tags the project lacks.".into());
+    }
+    Ok(n)
+}
+
 /// The block → symbol choices a scan suggests.
 pub fn suggested(s: &Scan) -> BTreeMap<String, String> {
     s.blocks.iter().filter(|b| !b.sym.is_empty()).map(|b| (b.block.clone(), b.sym.clone())).collect()
@@ -530,6 +618,88 @@ mod tests {
         // Undo takes the whole conversion back.
         d.undo();
         assert_eq!(d.p.sheets.len(), 1);
+    }
+
+    #[test]
+    fn a_pdf_converts_with_its_shapes_recognised() {
+        let text = dxfin::source(&crate::pdfin::tests::sample(true));
+        assert!(text.starts_with(dxfin::PDF_DATA));
+        let s = scan(&text).unwrap();
+        for k in ["~inst_field", "~gate"] {
+            assert!(s.blocks.iter().any(|b| b.block == k && b.how == "shape" && b.sym == k[1..]), "{k} in {:?}", s.blocks);
+        }
+        assert_eq!(s.blocks.iter().find(|b| b.block == "~inst_field").unwrap().sample, "FIC-101");
+        let mut d = Doc::new(Project::new());
+        d.apply(Op::ConvertDxf { text: text.clone(), name: "old.pdf".into(), map: suggested(&s) }).unwrap();
+        let sid = d.p.sheets.last().unwrap().id;
+        assert!(d.p.sheet(sid).unwrap().underlay.as_ref().is_some_and(|u| !u.is_image() && !u.prims().is_empty()));
+        let item = |t: &str| d.p.items.iter().find(|i| d.p.tag_of(i) == t).cloned();
+        assert_eq!(item("FIC-101").map(|i| i.sym), Some("inst_field".into()));
+        // The valve between the two pipes, wired to both; the dashed line a signal line.
+        let gate = d.p.items.iter().find(|i| i.sheet == sid && i.sym == "gate").unwrap().id;
+        let on = d.p.lines.iter().filter(|l| [&l.a, &l.b].iter().any(|e| e.item().is_some_and(|x| x.0 == gate))).count();
+        assert_eq!(on, 2);
+        assert!(d.p.lines.iter().any(|l| l.sheet == sid && l.kind == Kind::Electric));
+        d.undo();
+        assert!(d.p.sheets.iter().all(|x| x.id != sid));
+        // A picture is put behind a sheet, not converted.
+        assert!(scan(&dxfin::source(&tiny_png())).is_err());
+    }
+
+    pub(crate) fn tiny_png() -> Vec<u8> {
+        let mut b = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR".to_vec();
+        b.extend_from_slice(&1200u32.to_be_bytes());
+        b.extend_from_slice(&800u32.to_be_bytes());
+        b.extend_from_slice(&[8, 2, 0, 0, 0, 0, 0, 0, 0]);
+        b
+    }
+
+    #[test]
+    fn tags_in_the_old_drawing_are_placed() {
+        let mut d = Doc::new(Project::new());
+        let sid = d.p.sheets[0].id;
+        let mut sh = d.p.sheets[0].clone();
+        let (u, _) = dxfin::underlay(&dxfin::source(&crate::pdfin::tests::sample(false)), "old.pdf", &sh).unwrap();
+        sh.underlay = Some(u);
+        d.apply(Op::SetSheet { sheet: sh }).unwrap();
+        let tp = to_place(&d.p, sid);
+        let fic = tp.iter().find(|x| x.tag == "FIC-101").expect("the bubble's letters and number joined");
+        assert_eq!(fic.sym, "inst_field");
+        assert!(tp.iter().any(|x| x.tag == "P-1" && x.sym.starts_with("pump")), "{tp:?}");
+        assert!(!tp.iter().any(|x| x.tag == "FIC" || x.tag == "101"));
+        d.apply(Op::PlaceTags { sheet: sid, tags: vec!["FIC-101".into()] }).unwrap();
+        assert!(d.p.items.iter().any(|i| d.p.tag_of(i) == "FIC-101" && (i.x - fic.x).abs() < 1e-9));
+        assert!(!to_place(&d.p, sid).iter().any(|x| x.tag == "FIC-101"));
+        d.apply(Op::PlaceTags { sheet: sid, tags: vec![] }).unwrap();
+        assert!(to_place(&d.p, sid).is_empty());
+        assert!(d.apply(Op::PlaceTags { sheet: sid, tags: vec![] }).is_err(), "nothing left to place");
+        d.undo();
+        assert!(!to_place(&d.p, sid).is_empty());
+    }
+
+    #[test]
+    fn a_scanned_picture_goes_behind_a_sheet() {
+        let mut d = Doc::new(Project::new());
+        let mut sh = d.p.sheets[0].clone();
+        let (u, _) = dxfin::underlay(&dxfin::source(&tiny_png()), "scan.png", &sh).unwrap();
+        assert!(u.is_image() && u.prims().is_empty() && u.svg().starts_with("<image href=\"data:image/png;base64,"));
+        assert!(u.k.is_finite() && u.k > 0.0 && (u.w / u.h - 1.5).abs() < 1e-9);
+        let (x0, _, x1, _) = crate::frame::inner(&sh);
+        assert!((u.w * u.k - (x1 - x0)).abs() < 1e-6 || u.w * u.k < x1 - x0, "fitted to the drawing area");
+        sh.underlay = Some(u);
+        d.apply(Op::SetSheet { sheet: sh.clone() }).unwrap();
+        assert!(d.p.sheets[0].underlay.as_ref().unwrap().is_image());
+        assert!(to_place(&d.p, sh.id).is_empty());
+        // A picture underlay with anything but base64 in it is not kept.
+        let mut bad = sh.clone();
+        if let Some(u) = bad.underlay.as_mut() {
+            u.draw = std::sync::Arc::new(format!("{}data:image/png;base64,\"/><script>alert(1)</script>", crate::model::IMAGE));
+        }
+        let _ = d.apply(Op::SetSheet { sheet: bad });
+        assert!(d.p.sheets[0].underlay.as_ref().is_none_or(|u| !u.draw.contains("<script")));
+        // A JPEG's size from its frame header.
+        let jpg = [0xFF, 0xD8, 0xFF, 0xE0, 0, 4, 0, 0, 0xFF, 0xC0, 0, 11, 8, 0x01, 0x90, 0x02, 0x58, 3, 0, 0, 0];
+        assert_eq!(dxfin::picture_size(&jpg), Some(("image/jpeg", 600, 400)));
     }
 
     #[test]

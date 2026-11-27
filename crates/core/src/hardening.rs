@@ -234,6 +234,10 @@ fn random_dxf_never_panics() {
                 assert!(c.w.is_finite() && c.h.is_finite() && c.ports.iter().all(|q| q.x.is_finite() && q.y.is_finite()));
             }
         }
+        // Loose shapes recognised in any drawing never panic.
+        if let Ok(mut d) = crate::dxfin::read(&text) {
+            crate::recognise::recognise(&mut d);
+        }
         if let Ok((u, _)) = crate::dxfin::underlay(&text, HOSTILE[i % HOSTILE.len()], &sheet) {
             assert!(u.k.is_finite() && u.k > 0.0 && u.x.is_finite() && u.y.is_finite());
             let _ = symbols::svg(&u.prims());

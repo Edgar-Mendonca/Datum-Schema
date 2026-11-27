@@ -1,5 +1,5 @@
-// Old P&IDs turned into live sheets (engine: convert.rs): read a DXF, review which symbol each
-// block becomes, then convert into a new sheet with the old drawing behind it.
+// Old P&IDs turned into live sheets (engine: convert.rs): read a DXF or PDF, review which symbol
+// each block or recognised shape becomes, then convert into a new sheet with the old drawing behind it.
 import { For, createMemo, createSignal } from "solid-js";
 import { call, lib, openDialog, setOut, setSheetIdRaw, toast, setPanel, setPanelOpen } from "./store";
 import { Out } from "./api";
@@ -31,12 +31,12 @@ export const convertDrawing = async () => {
         <For each={scan.warnings}>{w => <p class="small warn">{w}</p>}</For>
         <div class="hzscroll"><table class="tbl small cvtbl"><thead><tr><th>Block</th><th>Placed</th><th>A tag on one</th><th>Becomes</th><th>Chosen by</th></tr></thead><tbody>
           <For each={scan.blocks}>{b => <tr classList={{ warn: !map()[b.block] }}>
-            <td class="mono">{b.block}</td><td class="num">{b.count}</td><td class="mono">{b.sample || "—"}</td>
+            <td class="mono">{b.block.startsWith("~") ? <i>a drawn shape</i> : b.block}</td><td class="num">{b.count}</td><td class="mono">{b.sample || "—"}</td>
             <td><select value={map()[b.block] ?? ""} onChange={e => setMap({ ...map(), [b.block]: e.currentTarget.value })}><option value="">Leave out</option><For each={syms()}>{s => <option value={s.key} selected={s.key === map()[b.block]}>{s.cat_name} · {s.name}</option>}</For></select></td>
-            <td class="muted">{map()[b.block] !== b.sym ? "you" : b.how === "library" ? "a symbol library" : b.how === "name" ? "the block's name" : "—"}</td>
+            <td class="muted">{map()[b.block] !== b.sym ? "you" : b.how === "library" ? "a symbol library" : b.how === "name" ? "the block's name" : b.how === "shape" ? "its shape" : "—"}</td>
           </tr>}</For>
         </tbody></table></div>
-        <p class="muted small">The new sheet gets the blocks as symbols where they were, with their tags (from the blocks' attributes or the nearest tag-like text), the drawing's lines joined to the symbols' nozzles, valves drawn over a line set into it, and line numbers read from the text beside the lines. The old drawing stays faintly behind the sheet to compare; hide it in the Inspector when done. Undo takes the whole conversion back.</p>
+        <p class="muted small">The new sheet gets the blocks (and the instrument bubbles, bow-tie valves and pumps drawn as loose lines, recognised by their shape) as symbols where they were, with their tags (from the blocks' attributes or the nearest tag-like text), the drawing's lines joined to the symbols' nozzles, valves drawn over a line set into it, and line numbers read from the text beside the lines. The old drawing stays faintly behind the sheet to compare; hide it in the Inspector when done. Undo takes the whole conversion back.</p>
       </Dialog>
     );
   });

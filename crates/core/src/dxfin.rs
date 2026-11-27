@@ -595,10 +595,90 @@ pub fn transform(ps: &mut [Prim], by: [f64; 2], k: f64) {
 
 /// An old drawing read for a sheet's background: its shapes moved to start at (0, 0), then
 /// scaled to fit the sheet's drawing area (never enlarged) and centred in it.
+/// How a PDF is kept as text (in an edit, or between reading and converting).
+pub const PDF_DATA: &str = "data:application/pdf;base64,";
+
+/// A drawing file as text: a DXF as it is, a PDF or a picture (PNG, JPEG) as a data URL.
+pub fn source(bytes: &[u8]) -> String {
+    use base64::Engine;
+    let b64 = |b: &[u8]| base64::engine::general_purpose::STANDARD.encode(b);
+    if bytes.starts_with(b"%PDF") {
+        format!("{PDF_DATA}{}", b64(bytes))
+    } else if let Some((mime, _, _)) = picture_size(bytes) {
+        format!("data:{mime};base64,{}", b64(bytes))
+    } else {
+        String::from_utf8_lossy(bytes).into_owned()
+    }
+}
+
+/// A PNG's or JPEG's type and size in pixels.
+pub fn picture_size(b: &[u8]) -> Option<(&'static str, u32, u32)> {
+    let be32 = |i: usize| b.get(i..i + 4).map(|x| u32::from_be_bytes([x[0], x[1], x[2], x[3]]));
+    let be16 = |i: usize| b.get(i..i + 2).map(|x| u16::from_be_bytes([x[0], x[1]]) as u32);
+    if b.starts_with(b"\x89PNG\r\n\x1a\n") {
+        return Some(("image/png", be32(16)?, be32(20)?)).filter(|x| x.1 > 0 && x.2 > 0);
+    }
+    if !b.starts_with(&[0xFF, 0xD8]) {
+        return None;
+    }
+    let mut i = 2;
+    while i + 9 < b.len() {
+        if b[i] != 0xFF {
+            return None;
+        }
+        let m = b[i + 1];
+        if (0xC0..=0xCF).contains(&m) && ![0xC4, 0xC8, 0xCC].contains(&m) {
+            return Some(("image/jpeg", be16(i + 7)?, be16(i + 5)?)).filter(|x| x.1 > 0 && x.2 > 0);
+        }
+        i += 2 + be16(i + 2)? as usize;
+    }
+    None
+}
+
+/// A drawing from `source`'s text: a DXF, or the first page of a PDF. Warnings say what was
+/// skipped.
+pub fn load(text: &str) -> Result<(Dxf, Vec<String>), String> {
+    use base64::Engine;
+    if let Some(b) = text.strip_prefix(PDF_DATA) {
+        let bytes = base64::engine::general_purpose::STANDARD.decode(b.trim()).map_err(|_| "That PDF could not be read.".to_string())?;
+        return crate::pdfin::read(&bytes, 0);
+    }
+    if text.starts_with("data:image/") {
+        return Err("That is a scanned drawing (a picture), so it has no lines to read: put it behind a sheet (Sheets › Old Drawing) and trace over it.".into());
+    }
+    Ok((read(text)?, vec![]))
+}
+
+/// An old drawing behind a sheet: a DXF, a PDF page, or a scanned picture (PNG, JPEG), as
+/// `source` gives it.
 pub fn underlay(text: &str, name: &str, s: &crate::model::Sheet) -> Result<(crate::model::Underlay, Vec<String>), String> {
-    let d = read(text)?;
+    if let Some(url) = text.strip_prefix("data:image/").map(|_| text) {
+        use base64::Engine;
+        let b = url.split_once(',').map(|x| x.1).unwrap_or("");
+        let bytes = base64::engine::general_purpose::STANDARD.decode(b).map_err(|_| "That picture could not be read.".to_string())?;
+        let (_, pw, ph) = picture_size(&bytes).ok_or("That picture could not be read.")?;
+        let draw = format!("{}{url}", crate::model::IMAGE);
+        if draw.len() > crate::model::MAX_UNDERLAY {
+            return Err("That picture is too large to show behind a sheet; save it smaller (under 12 MB).".into());
+        }
+        // Fitted to the drawing area, larger or smaller.
+        let (w, h) = (pw as f64 * 25.4 / 96.0, ph as f64 * 25.4 / 96.0);
+        let (x0, y0, x1, y1) = crate::frame::inner(s);
+        let k = ((x1 - x0) / w).min((y1 - y0) / h);
+        let rev = crate::model::Underlay::fingerprint(&draw);
+        let u = crate::model::Underlay { name: crate::clip(name, 120), draw: std::sync::Arc::new(draw), w, h, x: (x0 + x1 - w * k) / 2.0, y: (y0 + y1 - h * k) / 2.0, k, show: true, print: false, rev };
+        return Ok((u, vec![]));
+    }
+    let (d, mut warnings) = load(text)?;
+    let (u, w) = underlay_from(&d, name, s)?;
+    warnings.extend(w);
+    Ok((u, warnings))
+}
+
+/// A drawing already read, behind a sheet.
+pub fn underlay_from(d: &Dxf, name: &str, s: &crate::model::Sheet) -> Result<(crate::model::Underlay, Vec<String>), String> {
     let mut ps = vec![];
-    flatten(&d, &d.ents, Tf::ID, &mut ps, 0);
+    flatten(d, &d.ents, Tf::ID, &mut ps, 0);
     let b = bbox(&ps).ok_or("That drawing has nothing Datum Schema can show (lines, circles, arcs or text).")?;
     transform(&mut ps, [-b[0], -b[1]], 1.0);
     let draw = crate::symlib::to_draw(&ps);

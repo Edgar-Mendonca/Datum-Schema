@@ -40,6 +40,8 @@ pub mod model;
 pub mod nozzles;
 pub mod ops;
 pub mod query;
+pub mod recognise;
+pub mod pdfin;
 pub mod pfd;
 pub mod pipes;
 pub mod review;

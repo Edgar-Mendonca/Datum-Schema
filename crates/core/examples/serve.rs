@@ -15,6 +15,8 @@ struct St {
     exports: Vec<Value>,
     /// The drawing scanned for conversion.
     pending: Option<String>,
+    /// The file the next "pick a file" stands for: pdf, png, or (none) the pump example's DXF.
+    pick: Option<String>,
 }
 
 fn out(s: &St, created: Vec<u32>, warnings: Vec<String>) -> Value {
@@ -216,14 +218,31 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
             let _ = std::fs::remove_file(lib_dir().join(str_("file")));
             Value::Null
         }
+        "test_pick" => {
+            s.pick = a["kind"].as_str().map(String::from);
+            Value::Null
+        }
         "underlay_import" => {
-            // The test cannot pick a file: the pump example's sheet, on A1, as an old drawing.
+            // The test cannot pick a file: the pump example's sheet, on A1, as an old drawing; or
+            // a small PDF, or a picture, when the test said so.
             let mut p = examples::get("pump").ok_or("no example")?;
             p.sheets[0].size = "A1".into();
-            let text = dxf::write(&p, &p.sheets[0]);
+            let kind = s.pick.take();
+            let name = match kind.as_deref() { Some("pdf") => "old-pid.pdf", Some("png") => "scan.png", _ => "old-pid.dxf" };
+            let text = match kind.as_deref() {
+                Some("pdf") => datum_core::dxfin::source(&datum_core::pdfin::sample(true)),
+                Some("png") => {
+                    let mut b = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR".to_vec();
+                    b.extend_from_slice(&1200u32.to_be_bytes());
+                    b.extend_from_slice(&800u32.to_be_bytes());
+                    b.extend_from_slice(&[8, 2, 0, 0, 0, 0, 0, 0, 0]);
+                    datum_core::dxfin::source(&b)
+                }
+                _ => dxf::write(&p, &p.sheets[0]),
+            };
             let id = a["sheet"].as_u64().unwrap_or(0) as u32;
             let mut sh = s.doc.p.sheets.iter().find(|x| x.id == id).cloned().ok_or("no sheet")?;
-            let (u, warnings) = datum_core::dxfin::underlay(&text, "old-pid.dxf", &sh)?;
+            let (u, warnings) = datum_core::dxfin::underlay(&text, name, &sh)?;
             sh.underlay = Some(u);
             s.doc.apply(Op::SetSheet { sheet: sh })?;
             out(s, vec![], warnings)
@@ -279,7 +298,11 @@ fn call(s: &mut St, cmd: &str, a: &Value) -> Result<Value, String> {
         }
         "underlay_svg" => {
             let id = a["sheet"].as_u64().unwrap_or(0) as u32;
-            json!(s.doc.p.sheets.iter().find(|x| x.id == id).and_then(|x| x.underlay.as_ref()).map(|u| datum_core::symbols::svg(&datum_core::symbols::parse(&u.draw))).unwrap_or_default())
+            json!(s.doc.p.sheets.iter().find(|x| x.id == id).and_then(|x| x.underlay.as_ref()).map(|u| u.svg()).unwrap_or_default())
+        }
+        "tags_to_place" => {
+            let id = a["sheet"].as_u64().unwrap_or(0) as u32;
+            serde_json::to_value(datum_core::convert::to_place(&s.doc.p, id)).unwrap()
         }
         "symbol_like" => {
             let c: datum_core::symlib::CustomSym = serde_json::from_value(a["sym"].clone()).map_err(|e| e.to_string())?;
@@ -311,7 +334,7 @@ fn main() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../ui/dist");
     let listener = TcpListener::bind(("127.0.0.1", port)).expect("port in use");
     let opts = json!({ "autosave": 0, "beta": false, "theme": "light", "openLast": false, "units": "SI", "grid": true, "paper": "sheet", "company": "", "defaults": null });
-    let mut st = St { doc: Doc::new(Project::new()), opts, exports: vec![], pending: None };
+    let mut st = St { doc: Doc::new(Project::new()), opts, exports: vec![], pending: None, pick: None };
     println!("ready on {port}");
     for stream in listener.incoming().flatten() {
         let mut r = BufReader::new(&stream);

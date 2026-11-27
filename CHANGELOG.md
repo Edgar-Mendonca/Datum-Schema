@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.11.1 — 2026-11-27
+
+Old PDF P&IDs, and help tracing scanned ones.
+
+**Convert an old PDF P&ID** (Sheets › Convert Old P&ID, or File › New › From an old P&ID). A P&ID printed to PDF from a CAD program converts the way a DXF does: its lines, curves and text are read from the first page, and a dashed line becomes a signal line, a thin one a minor line.
+
+**Symbols drawn as loose lines are recognised by their shape**, in a PDF and in a DXF whose blocks were exploded:
+- **Instrument bubbles**: a circle with its letters and number inside, tagged from them (FIC over 101 is FIC-101); in a square a shared display, with a line across a control-room instrument.
+- **Valves drawn as a bow tie**: a gate valve; with a dot a globe valve, with a circle a ball valve, with a stem and an actuator a control valve, turned the way the drawing has it.
+- **Pumps**: a circle beside a tag starting with P.
+
+They are listed in the review as "a drawn shape", and can be changed or left out like any block.
+
+**Scans behind a sheet.** Sheets › Old Drawing now takes a PDF, or a scanned drawing as a PNG or JPEG picture, fitted to the drawing area to trace over.
+
+**Tags to Place** (Sheets › Background, or the Inspector under the old drawing): the tags in the old drawing behind a sheet that the project lacks, an instrument bubble's letters and number joined, each with the symbol its letters suggest. Place puts one where the drawing has it, Place all every one, in one undoable step.
+
+The command line (`datum-schema-cli convert old.pdf --save new.dschema`) and an AI assistant (the `convert_dxf` tool) convert PDFs too.
+
 ## 0.11.0 — 2026-11-21
 
 Old P&IDs turned into live sheets.

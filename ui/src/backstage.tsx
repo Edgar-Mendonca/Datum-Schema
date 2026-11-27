@@ -63,7 +63,7 @@ const Home = () => {
         <div class="tiles">
           <button class="tile" onClick={() => C.newProject(null)}><div class="pic"><ExampleArt id="blank" /></div><b>Blank project</b><span>One A3 sheet with its border and title block.</span></button>
           <For each={ex() ?? []}>{t => <button class="tile" onClick={() => C.newProject(t.id)}><div class="pic"><ExampleArt id={t.id} /></div><b>{t.name}</b><span>{t.what}</span></button>}</For>
-          <button class="tile" onClick={() => import("./convert").then(m => m.convertDrawing())}><div class="pic"><svg class="ic"><use href="#i-import" /></svg></div><b>From an old DXF P&ID</b><span>Its blocks become symbols, its lines are joined to them and its line numbers read, on a new live sheet with the old drawing behind it to compare.</span></button>
+          <button class="tile" onClick={() => import("./convert").then(m => m.convertDrawing())}><div class="pic"><svg class="ic"><use href="#i-import" /></svg></div><b>From an old P&ID (DXF or PDF)</b><span>Its blocks and drawn symbols become symbols, its lines are joined to them and its line numbers read, on a new live sheet with the old drawing behind it to compare.</span></button>
           <button class="tile" onClick={() => C.importDexpi()}><div class="pic"><svg class="ic"><use href="#i-import" /></svg></div><b>From a DEXPI file</b><span>Open a P&ID saved in the DEXPI exchange format (XML) by Datum Schema or another program.</span></button>
           <button class="tile" onClick={() => setBackstage("roadmap")}><div class="pic"><svg class="ic"><use href="#i-list" /></svg></div><b>Roadmap</b><span>Everything Datum Schema will do, and when.</span></button>
         </div>

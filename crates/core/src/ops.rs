@@ -44,6 +44,7 @@ pub fn catalog() -> Vec<OpInfo> {
         o("IssueRevision", "Issue a sheet at a revision (kept for comparison and clouds).", json!({"IssueRevision": {"sheet": 1, "rev": {"rev": "B", "date": "2026-11-21", "desc": "Issued for approval", "by": "EM"}}})),
         o("HazopNode", "Make a HAZOP node from symbols and lines.", json!({"HazopNode": {"ids": [17, 11], "name": "Duty pump"}})),
         o("HazopSuggest", "Add the deviations suggested from the drawing to a HAZOP node's worksheet.", json!({"HazopSuggest": {"node": 1}})),
+        o("PlaceTags", "Place the tags read from the old drawing behind a sheet that the project lacks (tags empty: all), each as the symbol its letters suggest.", json!({"PlaceTags": {"sheet": 3, "tags": ["FIC-101"]}})),
         o("MakeTestPacks", "Make pressure test packs of the line numbers not yet in one.", json!("MakeTestPacks")),
         o("Comment", "Pin a review comment on a sheet at x, y mm (on: the ids it is about).", json!({"Comment": {"sheet": 1, "x": 120.0, "y": 80.0, "text": "Check the strainer size", "on": []}})),
         o("Accept", "Accept a check's problem with a reason, kept for audit (its rule, ids and message exactly as the checks give them). It comes back if the drawing changes what the check says.", json!({"Accept": {"rule": 27, "ids": [5], "msg": "T-101 has no PSH (high pressure) on the drawing: add it, or say it is not needed (Safety, not needed).", "reason": "Vents to atmosphere", "by": "", "date": "2026-11-21"}})),
