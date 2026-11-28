@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.11.7 — 2026-11-28
+
+The symbol editor, rebuilt on Datum Mesh's way of sketching.
+
+**In a tab of its own.** Libraries › New symbol (or a symbol's Drawing…) opens the editor as a tab beside the sheets, with the whole window to draw in; clicking it again goes to the same tab, and closing it goes back to the Libraries tab. File › Libraries opens that tab too when a project is open.
+
+**It shows you how to draw.**
+- A bar over the drawing says what the tool wants next ("Click the next point, or type its length…").
+- **Guides:** a line near level or upright is held there, with a dashed guide and an **H** or **V** (Shift forces it); a point lined up with an end, a centre or a corner is held in line with it, with a dashed guide from it.
+- **Sizes as you draw:** the length and angle (a rectangle's width and height, a circle's diameter) show by the pointer. Type them instead: start typing a number, **Tab** to the next box, **Enter** places it.
+- Lines keep going point after point until a double-click, Enter or a right-click; a shape closes on its first corner.
+
+**Pick, move and change:** a box picks several shapes (Shift adds), drag to move them, **Copy** (Ctrl+D), **Mirror** and **Turn** a quarter (the picked shapes, or the whole drawing with none picked), Delete. The wheel zooms, the middle button pans, **Fit** shows it all; a 5 mm grid over the 1 mm grid.
+
+**Text without a pop-up:** click where it goes, type it and its height in the boxes under the drawing.
+
+**Fixed:** opening a project shows its drawing, closing the tabs of the project before (its datasheets, symbols being drawn); the Lists and Libraries tabs stay.
+
 ## 0.11.6 — 2026-11-28
 
 Drawing feel: you see where a line will go before you click, and you can always get back.

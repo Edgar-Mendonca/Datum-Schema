@@ -266,6 +266,7 @@ export const Backstage = () => (
       <For each={[["home", "home", "Home"], ["new", "new", "New"], ["open", "open", "Open"], ["save", "save", "Save"], ["saveas", "save", "Save As"], ["export", "export", "Export"], ["print", "print", "Print"], ["libraries", "symbols", "Libraries"], ["guide", "help", "User guide"], ["roadmap", "list", "Roadmap"]]}>{([k, i, l]) =>
         <button classList={{ on: backstage() === k }} onClick={() => {
           if (k === "open") C.open(); else if (k === "save") C.save(); else if (k === "saveas") C.save(true);
+          else if (k === "libraries" && out()) import("./rail").then(m => m.openLibraries());
           else setBackstage(k === "new" ? "home" : k);
         }}><Icon n={i} size={22} />{l}</button>}</For>
       <span class="grow" />

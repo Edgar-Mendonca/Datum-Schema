@@ -1468,3 +1468,23 @@ tr.behind td { background: var(--err-bg); }
 .zoomctl .zback { color: var(--blue); font-weight: 600; padding: 0 8px; border-right: 1px solid var(--line); }
 .iscope { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 4px; padding: 6px 8px; margin: 2px 0 8px; background: var(--pale); border-left: 3px solid var(--blue); font-size: 12px; }
 .iscope small { flex-basis: 100%; font-size: 11px; line-height: 1.35; margin-top: 2px; }
+
+/* 0.11.7: the symbol editor in a tab, with guides, sizes typed, a hint per step. */
+.dlg.intab .symed { height: 100%; grid-template-rows: auto minmax(0, 1fr); }
+.dlg.intab .symstage { min-height: 0; }
+.dlg.intab .symedsvg { aspect-ratio: auto; flex: 1; min-height: 0; max-height: none; height: 100%; }
+.symtools .sep { width: 1px; align-self: stretch; background: var(--line); margin: 0 4px; }
+.symstep { display: flex; gap: 8px; align-items: baseline; padding: 4px 8px; background: var(--pale); border-left: 3px solid var(--blue); font-size: 12px; }
+.symstep b { color: var(--blue); }
+.symedsvg .symgridm { stroke: #CDD3DA; stroke-width: .07; }
+.symedsvg .symguide { stroke: #2F6FD0; stroke-width: .12; stroke-dasharray: .5 .35; opacity: .8; }
+.symedsvg .symvert { fill: #2F6FD0; }
+.symedsvg .symbox { fill: rgba(47, 111, 208, .08); stroke: #2F6FD0; stroke-width: .12; stroke-dasharray: .4 .3; }
+.symedsvg .symbadge rect { fill: #2F6FD0; }
+.symedsvg .symbadge text { fill: #fff; font-family: var(--mono); font-weight: 600; }
+.symedsvg .symwhy, .symedsvg .symread { font-family: var(--sans); }
+.symedsvg .symread { fill: #2F6FD0; font-weight: 600; }
+.symsizes { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 4px 0; }
+.symsizes label { display: flex; align-items: center; gap: 4px; font-size: 12px; }
+.symsizes input { width: 72px; }
+.symsizes input.wide { width: 140px; }

@@ -2,9 +2,9 @@
 // in the symbol editor, reviewed here (what each symbol stands for, its connection points), named
 // as the user likes, kept in a project, on this computer, or both, and shared as a file. A project's drawing standard draws Datum Schema's symbols with a library's (engine:
 // symlib.rs; the window only edits and shows).
-import { For, Show, createMemo, createSignal, createEffect, on } from "solid-js";
+import { For, Show, createMemo, createSignal, createEffect, createRoot, on } from "solid-js";
 import { CPort, CustomSym, LibView, SymLibrary, Settings, Cat, Code, CodeList, invoke } from "./api";
-import { call, act, proj, lib, refreshLibs, openDialog, toast, allLibs, LibEntry } from "./store";
+import { call, act, proj, lib, refreshLibs, openDialog, toast, allLibs, LibEntry, out, docTabs, activeDoc, setActiveDoc, openDoc } from "./store";
 import { Dialog, Pick, Check } from "./ui";
 import { Help } from "./help";
 import * as D from "./dialogs";
@@ -136,67 +136,124 @@ const snapPoints = (es: Ent[]): [P, string][] => {
   return v;
 };
 const pickDist = (e: Ent, p: P) => e.k === "t" ? dist(p, e.p) - 1 : e.k === "c" || e.k === "fc" ? (e.k === "fc" ? Math.max(0, dist(p, e.c) - e.r) : Math.abs(dist(p, e.c) - e.r)) : Math.min(...outline(e).flatMap(o => o.slice(1).map((q, k) => segDist(p, o[k], q))), Infinity);
-const moveEnt = (e: Ent, d: P): Ent => {
-  const m = (p: P): P => [p[0] + d[0], p[1] + d[1]];
-  switch (e.k) { case "c": case "fc": case "a": return { ...e, c: m(e.c) }; case "r": return { ...e, a: m(e.a), b: m(e.b) }; case "t": return { ...e, p: m(e.p) }; default: return { ...e, pts: e.pts.map(m) }; }
+const moveEnt = (e: Ent, d: P): Ent => mapEnt(e, p => [p[0] + d[0], p[1] + d[1]]);
+/** An entity with every point mapped (a move, a mirror or a quarter turn); arcs keep their sense. */
+const mapEnt = (e: Ent, f: (p: P) => P, angle?: (a: number) => number, swap = false): Ent => {
+  switch (e.k) {
+    case "c": case "fc": return { ...e, c: f(e.c) };
+    case "a": { const a0 = angle ? angle(e.a0) : e.a0, a1 = angle ? angle(e.a1) : e.a1; return { ...e, c: f(e.c), a0: r2(swap ? a1 : a0), a1: r2(swap ? a0 : a1) }; }
+    case "r": { const a = f(e.a), b = f(e.b); return { ...e, a: [Math.min(a[0], b[0]), Math.min(a[1], b[1])], b: [Math.max(a[0], b[0]), Math.max(a[1], b[1])] }; }
+    case "t": return { ...e, p: f(e.p) };
+    default: return { ...e, pts: e.pts.map(f) };
+  }
+};
+const mirrorEnt = (e: Ent) => mapEnt(e, p => [r2(-p[0]), p[1]], a => 180 - a, true);
+const turnEnt = (e: Ent) => mapEnt(e, p => [r2(-p[1]), r2(p[0])], a => a + 90);
+const entPts = (e: Ent): P[] => (e.k === "t" ? [e.p] : outline(e).flat());
+
+type STool = "sel" | "l" | "p" | "f" | "d" | "r" | "c" | "a" | "fc" | "t";
+/** What each tool asks for, step by step (the hint over the drawing). */
+const STEPS: Record<STool, string[]> = {
+  sel: ["Click a shape, or drag a box round several; drag them to move; Delete removes them, Ctrl+D copies"],
+  l: ["Click where the line starts", "Click the next point, or type its length (Tab: angle, Enter: place it); double-click or Enter ends the line"],
+  d: ["Click where the dashed line starts", "Click the next point, or type its length (Tab: angle); double-click or Enter ends it"],
+  p: ["Click the first corner", "Click the next corner, or type the side's length (Tab: angle); click the first corner, or Enter, to close it"],
+  f: ["Click the first corner", "Click the next corner, or type the side's length (Tab: angle); click the first corner, or Enter, to close it"],
+  r: ["Click one corner", "Click the opposite corner, or type its width and height (Tab between them, Enter to place)"],
+  c: ["Click the centre", "Click a point on the circle, or type its diameter (Enter to place)"],
+  fc: ["Click the centre", "Click a point on the dot's edge, or type its diameter (Enter to place)"],
+  a: ["Click the arc's centre", "Click where it starts (that sets its radius)", "Click where it ends (it runs anticlockwise)"],
+  t: ["Click where the text goes", "Type the text (Tab: its height in mm), Enter to place it"],
+};
+/** The sizes a tool takes typed in, by step. */
+const SIZES: Partial<Record<STool, [string, string][]>> = {
+  l: [["len", "Length"], ["ang", "Angle °"]], d: [["len", "Length"], ["ang", "Angle °"]], p: [["len", "Length"], ["ang", "Angle °"]], f: [["len", "Length"], ["ang", "Angle °"]],
+  r: [["w", "Width"], ["h", "Height"]], c: [["dia", "Diameter"]], fc: [["dia", "Diameter"]], t: [["text", "Text"], ["th", "Height"]],
 };
 
-/** The symbol editor (0.11.3, as Datum Mesh's sketching): draw a symbol of your own, black on white,
- *  with lines, polylines, closed and filled shapes, dashed lines, rectangles, circles, arcs, dots
- *  and text; points snap to the ends, midpoints, centres, quadrants and crossings of what is drawn
- *  (else to a 0.5 mm grid), Shift keeps a line level or upright. Select picks a shape to move
- *  (drag) or delete (Delete). Start from a copy of any symbol to change it. Then say what it is:
- *  one of ours drawn your way, or a new kind of object with its class, category and tag prefix. */
-export const symbolEditor = (start: CustomSym | null, done: (c: CustomSym) => void) => openDialog(() => {
-  type Tool = "sel" | "l" | "p" | "f" | "d" | "r" | "c" | "a" | "fc" | "t";
+/** The symbol editor (0.11.7; first in 0.11.3), in a tab of its own: Datum Mesh's way of sketching,
+ *  for symbols. Lines, shapes, filled shapes, dashed lines, rectangles, circles, arcs, dots and text,
+ *  black on white. Points snap to the ends, midpoints, centres, quadrants and crossings of what is
+ *  drawn; a line near level or upright is held there (a dashed guide and an H or V say so, Shift
+ *  forces it); a point lined up with another is held in line with it (a dashed guide from it);
+ *  else the 0.5 mm grid. The length and angle show as you draw; type them instead (Tab between,
+ *  Enter places). Select picks shapes (a box picks several) to move, copy, mirror, turn or delete.
+ *  Then say what it is: one of ours drawn your way, or a new kind of object. */
+export const symbolEditor = (start: CustomSym | null, done: (c: CustomSym) => void) => {
+  const body = () => <SymbolEditor start={start} done={done} />;
+  if (!out()) return openDialog(body);
+  const id = `symed:${start ? start.key || start.name : "new"}`;
+  if (docTabs().some(t => t.id === id)) { setActiveDoc(id); return; }
+  // Closed (used or cancelled), it goes back to the tab it was opened from (the Libraries tab).
+  const from = activeDoc();
+  openDoc({ id, title: start ? `Symbol · ${start.name}` : "New symbol", render: body });
+  createRoot(dispose => createEffect(on(docTabs, v => { if (v.some(t => t.id === id)) return; dispose(); if (from && v.some(t => t.id === from)) setActiveDoc(from); }, { defer: true })));
+};
+
+const SymbolEditor = (props: { start: CustomSym | null; done: (c: CustomSym) => void }) => {
+  const start = props.start, done = props.done;
   const [ents, setEntsRaw] = createSignal<Ent[]>(start ? parseDraw(start.draw) : []);
   const [undo, setUndo] = createSignal<Ent[][]>([]);
   const setEnts = (v: Ent[]) => { setUndo([...undo().slice(-49), ents()]); setEntsRaw(v); };
-  const [tool, setTool] = createSignal<Tool>("l");
+  const [tool, setToolRaw] = createSignal<STool>("l");
   const [cur, setCur] = createSignal<P[]>([]);
-  const [hover, setHover] = createSignal<{ p: P; why: string } | null>(null);
-  const [picked, setPicked] = createSignal(-1);
+  const [hover, setHover] = createSignal<{ p: P; why: string; guides: [P, P][]; badge: string } | null>(null);
+  const [picked, setPicked] = createSignal<number[]>([]);
   const [drag, setDrag] = createSignal<P | null>(null);
+  const [box, setBox] = createSignal<{ a: P; b: P; add: boolean } | null>(null);
+  const [typed, setTyped] = createSignal<Record<string, string>>({});
+  const [view, setView] = createSignal({ x: 0, y: 0, half: 20 });
   const [c, setC] = createSignal<CustomSym>(start ? { ...start } : { key: "", name: "", library: "", block: "", like: "", class: "UnknownItem", cat: "mark", w: 10, h: 10, draw: "", ports: [], prefix: "", inline: false, terminal: false });
   const [svg, setSvg] = createSignal("");
-  const M = 20, G = 0.5;
+  const G = 0.5;
   let el!: SVGSVGElement;
+  const boxes: HTMLInputElement[] = [];
   const draw = () => ents().map(entStr).join("; ");
   createEffect(on(draw, d => { invoke<string>("symbol_svg", { draw: d }).then(setSvg, () => setSvg("")); }));
   const raw = (e: MouseEvent): P => { const pt = el.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; const q = pt.matrixTransform(el.getScreenCTM()!.inverse()); return [q.x, q.y]; };
-  const mmPerPx = () => 2 * M / Math.max(1, el?.getBoundingClientRect().width ?? 400);
+  // The view is square and fitted into the stage: its shorter side sets the scale.
+  const mmPerPx = () => { const r = el?.getBoundingClientRect(); return 2 * view().half / Math.max(1, r ? Math.min(r.width, r.height) : 400); };
   const snaps = createMemo(() => snapPoints(ents()));
-  const snap = (e: MouseEvent): { p: P; why: string } => {
+  const drawing = () => ["l", "d", "p", "f"].includes(tool());
+  const setTool = (k: STool) => { finish(); setToolRaw(k); setPicked([]); setTyped({}); };
+  /** The point the pointer means: a key point; else held level or upright from the last point, and in
+   *  line with other points (each with its guide); else the grid. */
+  const snap = (e: MouseEvent): { p: P; why: string; guides: [P, P][]; badge: string } => {
     let p = raw(e);
-    const last = cur()[cur().length - 1];
-    if (e.shiftKey && last) p = Math.abs(p[0] - last[0]) > Math.abs(p[1] - last[1]) ? [p[0], last[1]] : [last[0], p[1]];
-    const tol = 10 * mmPerPx();
-    const near = snaps().map(([q, why]) => ({ q, why, d: dist(q, p) })).filter(x => x.d < tol).sort((a, b) => a.d - b.d)[0];
-    if (near && !(e.shiftKey && last)) return { p: [r2(near.q[0]), r2(near.q[1])], why: near.why };
-    // The chain's own start closes a shape.
-    if (cur().length > 2 && dist(cur()[0], p) < tol) return { p: cur()[0], why: "Close" };
-    return { p: [Math.round(p[0] / G) * G, Math.round(p[1] / G) * G], why: e.shiftKey && last ? "Level/upright" : "Grid" };
+    const last = cur()[cur().length - 1], tol = 9 * mmPerPx(), guides: [P, P][] = [];
+    let badge = "", lockX = false, lockY = false;
+    if (e.shiftKey && last) { if (Math.abs(p[0] - last[0]) > Math.abs(p[1] - last[1])) { p = [p[0], last[1]]; lockY = true; badge = "H"; } else { p = [last[0], p[1]]; lockX = true; badge = "V"; } }
+    if (!e.shiftKey) {
+      const near = snaps().map(([q, why]) => ({ q, why, d: dist(q, p) })).filter(x => x.d < tol).sort((a, b) => a.d - b.d)[0];
+      if (near) return { p: [r2(near.q[0]), r2(near.q[1])], why: near.why, guides, badge };
+      if (cur().length > 2 && dist(cur()[0], p) < tol) return { p: cur()[0], why: "Close", guides, badge };
+      if (last && tool() !== "sel") {
+        if (Math.abs(p[1] - last[1]) < tol) { p = [p[0], last[1]]; lockY = true; badge = "H"; }
+        else if (Math.abs(p[0] - last[0]) < tol) { p = [last[0], p[1]]; lockX = true; badge = "V"; }
+      }
+    }
+    // In line with another point: the nearest key point (or a point of this chain) across or down.
+    const keys: P[] = [...snaps().map(s => s[0]), ...cur().slice(0, -1), [0, 0]];
+    if (!lockX) { const k = keys.filter(q => Math.abs(q[0] - p[0]) < tol).sort((a, b) => Math.abs(a[0] - p[0]) - Math.abs(b[0] - p[0]))[0]; if (k) { p = [k[0], p[1]]; lockX = true; guides.push([k, p]); } }
+    if (!lockY) { const k = keys.filter(q => Math.abs(q[1] - p[1]) < tol).sort((a, b) => Math.abs(a[1] - p[1]) - Math.abs(b[1] - p[1]))[0]; if (k) { p = [p[0], k[1]]; lockY = true; guides.push([k, p]); } }
+    const g = (v: number) => Math.round(v / G) * G;
+    p = [lockX ? r2(p[0]) : g(p[0]), lockY ? r2(p[1]) : g(p[1])];
+    for (const gd of guides) gd[1] = p;
+    if (badge && last) guides.unshift([last, p]);
+    return { p, why: badge ? (badge === "H" ? "Level" : "Upright") : guides.length ? "In line" : "Grid", guides, badge };
   };
   const finish = () => {
     const k = tool(), p = cur();
     if ((k === "l" || k === "d") && p.length >= 2) setEnts([...ents(), { k, pts: p }]);
     if ((k === "p" || k === "f") && p.length >= 3) setEnts([...ents(), { k, pts: dist(p[0], p[p.length - 1]) < 1e-6 ? p.slice(0, -1) : p }]);
-    setCur([]);
+    setCur([]); setTyped({});
   };
-  const down = (e: MouseEvent) => {
-    if (e.button !== 0) return;
-    const k = tool();
-    if (k === "sel") {
-      const p = raw(e), tol = 8 * mmPerPx();
-      const best = ents().map((x, i) => ({ i, d: pickDist(x, p) })).filter(x => x.d < tol).sort((a, b) => a.d - b.d)[0];
-      setPicked(best ? best.i : -1);
-      if (best) { setUndo([...undo().slice(-49), ents()]); setDrag(snap(e).p); }
-      return;
-    }
-    const { p } = snap(e), pts = [...cur(), p];
-    if (k === "t") { const text = window.prompt("Text (a letter or a short word):", "M"); if (text) setEnts([...ents(), { k: "t", p, h: 2.5, s: text.slice(0, 12) }]); return; }
-    if (k === "c" || k === "fc") { if (pts.length === 2) { setEnts([...ents(), { k, c: pts[0], r: Math.max(k === "fc" ? 0.3 : 0.5, r2(dist(pts[0], pts[1]))) }]); setCur([]); } else setCur(pts); return; }
-    if (k === "r") { if (pts.length === 2) { setEnts([...ents(), { k: "r", a: pts[0], b: pts[1] }]); setCur([]); } else setCur(pts); return; }
+  /** A point given to the tool (clicked, or from the sizes typed). */
+  const give = (p: P) => {
+    const k = tool(), pts = [...cur(), p];
+    if (k === "t") { setCur([p]); setTyped({ th: "2.5" }); queueMicrotask(() => boxes[0]?.focus()); return; }
+    if (k === "c" || k === "fc") { if (pts.length === 2) { setEnts([...ents(), { k, c: pts[0], r: Math.max(k === "fc" ? 0.3 : 0.5, r2(dist(pts[0], pts[1]))) }]); setCur([]); setTyped({}); } else setCur(pts); return; }
+    if (k === "r") { if (pts.length === 2) { if (dist(pts[0], pts[1]) > 0) setEnts([...ents(), { k: "r", a: [Math.min(pts[0][0], p[0]), Math.min(pts[0][1], p[1])], b: [Math.max(pts[0][0], p[0]), Math.max(pts[0][1], p[1])] }]); setCur([]); setTyped({}); } else setCur(pts); return; }
     if (k === "a") {
       if (pts.length === 3) { const ang = (q: P) => r2(Math.atan2(q[1] - pts[0][1], q[0] - pts[0][0]) * 180 / Math.PI); setEnts([...ents(), { k: "a", c: pts[0], r: r2(dist(pts[0], pts[1])), a0: ang(pts[1]), a1: ang(pts[2]) }]); setCur([]); }
       else setCur(pts);
@@ -204,56 +261,155 @@ export const symbolEditor = (start: CustomSym | null, done: (c: CustomSym) => vo
     }
     // A shape closes when the chain comes back to its start.
     if ((k === "p" || k === "f") && pts.length > 3 && dist(pts[0], p) < 1e-6) { setCur(pts); finish(); return; }
-    setCur(pts);
+    if (cur().length && dist(cur()[cur().length - 1], p) < 1e-6) return;
+    setCur(pts); setTyped({});
+  };
+  /** The sizes typed, as the next point (or the text placed). */
+  const num = (k: string) => { const v = typed()[k]; return v !== undefined && v.trim() !== "" && Number.isFinite(+v) ? +v : null; };
+  const placeTyped = () => {
+    const k = tool(), last = cur()[cur().length - 1];
+    if (k === "t") { const s = (typed().text ?? "").trim(); if (s && last) setEnts([...ents(), { k: "t", p: last, h: Math.max(0.5, num("th") ?? 2.5), s: s.slice(0, 12) }]); setCur([]); setTyped({}); el.focus(); return; }
+    if (!last) return;
+    if (k === "c" || k === "fc") { const d = num("dia"); if (d && d > 0) give([r2(last[0] + d / 2), last[1]]); el.focus(); return; }
+    if (k === "r") { const h0 = hover()?.p ?? last; const w = num("w") ?? Math.abs(h0[0] - last[0]), h = num("h") ?? Math.abs(h0[1] - last[1]); if (w > 0 && h > 0) give([r2(last[0] + w), r2(last[1] + h)]); el.focus(); return; }
+    const hp = hover()?.p;
+    const len = num("len") ?? (hp ? dist(last, hp) : null), ang = num("ang") ?? (hp ? Math.atan2(-(hp[1] - last[1]), hp[0] - last[0]) * 180 / Math.PI : 0);
+    if (len && len > 0) give([r2(last[0] + len * Math.cos(ang * Math.PI / 180)), r2(last[1] - len * Math.sin(ang * Math.PI / 180))]);
+    el.focus();
+  };
+  /** The live size by the pointer: length and angle, width and height, or diameter. */
+  const readout = () => {
+    const h = hover()?.p, last = cur()[cur().length - 1], k = tool(); if (!h || !last || k === "t" || k === "sel") return "";
+    if (k === "r") return `${r2(Math.abs(h[0] - last[0]))} × ${r2(Math.abs(h[1] - last[1]))} mm`;
+    if (k === "c" || k === "fc") return `⌀ ${r2(2 * dist(last, h))} mm`;
+    if (k === "a") return cur().length === 1 ? `r ${r2(dist(last, h))} mm` : "";
+    let a = Math.atan2(-(h[1] - last[1]), h[0] - last[0]) * 180 / Math.PI; if (a < 0) a += 360;
+    return `${r2(dist(last, h))} mm · ${Math.round(a * 10) / 10}°`;
+  };
+  const down = (e: MouseEvent) => {
+    if (e.button === 1) { e.preventDefault(); const a = raw(e), v0 = view(); const mv = (m: MouseEvent) => { const b = raw(m); setView({ ...v0, x: view().x - (b[0] - a[0]), y: view().y - (b[1] - a[1]) }); }; const up = () => { removeEventListener("mousemove", mv); removeEventListener("mouseup", up); }; addEventListener("mousemove", mv); addEventListener("mouseup", up); return; }
+    if (e.button !== 0) return;
+    el.focus();
+    if (tool() === "sel") {
+      const p = raw(e), tol = 8 * mmPerPx();
+      const best = ents().map((x, i) => ({ i, d: pickDist(x, p) })).filter(x => x.d < tol).sort((a, b) => a.d - b.d)[0];
+      if (!best) { setBox({ a: p, b: p, add: e.shiftKey }); if (!e.shiftKey) setPicked([]); return; }
+      if (e.shiftKey) { setPicked(picked().includes(best.i) ? picked().filter(i => i !== best.i) : [...picked(), best.i]); return; }
+      if (!picked().includes(best.i)) setPicked([best.i]);
+      setUndo([...undo().slice(-49), ents()]); setDrag(snap(e).p);
+      return;
+    }
+    give(snap(e).p);
   };
   const move = (e: MouseEvent) => {
+    const b0 = box(); if (b0) { setBox({ ...b0, b: raw(e) }); return; }
     const s = snap(e);
     setHover(s);
     const d0 = drag();
-    if (d0 && picked() >= 0) { const d: P = [s.p[0] - d0[0], s.p[1] - d0[1]]; if (d[0] || d[1]) { setEntsRaw(ents().map((x, i) => (i === picked() ? moveEnt(x, d) : x))); setDrag(s.p); } }
+    if (d0 && picked().length) { const d: P = [s.p[0] - d0[0], s.p[1] - d0[1]]; if (d[0] || d[1]) { setEntsRaw(ents().map((x, i) => (picked().includes(i) ? moveEnt(x, d) : x))); setDrag(s.p); } }
   };
+  const up = () => {
+    setDrag(null);
+    const b0 = box(); if (!b0) return; setBox(null);
+    const [x0, x1] = [Math.min(b0.a[0], b0.b[0]), Math.max(b0.a[0], b0.b[0])], [y0, y1] = [Math.min(b0.a[1], b0.b[1]), Math.max(b0.a[1], b0.b[1])];
+    if (x1 - x0 < 0.2 && y1 - y0 < 0.2) return;
+    const inside = ents().map((e, i) => ({ i, ok: entPts(e).every(q => q[0] >= x0 && q[0] <= x1 && q[1] >= y0 && q[1] <= y1) })).filter(x => x.ok).map(x => x.i);
+    setPicked(b0.add ? [...new Set([...picked(), ...inside])] : inside);
+  };
+  const wheel = (e: WheelEvent) => { e.preventDefault(); const p = raw(e), v = view(), f = e.deltaY > 0 ? 1.2 : 1 / 1.2, half = Math.min(80, Math.max(3, v.half * f)); setView({ half, x: p[0] - (p[0] - v.x) * half / v.half, y: p[1] - (p[1] - v.y) * half / v.half }); };
+  /** The picked shapes (or, with none picked, the whole drawing) mirrored, turned or copied. */
+  const onPicked = (f: (e: Ent) => Ent, copy = false) => {
+    const all = !picked().length, ids = all ? ents().map((_, i) => i) : picked();
+    if (!ids.length) return;
+    if (copy) { const n = ents().length; setEnts([...ents(), ...ids.map(i => f(ents()[i]))]); setPicked(ids.map((_, k) => n + k)); return; }
+    setEnts(ents().map((x, i) => (ids.includes(i) ? f(x) : x)));
+  };
+  const delPicked = () => { if (!picked().length) return; setEnts(ents().filter((_, i) => !picked().includes(i))); setPicked([]); };
+  const doUndo = () => { const u = undo(); if (u.length) { setEntsRaw(u[u.length - 1]); setUndo(u.slice(0, -1)); setPicked([]); } };
   const key = (e: KeyboardEvent) => {
-    if (e.key === "Enter") { e.preventDefault(); finish(); }
-    if (e.key === "Escape") { e.stopPropagation(); if (cur().length) setCur([]); else setPicked(-1); }
-    if ((e.key === "Delete" || e.key === "Backspace") && picked() >= 0) { e.preventDefault(); setEnts(ents().filter((_, i) => i !== picked())); setPicked(-1); }
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); e.stopPropagation(); const u = undo(); if (u.length) { setEntsRaw(u[u.length - 1]); setUndo(u.slice(0, -1)); setPicked(-1); } }
+    const ctrl = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+    // The keys the editor uses stay in it (Enter must not close the tab, Ctrl+Z must not undo the project).
+    if (["Enter", "Escape", "Delete", "Backspace"].includes(e.key) || (ctrl && ["z", "a", "d", "y"].includes(k)) || /^[0-9.\-]$/.test(e.key)) e.stopPropagation();
+    if (e.key === "Enter") { e.preventDefault(); if (SIZES[tool()] && cur().length && Object.values(typed()).some(v => v.trim())) placeTyped(); else finish(); return; }
+    if (e.key === "Escape") { if (cur().length) { setCur([]); setTyped({}); } else setPicked([]); return; }
+    if ((e.key === "Delete" || e.key === "Backspace") && picked().length) { e.preventDefault(); delPicked(); return; }
+    if (ctrl && k === "z") { e.preventDefault(); doUndo(); return; }
+    if (ctrl && k === "a") { e.preventDefault(); setToolRaw("sel"); setPicked(ents().map((_, i) => i)); return; }
+    if (ctrl && k === "d") { e.preventDefault(); onPicked(x => moveEnt(x, [1, 1]), true); return; }
+    // A size typed while a shape is drawn goes into its first box.
+    const sz = SIZES[tool()];
+    if (sz && cur().length && /^[0-9.\-]$/.test(e.key) && boxes[0]) { e.preventDefault(); boxes[0].focus(); setTyped({ ...typed(), [sz[0][0]]: e.key }); return; }
+  };
+  const boxKey = (e: KeyboardEvent) => {
+    e.stopPropagation();
+    if (e.key === "Enter") { e.preventDefault(); placeTyped(); }
+    if (e.key === "Escape") { setTyped({}); el.focus(); }
   };
   const wh = (): [number, number] => {
     let w = 0, h = 0;
-    for (const e of ents()) { const pts = e.k === "t" ? [e.p] : outline(e).flat(); for (const p of pts) { w = Math.max(w, 2 * Math.abs(p[0])); h = Math.max(h, 2 * Math.abs(p[1])); } }
+    for (const e of ents()) for (const p of entPts(e)) { w = Math.max(w, 2 * Math.abs(p[0])); h = Math.max(h, 2 * Math.abs(p[1])); }
     return [Math.max(1, r2(w)), Math.max(1, r2(h))];
   };
-  const fromSym = (key: string) => { invoke<string>("symbol_draw", { key }).then(d => { setEnts(parseDraw(d)); setPicked(-1); setCur([]); }, () => toast("That symbol's drawing could not be read.")); };
+  const fromSym = (key: string) => { invoke<string>("symbol_draw", { key }).then(d => { setEnts(parseDraw(d)); setPicked([]); setCur([]); }, () => toast("That symbol's drawing could not be read.")); };
+  const fit = () => { const [w, h] = wh(); setView({ x: 0, y: 0, half: Math.max(6, Math.min(80, Math.max(w, h) * 0.75 + 3)) }); };
   const classes = () => (lib()?.classes ?? []).filter(k => k.name !== "UnknownItem").map(k => [k.name, k.label || k.name] as [string, string]).sort((a, b) => a[1].localeCompare(b[1]));
-  const tools: [Tool, string, string][] = [["sel", "Select", "Pick a shape: drag it to move it, Delete to remove it"], ["l", "Line", "Click each point; double-click or Enter ends it; Shift keeps it level or upright"], ["p", "Shape", "A closed outline: click each corner; click the first one, double-click or Enter closes it"], ["f", "Filled", "A filled outline (an arrowhead, a solid triangle)"], ["d", "Dashed", "A dashed line: click each point; double-click ends it"], ["r", "Rectangle", "Click two opposite corners"], ["c", "Circle", "Click the centre, then a point on the circle"], ["a", "Arc", "Click the centre, the start, then the end (clockwise)"], ["fc", "Dot", "A filled circle: click the centre, then its edge"], ["t", "Text", "Click where a letter or word goes"]];
+  const tools: [STool, string, string][] = [["sel", "Select", "Pick shapes to move, copy, mirror, turn or delete (a box picks several)"], ["l", "Line", "A line through each point you click"], ["p", "Shape", "A closed outline"], ["f", "Filled", "A closed outline, filled in black"], ["d", "Dashed", "A dashed line"], ["r", "Rectangle", "Two opposite corners"], ["c", "Circle", "Its centre, then its edge"], ["a", "Arc", "Its centre, its start and its end"], ["fc", "Dot", "A filled circle"], ["t", "Text", "A letter or a short word, such as M for a motor"]];
   const ok = () => {
     if (!c().name.trim()) { toast("Give the symbol a name."); return false; }
     if (!draw().trim()) { toast("Draw the symbol first."); return false; }
     const [w, h] = wh();
     done({ ...c(), name: c().name.trim(), block: c().block || c().name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, "_").slice(0, 40), draw: draw(), w, h, inline: c().inline && c().ports.filter(q => !q.signal).length === 2 });
   };
-  const rubber = () => { const p = cur(), h = hover()?.p; if (!p.length || !h) return ""; const k = tool(); if (k === "c" || k === "fc") return `M${p[0][0] + dist(p[0], h)},${p[0][1]}A${dist(p[0], h)},${dist(p[0], h)} 0 1 1 ${p[0][0] - dist(p[0], h)},${p[0][1]}A${dist(p[0], h)},${dist(p[0], h)} 0 1 1 ${p[0][0] + dist(p[0], h)},${p[0][1]}`; if (k === "r") return `M${p[0][0]},${p[0][1]}H${h[0]}V${h[1]}H${p[0][0]}Z`; return `M${[...p, h].map(q => `${q[0]},${q[1]}`).join("L")}`; };
+  const rubber = () => { const p = cur(), h = hover()?.p; if (!p.length || !h) return ""; const k = tool(); if (k === "c" || k === "fc") { const r = dist(p[0], h); return `M${p[0][0] + r},${p[0][1]}A${r},${r} 0 1 1 ${p[0][0] - r},${p[0][1]}A${r},${r} 0 1 1 ${p[0][0] + r},${p[0][1]}`; } if (k === "r") return `M${p[0][0]},${p[0][1]}H${h[0]}V${h[1]}H${p[0][0]}Z`; if (k === "a" || k === "t") return ""; return `M${[...p, h].map(q => `${q[0]},${q[1]}`).join("L")}`; };
+  const step = () => { const s = STEPS[tool()]; return s[Math.min(cur().length, s.length - 1)]; };
+  const vb = () => { const v = view(); return `${v.x - v.half} ${v.y - v.half} ${2 * v.half} ${2 * v.half}`; };
+  const fs = () => 11 * mmPerPx();
   return (
     <Dialog title={start ? `Symbol · ${start.name}` : "New symbol"} wide help="symboleditor" ok={ok} okText="Use this symbol">
       <div class="symed">
         <div class="symtools">
-          <For each={tools}>{([k, l, t]) => <button class="btn sm" classList={{ on: tool() === k }} title={t} onClick={() => { finish(); setTool(k); setPicked(-1); }}>{l}</button>}</For>
+          <For each={tools}>{([k, l, t]) => <button class="btn sm" data-t={k} classList={{ on: tool() === k }} title={t} onClick={() => setTool(k)}>{l}</button>}</For>
+          <span class="sep" />
+          <button class="btn sm" data-a="mirror" title="Mirror left to right about the cross (the picked shapes, or the whole drawing)" onClick={() => onPicked(mirrorEnt)}>Mirror</button>
+          <button class="btn sm" data-a="turn" title="Turn a quarter clockwise about the cross (the picked shapes, or the whole drawing)" onClick={() => onPicked(turnEnt)}>Turn</button>
+          <button class="btn sm" data-a="copy" title="A copy of the picked shapes, 1 mm across and down (Ctrl+D)" onClick={() => onPicked(x => moveEnt(x, [1, 1]), true)} disabled={!picked().length}>Copy</button>
+          <button class="btn sm" data-a="del" title="Delete the picked shapes (Delete)" onClick={delPicked} disabled={!picked().length}>Delete</button>
           <span class="grow" />
-          <button class="btn sm" title="Take back the last change (Ctrl+Z)" onClick={() => { const u = undo(); if (u.length) { setEntsRaw(u[u.length - 1]); setUndo(u.slice(0, -1)); setPicked(-1); } }}>Undo</button>
-          <button class="btn sm" title="Start again from nothing" onClick={() => { setCur([]); setPicked(-1); setEnts([]); }}>Clear</button>
+          <button class="btn sm" title="Show the whole symbol" onClick={fit}>Fit</button>
+          <button class="btn sm" title="Take back the last change (Ctrl+Z)" onClick={doUndo}>Undo</button>
+          <button class="btn sm" title="Start again from nothing" onClick={() => { setCur([]); setPicked([]); setEnts([]); }}>Clear</button>
         </div>
         <div class="symstage">
-          <svg ref={el} class="symedsvg" viewBox={`${-M} ${-M} ${2 * M} ${2 * M}`} tabindex="0" onMouseDown={down} onMouseUp={() => setDrag(null)} onDblClick={finish} onMouseMove={move} onMouseLeave={() => { setHover(null); setDrag(null); }} onKeyDown={key}>
-            <defs><pattern id="symgrid" width="1" height="1" patternUnits="userSpaceOnUse"><path d="M1 0H0V1" fill="none" class="symgridl" /></pattern></defs>
-            <rect x={-M} y={-M} width={2 * M} height={2 * M} fill="#fff" />
-            <rect x={-M} y={-M} width={2 * M} height={2 * M} fill="url(#symgrid)" />
-            <line x1={-M} y1={0} x2={M} y2={0} class="symaxis" /><line x1={0} y1={-M} x2={0} y2={M} class="symaxis" />
+          <div class="symstep"><b>{tools.find(t => t[0] === tool())?.[1]}</b><span>{step()}</span></div>
+          <svg ref={el} class="symedsvg" viewBox={vb()} tabindex="0" onMouseDown={down} onMouseUp={up} onDblClick={() => drawing() && finish()} onMouseMove={move} onMouseLeave={() => { setHover(null); }} onKeyDown={key} onWheel={wheel} onContextMenu={e => { e.preventDefault(); finish(); }}>
+            <defs>
+              <pattern id="symgrid" width="1" height="1" patternUnits="userSpaceOnUse"><path d="M1 0H0V1" fill="none" class="symgridl" /></pattern>
+              <pattern id="symgrid5" width="5" height="5" patternUnits="userSpaceOnUse"><path d="M5 0H0V5" fill="none" class="symgridm" /></pattern>
+            </defs>
+            <rect x={-200} y={-200} width={400} height={400} fill="#fff" />
+            <rect x={-200} y={-200} width={400} height={400} fill="url(#symgrid)" />
+            <rect x={-200} y={-200} width={400} height={400} fill="url(#symgrid5)" />
+            <line x1={-200} y1={0} x2={200} y2={0} class="symaxis" /><line x1={0} y1={-200} x2={0} y2={200} class="symaxis" />
             <g class="symink" innerHTML={svg()} />
-            <Show when={picked() >= 0 && ents()[picked()]}>{e => <g class="sympick"><For each={outline(e())}>{o => <polyline points={o.map(q => q.join(",")).join(" ")} />}</For><Show when={e().k === "t"}><circle cx={(e() as { p: P }).p[0]} cy={(e() as { p: P }).p[1]} r={1.2} /></Show></g>}</Show>
+            <For each={picked().map(i => ents()[i]).filter(Boolean)}>{e => <g class="sympick"><For each={outline(e)}>{o => <polyline points={o.map(q => q.join(",")).join(" ")} />}</For><Show when={e.k === "t"}><circle cx={(e as { p: P }).p[0]} cy={(e as { p: P }).p[1]} r={1.2} /></Show></g>}</For>
+            <Show when={box()}>{b => <rect class="symbox" x={Math.min(b().a[0], b().b[0])} y={Math.min(b().a[1], b().b[1])} width={Math.abs(b().b[0] - b().a[0])} height={Math.abs(b().b[1] - b().a[1])} />}</Show>
+            <Show when={hover()}>{h => <For each={h().guides}>{g => <line class="symguide" x1={g[0][0]} y1={g[0][1]} x2={g[1][0]} y2={g[1][1]} />}</For>}</Show>
             <Show when={rubber()}><path d={rubber()} class="symcur" /></Show>
-            <Show when={hover()}>{h => <g class="symsnap"><Show when={h().why !== "Grid"} fallback={<circle cx={h().p[0]} cy={h().p[1]} r={0.3} class="symhov" />}><rect x={h().p[0] - 0.6} y={h().p[1] - 0.6} width={1.2} height={1.2} class="symsq" /><text x={h().p[0] + 1} y={h().p[1] - 1} class="symwhy">{h().why}</text></Show></g>}</Show>
+            <For each={cur()}>{q => <circle cx={q[0]} cy={q[1]} r={0.35} class="symvert" />}</For>
+            <Show when={hover()}>{h => <g class="symsnap">
+              <Show when={h().why !== "Grid"} fallback={<circle cx={h().p[0]} cy={h().p[1]} r={0.3} class="symhov" />}><rect x={h().p[0] - 0.6} y={h().p[1] - 0.6} width={1.2} height={1.2} class="symsq" />
+                <Show when={!h().badge} fallback={<g class="symbadge"><rect x={h().p[0] + 1} y={h().p[1] + 0.8} width={fs() * 1.4} height={fs() * 1.4} rx={fs() * 0.2} /><text x={h().p[0] + 1 + fs() * 0.7} y={h().p[1] + 0.8 + fs() * 1.05} style={{ "font-size": `${fs()}px` }} text-anchor="middle">{h().badge}</text></g>}>
+                  <text x={h().p[0] + 1} y={h().p[1] - 1} class="symwhy" style={{ "font-size": `${fs()}px` }}>{h().why}</text></Show></Show>
+              <Show when={readout()}><text x={h().p[0] + 1} y={h().p[1] + (h().badge ? 1 + fs() * 3 : fs() * 1.6)} class="symread" style={{ "font-size": `${fs()}px` }}>{readout()}</text></Show>
+            </g>}</Show>
           </svg>
-          <p class="muted small symhint">{tools.find(t => t[0] === tool())?.[2]} · Points snap to ends, midpoints, centres, quadrants and crossings (else a 0.5 mm grid). Esc cancels; Ctrl+Z undoes.</p>
+          <Show when={SIZES[tool()] && cur().length}>
+            <div class="symsizes">
+              <For each={SIZES[tool()]!}>{([k, l], i) => <label><span>{l}</span><input class="mono" classList={{ wide: k === "text" }} ref={x => { boxes[i()] = x; }} value={typed()[k] ?? ""} placeholder={k === "th" ? "2.5" : ""} onInput={e => setTyped({ ...typed(), [k]: e.currentTarget.value })} onKeyDown={boxKey} /></label>}</For>
+              <span class="muted small">{tool() === "t" ? "Enter places it" : "mm · Tab to the next, Enter places it, Esc goes back to the mouse"}</span>
+            </div>
+          </Show>
+          <p class="muted small symhint">Points snap to ends, midpoints, centres, quadrants and crossings; a dashed guide shows a point held level, upright or in line with another; else the 0.5 mm grid. The wheel zooms, the middle button pans. Esc cancels; Ctrl+Z undoes.</p>
         </div>
         <div class="symprops form">
           <label>Name</label><div><input value={c().name} placeholder="Skid package, flame arrester…" onInput={e => setC({ ...c(), name: e.currentTarget.value })} /></div>
@@ -271,7 +427,7 @@ export const symbolEditor = (start: CustomSym | null, done: (c: CustomSym) => vo
       </div>
     </Dialog>
   );
-});
+};
 
 /** The review of a library: what each symbol stands for, its description and points. */
 const Editor = (p: { view: LibView; inProject?: boolean; onComputer?: boolean; back: () => void }) => {

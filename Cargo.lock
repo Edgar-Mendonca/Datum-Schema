@@ -577,7 +577,7 @@ dependencies = [
 
 [[package]]
 name = "datum-core"
-version = "0.11.6"
+version = "0.11.7"
 dependencies = [
  "acadrust",
  "base64 0.22.1",
@@ -593,7 +593,7 @@ dependencies = [
 
 [[package]]
 name = "datum-schema"
-version = "0.11.6"
+version = "0.11.7"
 dependencies = [
  "chrono",
  "datum-core",
@@ -608,7 +608,7 @@ dependencies = [
 
 [[package]]
 name = "datum-schema-cli"
-version = "0.11.6"
+version = "0.11.7"
 dependencies = [
  "datum-core",
  "serde_json",

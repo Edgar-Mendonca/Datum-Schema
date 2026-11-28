@@ -210,7 +210,9 @@ export const onLoadHook = (f: () => void) => { loaded = f; };
 export const loadOut = async (cmd: string, args?: object) => {
   const o = await call<Out | null>(cmd, args);
   if (o) wantFit = true;
-  if (o) batch(() => { setSel([]); setSheetIdRaw(o.p.sheets[0]?.id ?? 0); setOut(o); setBackstage(null); setTool({ k: "select" }); setLoads(n => n + 1); loaded(); });
+  // A project opened shows its drawing; tabs of the one before (its datasheets, symbols being
+  // drawn) close; the Lists and Libraries tabs stay, behind it.
+  if (o) batch(() => { setSel([]); setSheetIdRaw(o.p.sheets[0]?.id ?? 0); setOut(o); setBackstage(null); setTool({ k: "select" }); setDocTabs(v => v.filter(t => t.id === LISTS_TAB || t.id === "libraries")); setActiveDoc(null); setLoads(n => n + 1); loaded(); });
   return o;
 };
 

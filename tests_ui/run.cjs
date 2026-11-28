@@ -1123,21 +1123,36 @@ const shots = process.env.SHOTS;
   await p.click(".libraries button:has-text('New library')"); await p.waitForTimeout(200);
   await p.fill(".libhead input >> nth=0", "Job 4711 symbols");
   await p.click(".libbtns button:has-text('New symbol')"); await p.waitForSelector(".symedsvg");
-  { const bx = await p.$(".symedsvg").then(e => e.boundingBox()); const at = (x, y) => [bx.x + bx.width * (x + 20) / 40, bx.y + bx.height * (y + 20) / 40];
+  { const at = (x, y) => p.evaluate(([x, y]) => { const s = [...document.querySelectorAll(".symedsvg")].find(e => e.getBoundingClientRect().width > 0); const pt = s.createSVGPoint(); pt.x = x; pt.y = y; const q = pt.matrixTransform(s.getScreenCTM()); return [q.x, q.y]; }, [x, y]);
+    check("the symbol editor opens as a tab of its own", ((await p.textContent(".stabs .dtab.on").catch(() => "")) ?? "").includes("New symbol"));
     await p.click(".symtools button:text-is('Rectangle')");
-    for (const q of [[-8, -6], [8, 6]]) { const [x, y] = at(...q); await p.mouse.click(x, y); await p.waitForTimeout(80); }
+    for (const q of [[-8, -6], [8, 6]]) { const [x, y] = await at(...q); await p.mouse.click(x, y); await p.waitForTimeout(80); }
     await p.click(".symtools button:text-is('Circle')");
-    for (const q of [[0, 0], [3, 0]]) { const [x, y] = at(...q); await p.mouse.click(x, y); await p.waitForTimeout(80); } }
+    for (const q of [[0, 0], [3, 0]]) { const [x, y] = await at(...q); await p.mouse.click(x, y); await p.waitForTimeout(80); }
+    // A line drawn near level is held level (H), and one typed in by length and angle.
+    await p.click(".symtools button:text-is('Line')");
+    { const [x, y] = await at(-10, 8); await p.mouse.click(x, y); const [x2, y2] = await at(-2, 8.2); await p.mouse.move(x2, y2, { steps: 3 }); await p.waitForTimeout(100);
+      check("a line near level is held level, and says so", ((await p.textContent(".symbadge text").catch(() => "")) ?? "") === "H" && ((await p.textContent(".symread").catch(() => "")) ?? "").includes("mm"));
+      await p.keyboard.type("6"); await p.keyboard.press("Tab"); await p.keyboard.type("90"); await p.keyboard.press("Enter"); await p.waitForTimeout(100);
+      await p.focus(".symedsvg:visible"); await p.keyboard.press("Enter"); await p.waitForTimeout(150); }
+    await p.click(".symtools button:text-is('Select')");
+    { const [x, y] = await at(-10, 5); await p.mouse.click(x, y); await p.waitForTimeout(100); }
+    check("a line typed by length and angle", (await p.$$(".sympick")).length === 1);
+    await p.click(".symtools button[data-a='del']"); await p.waitForTimeout(100);
+    // Nothing picked: Turn turns the whole drawing a quarter round the cross.
+    await p.keyboard.press("Escape"); await p.click(".symtools button[data-a='turn']"); await p.waitForTimeout(100); }
   await p.fill(".symprops input >> nth=0", "Skid package"); await p.waitForTimeout(200);
   await p.click(".dlg footer button:has-text('Use this symbol')"); await p.waitForTimeout(400);
   check("the symbol editor adds a symbol to the library", (await p.$$(".libtbl tbody tr")).length === 1);
   await p.click(".libhead button:has-text('Save library')"); await p.waitForTimeout(600);
+  { const q = await project(); check("Turn turned the drawing a quarter", (q.settings.libraries ?? []).some(l => l.symbols.some(s => /(^|; )r -6 -8 12 16/.test(s.draw))), JSON.stringify((q.settings.libraries ?? []).map(l => l.symbols.map(s => s.draw)))); }
   { const q = await project(); check("the library is kept in this project", (q.settings.libraries ?? []).some(l => l.name === "Job 4711 symbols" && l.symbols.length === 1 && /(^|; )r /.test(l.symbols[0].draw) && /(^|; )c /.test(l.symbols[0].draw))); }
   await p.click(".codesec button:has-text('Import codes')"); await p.waitForSelector(".codetbl tbody tr");
   check("codes are read for review", (await p.$$(".codetbl tbody tr")).length === 4);
   await p.click(".libhead button:has-text('Save codes')"); await p.waitForTimeout(600);
   check("the codes are kept in this project", ((await project()).settings.codes ?? []).some(l => l.codes.length === 4));
-  await p.click(".bs .back"); await p.waitForTimeout(400);
+  if (await p.isVisible(".bs .back")) { await p.click(".bs .back"); await p.waitForTimeout(400); }
+  await p.click(".stabs .dtab:has-text('Libraries') .dx").catch(() => {});
   await side("symbols");
   check("the project's library is a branch of the Symbols tree", ((await p.textContent(".palette .tbody")) ?? "").includes("Job 4711 symbols"));
   await btab('Checks'); await p.waitForTimeout(400);
@@ -1300,9 +1315,11 @@ const shots = process.env.SHOTS;
     await q.click(".bs aside button:has-text('Libraries')"); await q.waitForTimeout(200);
     await q.click(".libraries button:has-text('New library')"); await q.waitForTimeout(200);
     await q.click(".libbtns button:has-text('New symbol')"); await q.waitForTimeout(400);
-    const dl = await q.$(".dlg:not(.intab)");
-    const fits = dl ? await dl.evaluate(e => { const r = e.querySelector("footer").getBoundingClientRect(); return r.bottom <= window.innerHeight; }) : false;
-    check(`${w}×${h}: New symbol opens the editor, its buttons on the screen, no hidden tabs`, !!dl && fits && (await q.$$(".stabs .dtab")).length === 0);
+    await q.click(".docview:has(.libraries) .libbtns button:has-text('New symbol')").catch(() => {}); await q.waitForTimeout(300);
+    const dl = await q.$(".docview:visible .dlg.intab .symed");
+    const fits = dl ? await q.evaluate(() => { const f = [...document.querySelectorAll(".dlg.intab footer")].find(e => e.getBoundingClientRect().width > 0); const r = f?.getBoundingClientRect(); return !!r && r.bottom <= window.innerHeight; }) : false;
+    const tabs = await q.$$eval(".stabs .dtab", e => e.map(x => x.textContent));
+    check(`${w}×${h}: New symbol opens the editor in one tab, shown, its buttons on the screen`, !!dl && fits && tabs.filter(t => t.includes("New symbol")).length === 1, JSON.stringify(tabs));
     await q.close();
   }
 
