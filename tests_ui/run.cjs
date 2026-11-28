@@ -500,7 +500,7 @@ const shots = process.env.SHOTS;
     const sg = ln.segs.find(sg => sg.length >= 2 && Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]) > 20);
     const [lx, ly] = await scr((sg[0][0] + sg[1][0]) / 2, (sg[0][1] + sg[1][1]) / 2);
     await p.mouse.click(lx, ly); await p.waitForTimeout(300);
-    await p.click(".ctxgrp button:has-text('Format')"); await p.click(".ribbon button:has-text('To Datum Pipe')"); await p.waitForTimeout(400);
+    await p.click(".ctxgrp button"); await p.click(".ribbon button:has-text('To Datum Pipe')"); await p.waitForTimeout(400);
     const ex = (await inv("exports")).filter(e => e.kind === "pipe").pop(); const m = ex && JSON.parse(ex.text);
     check("a line goes to Datum Pipe as its model file", !!m && m.format === 1 && m.elements.length >= 1 && m.supports.length === 2 && m.pipes[0].od > 0, ex?.text.slice(0, 120)); }
   await p.click(".tabs button:text-is('Lists')"); await p.click(".ribbon button:has-text('Loop Diagrams')"); await p.waitForSelector(".dlg .loopsvg svg");
@@ -674,7 +674,7 @@ const shots = process.env.SHOTS;
   await openEx("Pump transfer");
   { const q = await project(); const pb = q.items.find(i => tagOf(q, i) === "P-101B");
     const [px, py] = await scr(pb.x, pb.y); await p.mouse.click(px, py); await p.waitForTimeout(300); }
-  await p.click(".ctxgrp button:has-text('Format')"); await p.click(".ribbon button:has-text('Save as Assembly')"); await p.waitForSelector(".dlg input");
+  await p.click(".ctxgrp button"); await p.click(".ribbon button:has-text('Save as Assembly')"); await p.waitForSelector(".dlg input");
   await p.fill(".dlg input", "Spare pump"); await p.click(".dlg footer button:has-text('Save')"); await p.waitForTimeout(400);
   check("the selection is saved as an assembly", (await project()).settings.assemblies.some(a => a.name === "Spare pump" && a.items.length === 1));
   await p.keyboard.press("Escape");
@@ -770,7 +770,7 @@ const shots = process.env.SHOTS;
   await openEx("Pump transfer");
   { const q = await project(); const pa = q.items.find(i => tagOf(q, i) === "P-101A"); const n0 = q.items.length;
     const [x, y] = await scr(pa.x, pa.y); await p.mouse.click(x, y); await p.waitForTimeout(300);
-    await p.click(".ctxgrp button:has-text('Format')"); await p.click(".ribbon button[title^='Place the standard']"); await p.waitForTimeout(500);
+    await p.click(".ctxgrp button"); await p.click(".ribbon button[title^='Place the standard']"); await p.waitForTimeout(500);
     const r = await project();
     check("the pump's arrangement is placed", r.items.length > n0 && r.objects.some(o => o.tag === "PI-101A"), `${n0} → ${r.items.length}`); }
   await p.keyboard.press("Escape");
@@ -824,7 +824,7 @@ const shots = process.env.SHOTS;
     const shown = await p.$$eval(".lists tbody tr.f", els => els.map(e => e.textContent));
     check("the register lists it as not drawn", shown.length === 1 && shown[0].includes("Not drawn"), JSON.stringify(shown));
     await p.locator(".lists tbody tr.f td:nth-child(4)").first().click(); await p.waitForTimeout(200);
-    await p.click(".bcollapse:not(.bdoc):not(.bwhere)"); await p.waitForTimeout(200);
+    await p.click(".drawer .bcollapse:not(.bdoc)"); await p.waitForTimeout(200);
     { const [x, y] = await scr(200, 150); await p.mouse.click(x, y); await p.waitForTimeout(400); }
     const r = await project(); check("the registered tag is drawn as the same object", r.items.some(i => i.obj === o.id), await p.textContent(".status")); }
   await p.keyboard.press("Escape");
@@ -1083,16 +1083,23 @@ const shots = process.env.SHOTS;
   check("the panel folds away", !(await p.$(".sidep:visible")));
   await p.click(".rail button:has-text('Lists')"); await p.waitForTimeout(300);
   await btab('Equipment'); await p.waitForTimeout(500);
-  await p.waitForSelector(".lowerlists .egrid tbody tr.f");
-  check("the lists sit under the drawing, in the drawing's tab", await p.isVisible(".canvhold svg") && (await p.$$(".lowerlists .egrid tbody tr.f")).length >= 3);
+  await p.waitForSelector(".drawer .egrid tbody tr.f");
+  check("the lists sit under the drawing, in the drawing's tab", await p.isVisible(".canvhold svg") && (await p.$$(".drawer .egrid tbody tr.f")).length >= 3);
   await side("documents");
-  await p.locator(".lowerlists .egrid tbody tr.f td", { hasText: /^Air cooler$/ }).first().click(); await p.waitForTimeout(400);
-  check("a row picks its symbol, and the Inspector shows it", !!(await p.$(".sidep .insp")) && (await p.$$(".lowerlists .egrid tr.f.sel")).length >= 1);
-  await p.click(".lowerlists .bdoc"); await p.waitForTimeout(400);
+  await p.locator(".drawer .egrid tbody tr.f td", { hasText: /^Air cooler$/ }).first().click(); await p.waitForTimeout(400);
+  check("a row picks its symbol, and the Inspector shows it", !!(await p.$(".sidep .insp")) && (await p.$$(".drawer .egrid tr.f.sel")).length >= 1);
+  await p.click(".drawer .bdoc"); await p.waitForTimeout(400);
   await p.waitForSelector(".docview:visible .egrid tbody tr.f").catch(() => {});
-  check("a list moves to its own tab", ((await p.textContent(".stabs .dtab.on").catch(() => "")) ?? "").includes("Equipment") && ((await p.textContent(".docview:visible .egrid").catch(() => "")) ?? "").includes("Air cooler"));
-  await p.click(".docview:visible button:has-text('Show under the drawing')"); await p.waitForTimeout(400);
-  check("and comes back under the drawing", !(await p.$(".stabs .dtab")) && await p.isVisible(".canvhold svg") && await p.isVisible(".lowerlists .egrid"));
+  check("the lists move, as one set, to a Lists tab", ((await p.textContent(".stabs .dtab.on").catch(() => "")) ?? "").includes("Lists") && ((await p.textContent(".docview:visible .egrid").catch(() => "")) ?? "").includes("Air cooler") && (await p.$$(".docview:visible .btabs button.bt")).length >= 5);
+  check("and the drawer keeps the rest", !(await p.$(".drawer .btabs button.bt[data-k='equipment']")) && !!(await p.$(".drawer .btabs button.bt[data-k='checks']")));
+  await p.click(".docview:visible .btabs button.bt[data-k='lines']"); await p.waitForTimeout(400);
+  check("the Lists tab switches list", ((await p.textContent(".docview:visible .egrid thead").catch(() => "")) ?? "").toLowerCase().includes("line"));
+  await p.click(".stabs button:has-text('PID')").catch(() => p.click(".stabs > button:not(.sadd)")); await p.waitForTimeout(200);
+  await side("documents");
+  await p.locator(".docs .tgrp", { hasText: "Lists" }).first().locator(".ti", { hasText: "Equipment" }).first().click(); await p.waitForTimeout(400);
+  check("Documents opens a list in the Lists tab", ((await p.textContent(".stabs .dtab.on").catch(() => "")) ?? "").includes("Lists") && ((await p.textContent(".docview:visible .egrid").catch(() => "")) ?? "").includes("Air cooler"));
+  await p.click(".docview:visible .bunder"); await p.waitForTimeout(400);
+  check("and comes back under the drawing", !(await p.$(".stabs .dtab")) && await p.isVisible(".canvhold svg") && await p.isVisible(".drawer .egrid"));
   await side("documents");
   await p.locator(".docs .tgrp", { hasText: "Datasheets" }).last().locator(".ti").first().click(); await p.waitForSelector(".dspage .ds");
   { const first = await p.textContent(".dsbar b"); await p.click(".dsbar button:text-is('›')"); await p.waitForTimeout(500);
@@ -1100,7 +1107,7 @@ const shots = process.env.SHOTS;
     check("a datasheet opens as a tab and steps to the next", first !== second && ((await p.textContent(".dsbar")) ?? "").includes("2 of"), `${first} -> ${second}`); }
   await p.click(".stabs .dtab .dx"); await p.waitForTimeout(200);
   await btab('Messages'); await p.waitForTimeout(300);
-  check("the bottom pane keeps the messages", ((await p.textContent(".bottom.slim")) ?? "").length > 20);
+  check("the drawer keeps the messages", ((await p.textContent(".drawer")) ?? "").length > 20);
   await btab('Log'); await p.waitForTimeout(500);
   check("and the log of changes", (await p.$$(".logtbl tbody tr")).length >= 1);
   await p.click(".tabs button:text-is('View')"); await p.selectOption(".ccol:has-text('On the screen') select", "bw"); await p.waitForTimeout(300);
@@ -1155,6 +1162,58 @@ const shots = process.env.SHOTS;
     check("no product name in the window's text", hits.length === 0 && shown.length > 500, hits.join(", ") + ` (${shown.length} characters read)`);
     check("the product-name check would see one", ["Datum Schema", ...names].every(n => rot(rot(n)) === n) && bundle.includes("Datum Schema") && shown.includes("Datum Schema")); }
 
+  // 82. The selection (0.11.5): a coloured Selection tab named for what is picked, a quick bar by
+  // the selection with the common commands, a status line that says the keys; the rail's tools
+  // open their place and close it again; Libraries as a tab.
+  await openEx("Pump transfer");
+  { const q = await project();
+    const tagged = t => { const o = q.objects.find(x => x.tag === t); return q.items.find(i => i.obj === o?.id); };
+    const v = tagged("HV-101");
+    if (await p.isVisible(".drawer .egrid")) { await p.click(".drawer .bcollapse:not(.bdoc)"); await p.waitForTimeout(200); }
+    await side("symbols");
+    await clickAt(v.x, v.y); await p.waitForTimeout(300);
+    check("a pick shows the Selection tab, named for a symbol", await p.isVisible(".ctxgrp.k-symbol") && ((await p.textContent(".ctxgrp")) ?? "").includes("Symbol"));
+    check("and the quick bar by it, with Rotate and Turn round", await p.isVisible(".qbar button[data-k='rotate']") && await p.isVisible(".qbar button[data-k='turn']"));
+    check("the status line says the keys", ((await p.textContent(".status .shint")) ?? "").includes("R rotate"));
+    const rot0 = (await project()).items.find(i => i.id === v.id).rot;
+    await p.click(".qbar button[data-k='rotate']"); await p.waitForTimeout(400);
+    check("the quick bar's Rotate turns it", (await project()).items.find(i => i.id === v.id).rot !== rot0);
+    await p.click(".ctxgrp button"); await p.waitForTimeout(200);
+    check("the Selection tab holds everything for it", await p.isVisible(".ribbon .grp:has-text('Arrange') .rb:has-text('Mirror')") && await p.isVisible(".ribbon .grp:has-text('Data') .rb:has-text('Properties')"));
+    await p.click(".qbar button[data-k='props']"); await p.waitForTimeout(200);
+    check("Properties opens the Inspector", !!(await p.$(".sidep:visible .insp")));
+    await p.keyboard.press("Escape"); await p.waitForTimeout(150);
+    { const vw = (await inv("views"))[0];
+      const ln = vw.lines.find(l => l.kind === "major" && l.segs.some(sg => sg.length >= 2 && Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]) > 20));
+      const sg = ln.segs.find(sg => sg.length >= 2 && Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]) > 20);
+      await clickAt((sg[0][0] + sg[1][0]) / 2, (sg[0][1] + sg[1][1]) / 2); await p.waitForTimeout(300);
+      const l0 = (await project()).lines.find(l => l.id === ln.id);
+      check("a line shows Line tools, and Reverse Flow on its quick bar", await p.isVisible(".ctxgrp.k-line") && await p.isVisible(".qbar button[data-k='reverse']"));
+      await p.click(".qbar button[data-k='reverse']"); await p.waitForTimeout(400);
+      const l1 = (await project()).lines.find(l => l.id === ln.id);
+      check("Reverse Flow turns its flow round", l1.flip !== l0.flip); }
+    check("and the tab goes back when the selection is let go", await (async () => { await p.click(".tabs button:text-is('Draw')"); await p.click(".ctxgrp button"); await clickAt(4, 4); await p.waitForTimeout(200); return !(await p.isVisible(".ribbon .grp:has-text('Arrange')")) || (await p.textContent(".tabs button.on")) === "Draw"; })(), await p.evaluate(() => `${document.activeElement?.tagName}.${document.activeElement?.className} sel=${document.querySelector(".status")?.textContent}`));
+    await p.click(".tabs button:text-is('View')"); await p.uncheck(".ribbon label:has-text('Quick bar') input"); await p.waitForTimeout(100);
+    await clickAt(v.x, v.y); await p.waitForTimeout(300);
+    check("View switches the quick bar off", !(await p.$(".qbar")) && await p.isVisible(".ctxgrp.k-symbol"));
+    await p.click(".tabs button:text-is('View')"); await p.check(".ribbon label:has-text('Quick bar') input"); await p.keyboard.press("Escape"); await p.waitForTimeout(150);
+    // Placing keeps the Symbols panel: the app's own selection of the new symbol is not a pick.
+    await side("symbols");
+    await p.fill(".psearch", "Gate valve"); await p.click(`.psym:has(span:text-is("Gate valve"))`);
+    await clickAt(30, 30); await p.waitForTimeout(400);
+    check("placing a symbol keeps the Symbols panel", !!(await p.$(".rail button[data-side='symbols'].on")) && !!(await p.$(".sidep:visible .palette")));
+    await p.keyboard.press("Control+z"); await p.waitForTimeout(300); await p.fill(".psearch", ""); }
+  if (await p.evaluate(() => document.querySelector(".drawer").getBoundingClientRect().height > 40)) { await p.click(".drawer .bcollapse:not(.bdoc)"); await p.waitForTimeout(200); }
+  await p.click(".rail button[data-tool='checks']"); await p.waitForTimeout(200);
+  const chOpen = await p.evaluate(() => document.querySelector(".drawer").getBoundingClientRect().height > 60);
+  await p.click(".rail button[data-tool='checks']"); await p.waitForTimeout(200);
+  check("the rail's Checks opens the drawer and closes it again", chOpen && await p.evaluate(() => document.querySelector(".drawer").getBoundingClientRect().height <= 40));
+  await p.click(".rail button[data-tool='libraries']"); await p.waitForTimeout(300);
+  const libOn = ((await p.textContent(".stabs .dtab.on").catch(() => "")) ?? "").includes("Libraries") && await p.isVisible(".docview:visible .libraries");
+  await p.click(".rail button[data-tool='libraries']"); await p.waitForTimeout(200);
+  check("the rail's Libraries opens a tab, and goes back to the drawing", libOn && await p.isVisible(".canvhold svg"));
+  await p.click(".stabs .dtab .dx").catch(() => {});
+
   // 81. Small screens (0.11.4): a laptop at 125–150 % scaling, less the taskbar, gives a window of
   // about 1280 × 640. The ribbon folds to its tabs, the rail and the File page fit without
   // scrolling, the drawing keeps its room, and a stale "big windows as tabs" choice from 0.11.2
@@ -1169,6 +1228,7 @@ const shots = process.env.SHOTS;
     check(`${w}×${h}: the File page's side fits`, (await over(".bs aside")) === 0);
     check(`${w}×${h}: the File page's icons are white on its colour`, await q.evaluate(() => { const u = document.querySelector(".bs aside button svg"); return !!u && getComputedStyle(u).getPropertyValue("--ic").trim() === "currentColor"; }));
     await q.click(".tile:has(b:text-is('Blank project'))"); await q.waitForTimeout(400);
+    { const d = await q.$('.dlg button:has-text("Don\'t save")'); if (d) { await d.click(); await q.waitForTimeout(600); } }
     await q.evaluate(() => document.querySelector(".tabs .file").click()); await q.waitForTimeout(200);
     await q.click(".tile:has(b:text-is('Pump transfer'))"); await q.waitForTimeout(400);
     { const d = await q.$('.dlg button:has-text("Don\'t save")'); if (d) { await d.click(); await q.waitForTimeout(900); } }
@@ -1177,7 +1237,7 @@ const shots = process.env.SHOTS;
     check(`${w}×${h}: the rail fits`, (await over(".rail")) === 0);
     const ch = await q.evaluate(() => Math.round(document.querySelector(".canvhold .canvas").getBoundingClientRect().height));
     check(`${w}×${h}: the drawing keeps its room`, ch >= 380, `${ch} px`);
-    check(`${w}×${h}: notes alone leave the Checks pane folded`, await q.evaluate(() => document.querySelector(".bottom.slim").getBoundingClientRect().height <= 40));
+    check(`${w}×${h}: notes alone leave the Checks pane folded`, await q.evaluate(() => document.querySelector(".drawer").getBoundingClientRect().height <= 40));
     await q.click(".tabs button:text-is('Draw')"); await q.waitForTimeout(150);
     const shown = await disp();
     await q.mouse.click(w / 2, h / 2 + 40); await q.waitForTimeout(150);

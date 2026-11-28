@@ -27,6 +27,7 @@
   ],
   "highlights": [
     "About 80 symbols of our own, following ISO 10628-2 and ISA-5.1",
+    "A Selection tab and a quick bar with everything for what you pick; the ribbon folds on a laptop screen",
     "Process flow diagrams: streams in diamonds, a stream table on the sheet, heat and mass balance checks",
     "A client's legend (DXF, DWG or PDF) becomes a symbol library, kept in one project or for all; draw a project to their standard and back, or draw the symbols that are missing",
     "Old drawings (DXF) behind a sheet to trace over; revision clouds round what changed since an issue",
@@ -158,7 +159,7 @@
         "0.11.2: your own symbols and codes (symbol editor, libraries per project or for all projects, abbreviations from the legend sheet), DWG drawings, and a workspace you arrange (done)",
         "0.11.3: easier to work with: one rail on the left, the drawing and its lists together, datasheets as tabs stepped one by one, colours for screen and print, a better symbol editor (done)",
         "0.11.4: fixes and fit: the ribbon folds on a laptop screen, nothing cut off at 1280 × 640, the Checks pane out of the way, New symbol fixed (done)",
-        "0.11.5: the workspace: a highlighted Selection tab with the commands for what is picked, one bottom drawer, the lists and datasheets each one tab",
+        "0.11.5: the workspace: a Selection tab and a quick bar with the commands for what is picked, one drawer under the drawing, the lists as one set in their own tab (done)",
         "0.11.6: drawing feel: the target named before a line joins it, recently placed symbols, Locate and Back",
         "0.11.7: the symbol editor as a full tab with guides, typed sizes and lines that chain",
         "0.11.8: speed and keyboard",

@@ -4,13 +4,14 @@
 // right: the sheet has all the room.
 import { For, Show, createEffect, createMemo, createResource, createSignal, on } from "solid-js";
 import { List } from "./api";
-import { side, setSide, Side, sel, tool, proj, sheet, setSheetId, activeDoc, setActiveDoc, docTabs, call, setPanel, setListOpen, setBottomOpen, setBackstage, listKey, listOpen } from "./store";
+import { takeQuiet, followPick, side, setSide, Side, sel, tool, proj, sheet, setSheetId, activeDoc, setActiveDoc, call, setPanel, setListOpen, setBottomOpen, bottomOpen, bottomKey, listKey, listOpen, listsInTab, LISTS_TAB, openListsTab, openDoc } from "./store";
+import { LibrariesPage } from "./libraries";
 import { Palette, paneW, setPaneW, grip } from "./palette";
 import { PlantPanel } from "./plant";
 import { Inspector } from "./inspector";
 import { Help } from "./help";
 import { openDatasheet, dsId } from "./datasheet";
-import { openListTab, tabTitle, LIST_TABS } from "./panels";
+import { tabTitle, LIST_TABS } from "./panels";
 
 const Ic = (p: { n: string }) => <svg class="ic"><use href={`#i-${p.n}`} /></svg>;
 
@@ -21,15 +22,13 @@ const PANELS: [Exclude<Side, "">, string, string, string][] = [
   ["documents", "list", "Documents", "Sheets, lists and datasheets: where you are, and one click to any of them"],
 ];
 
-/** Show the Inspector when something is picked on the sheet (and go back when it is let go), unless
- *  the user is placing symbols or has folded the panel away. */
+/** Show the Inspector when the user picks something (and go back when it is let go), unless the user
+ *  switched that off (View) or folded the panel away. A selection the app makes (a symbol placed,
+ *  a paste) is marked quiet where it is made (0.11.5), so placing keeps the Symbols panel. */
 let auto: Side | null = null;
-let placedAt = 0;
 export const followSelection = () => {
-  // Placing symbols selects each new one: that is not a pick, so the Symbols panel stays.
-  createEffect(on(tool, t => { if (t.k !== "select") placedAt = Date.now(); }));
   createEffect(on(sel, (s, prev) => {
-  if (tool().k !== "select" || Date.now() - placedAt < 600) { placedAt = tool().k !== "select" ? Date.now() : placedAt; return; }
+  if (takeQuiet() || tool().k !== "select" || !followPick()) return;
   // Only an open panel switches: a folded one stays folded (the user wanted the room), and the
   // drawing never shifts under the pointer.
   if (s.length && s.join() !== (prev ?? []).join() && (side() === "symbols" || side() === "documents")) { auto = side(); setSide("inspector"); }
@@ -44,13 +43,17 @@ export const Rail = () => {
       <For each={PANELS}>{([k, ic, l, t]) => <button classList={{ on: side() === k }} data-side={k} title={t} onClick={() => pick(k)}><Ic n={ic} /><span>{l}</span></button>}</For>
       <span class="rgrow" />
       <span class="rcap">Tools</span>
-      <button class="rextra" title="The checks, the to-do list, comments, messages and the log (bottom pane)" onClick={() => { setPanel("checks"); setBottomOpen(true); }}><Ic n="check" /><span>Checks</span></button>
-      <button class="rextra" title="Lists under the drawing, to review it against them" classList={{ on: listOpen() && !activeDoc() }} onClick={() => { setActiveDoc(null); setPanel(listKey()); setListOpen(!listOpen()); }}><Ic n="table" /><span>Lists</span></button>
-      <button class="rextra" title="Symbol libraries, and abbreviations and codes" onClick={() => setBackstage("libraries")}><Ic n="legend" /><span>Libraries</span></button>
+      {/* The tools (0.11.5) each open their place, and a second click closes it again. */}
+      <button class="rextra" data-tool="checks" title="The checks, in the drawer under the drawing (click again to fold it)" classList={{ on: bottomOpen() && bottomKey() === "checks" }} onClick={() => { if (bottomOpen() && bottomKey() === "checks") setBottomOpen(false); else { setPanel("checks"); setBottomOpen(true); } }}><Ic n="check" /><span>Checks</span></button>
+      <button class="rextra" data-tool="lists" title="The lists: under the drawing, or in their own tab if you moved them there (click again to put them away)" classList={{ on: listsInTab() ? activeDoc() === LISTS_TAB : listOpen() }} onClick={() => { if (listsInTab()) setActiveDoc(activeDoc() === LISTS_TAB ? null : LISTS_TAB); else if (listOpen()) setListOpen(false); else { setActiveDoc(null); setPanel(listKey()); setListOpen(true); } }}><Ic n="table" /><span>Lists</span></button>
+      <button class="rextra" data-tool="libraries" title="Symbol libraries, and abbreviations and codes, in a tab (click again to go back to the drawing)" classList={{ on: activeDoc() === "libraries" }} onClick={() => (activeDoc() === "libraries" ? setActiveDoc(null) : openLibraries())}><Ic n="legend" /><span>Libraries</span></button>
       <button class="rextra" title="Find anything (Ctrl+F)" onClick={() => import("./find").then(m => m.openFind())}><Ic n="search" /><span>Find</span></button>
     </nav>
   );
 };
+
+/** The libraries page, as a tab over the sheet (0.11.5). */
+export const openLibraries = () => openDoc({ id: "libraries", title: "Libraries", render: () => <div class="docpage"><LibrariesPage /></div> });
 
 /** The documents tree: sheets, lists and datasheets, with the one open marked. */
 const Documents = () => {
@@ -63,7 +66,7 @@ const Documents = () => {
     <Show when={open()[p.k] || !!q()}><div class="tlist">{p.children}</div></Show></div>;
   const lists = createMemo(() => LIST_TABS().filter(([, l]) => match(l)));
   const dsRows = createMemo(() => (ds()?.rows ?? []).filter(r => match(r.cells.join(" "))));
-  const listOn = (k: string) => (activeDoc() ? docTabs().find(t => t.id === activeDoc())?.list === k : listOpen() && listKey() === k);
+  const listOn = (k: string) => listKey() === k && (listsInTab() ? activeDoc() === LISTS_TAB : listOpen() && !activeDoc());
   const dsOn = (id: number) => activeDoc() === "datasheet" && dsId() === id;
   return (
     <div class="docs">
@@ -72,7 +75,7 @@ const Documents = () => {
         <B k="sheets" t="Sheets" n={proj()?.sheets.length ?? 0}><For each={(proj()?.sheets ?? []).filter(s => match(`${s.number} ${s.title}`))}>{s =>
           <button class="ti" classList={{ on: !activeDoc() && sheet()?.id === s.id }} onClick={() => { setActiveDoc(null); setSheetId(s.id); }}><svg class="ic"><use href="#i-sheet" /></svg><span>{s.number}</span><small>{s.title}</small></button>}</For></B>
         <B k="lists" t="Lists" n={lists().length}><For each={lists()}>{([k, l]) =>
-          <button class="ti" classList={{ on: listOn(k) }} title="Click: under the drawing (or in its own tab, if it has one). Double-click: its own tab" onClick={() => { const t = docTabs().find(x => x.list === k); if (t) setActiveDoc(t.id); else { setActiveDoc(null); setPanel(k); setListOpen(true); } }} onDblClick={() => openListTab(k)}><svg class="ic"><use href="#i-table" /></svg><span>{l}</span></button>}</For></B>
+          <button class="ti" classList={{ on: listOn(k) }} title="Click: open it (under the drawing, or in the Lists tab if the lists are there). Double-click: the Lists tab" onClick={() => { setPanel(k); setListOpen(true); }} onDblClick={() => openListsTab(k)}><svg class="ic"><use href="#i-table" /></svg><span>{l}</span></button>}</For></B>
         <B k="ds" t="Datasheets" n={dsRows().length}><For each={dsRows().slice(0, 2000)} fallback={<p class="muted small plhint">Instruments, control valves, relief devices and equipment have datasheets; they appear here as you draw them.</p>}>{r =>
           <button class="ti" classList={{ on: dsOn(r.ids[0]) }} onClick={() => openDatasheet(r.ids[0])}><svg class="ic"><use href="#i-report" /></svg><span>{r.cells[0]}</span><small>{r.cells[1]}</small></button>}</For></B>
       </div>

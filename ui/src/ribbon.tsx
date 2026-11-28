@@ -2,9 +2,10 @@
 // Instruments · Check · Lists · Sheets · View · Help, and the contextual Format tab). Copied from
 // Datum Plan's ribbon by way of Datum Pipe.
 import { MODES, ColourMode } from "./colours";
-import { ribbonFolded, ribbonPeek, setRibbonPeek, toggleRibbon } from "./store";
+import { ribbonFolded, ribbonPeek, setRibbonPeek, toggleRibbon, quickBar, setQuickBar, followPick, setFollowPick } from "./store";
 import { screenMode, setScreenMode, printMode, setPrintMode } from "./store";
-import { For, Show, JSX, createSignal, createMemo, onMount, onCleanup } from "solid-js";
+import { For, Show, JSX, createSignal, createMemo, createEffect, on, onMount, onCleanup } from "solid-js";
+import { selKind, selTab, selActions } from "./selbar";
 import { call, out, proj, tab, setTab, setBackstage, openMenu, openDialog, closeDialog, theme, setTheme, sel, tool, setTool, lib, derived, hidden, opts, setOpts, itemOf, lineOf, act, sheet, showIssues, setShowIssues } from "./store";
 import { C, ALL_CMDS, exampleMenu } from "./cmds";
 import * as D from "./dialogs";
@@ -20,8 +21,11 @@ import { openCause } from "./cause";
 
 const GH = "https://github.com/Edgar-Mendonca/Datum-Schema";
 
+/** The keyboard back to the drawing, unless a window, a tab or a field has it now. */
+export const backToSheet = () => { const a = document.activeElement; if (document.querySelector(".ov") || a instanceof HTMLInputElement || a instanceof HTMLTextAreaElement || a instanceof HTMLSelectElement) return; const c = document.querySelector<HTMLElement>(".canvhold .canvas"); if (c && c.offsetParent !== null) c.focus({ preventScroll: true }); };
 /** A ribbon tab picked: folded, it shows the ribbon over the drawing for a moment. */
-export const pickTab = (k: string) => { if (ribbonFolded()) setRibbonPeek(!(ribbonPeek() && tab() === k)); setTab(k); };
+let before = "home";
+export const pickTab = (k: string) => { if (ribbonFolded()) setRibbonPeek(!(ribbonPeek() && tab() === k)); if (k === "format" && tab() !== "format") before = tab(); setTab(k); setTimeout(backToSheet, 0); };
 
 export const B = (p: { i: string; l: string; run?: (e: MouseEvent) => void; big?: boolean; on?: boolean; off?: boolean; dd?: (e: MouseEvent) => void; title?: string }) => p.big && p.run && p.dd ? (
   <div class="rbw big splitbig" classList={{ on: p.on }}>
@@ -57,7 +61,14 @@ export const palette = () => openDialog(() => {
 
 export const TABS: [string, string][] = [["home", "Home"], ["draw", "Draw"], ["symbols", "Symbols"], ["lines", "Lines"], ["instruments", "Instruments"], ["check", "Check"], ["lists", "Lists"], ["sheets", "Sheets"], ["view", "View"], ["help", "Help"]];
 
-export const TitleBar = (p: { update: string | null }) => (
+export const TitleBar = (p: { update: string | null }) => {
+  // The Selection tab glows for a moment when something is first picked, so it is seen.
+  const [glow, setGlow] = createSignal(false);
+  let t = 0;
+  createEffect(on(() => selKind() !== "", (on_, was) => { if (on_ && !was) { setGlow(true); clearTimeout(t); t = window.setTimeout(() => setGlow(false), 1600); } }, { defer: true }));
+  // Let go of everything with the Selection tab open: back to the tab before it.
+  createEffect(on(() => sel().length, n => { if (!n && tab() === "format") setTab(before); }, { defer: true }));
+  return (
   <header class="top">
     <div class="bar">
       <div class="qat">
@@ -75,12 +86,13 @@ export const TitleBar = (p: { update: string | null }) => (
     <nav class="tabs">
       <button class="file" onClick={() => setBackstage("home")}>File</button>
       <For each={TABS}>{([k, l]) => <button classList={{ on: tab() === k && !(ribbonFolded() && !ribbonPeek()) }} onClick={() => pickTab(k)} onDblClick={toggleRibbon}>{l}</button>}</For>
-      <div class="ctxgrp" style={{ visibility: sel().length ? "visible" : "hidden" }}><small>Selection</small><button classList={{ on: tab() === "format" && !(ribbonFolded() && !ribbonPeek()) }} onClick={() => pickTab("format")} onDblClick={toggleRibbon}>Format</button></div>
+      <div class="ctxgrp" classList={{ [`k-${selKind()}`]: true, glow: glow() }} style={{ visibility: sel().length ? "visible" : "hidden" }} title="Everything you can do with what is picked"><small>{selTab()[1]}</small><button classList={{ on: tab() === "format" && !(ribbonFolded() && !ribbonPeek()) }} onClick={() => pickTab("format")} onDblClick={toggleRibbon}>{selTab()[0]}</button></div>
       <span class="grow" />
       <button class="rfold" title={ribbonFolded() ? "Keep the ribbon open (Ctrl+F1)" : "Fold the ribbon to its tabs, for more drawing room (Ctrl+F1)"} onClick={toggleRibbon}>{ribbonFolded() ? "⌄" : "⌃"}</button>
     </nav>
   </header>
-);
+  );
+};
 
 /** Shrinks the ribbon in steps instead of scrolling sideways (FAMILY §6). */
 const fitRibbon = (el: HTMLElement) => {
@@ -117,7 +129,8 @@ export const Ribbon = () => {
   const away = (e: PointerEvent) => { const t = e.target as HTMLElement; if (ribbonPeek() && !t.closest(".ribbon, .tabs, .menu")) setRibbonPeek(false); };
   onMount(() => document.addEventListener("pointerdown", away, true));
   onCleanup(() => document.removeEventListener("pointerdown", away, true));
-  const ran = (e: MouseEvent) => { const b = (e.target as HTMLElement).closest(".rb"); if (b && !b.querySelector(".car") && !b.matches(".split, .bot") && !/ ▾$/.test(b.textContent ?? "") && ribbonFolded()) setTimeout(() => setRibbonPeek(false), 0); };
+  // A command run from the ribbon gives the keyboard back to the drawing (R, M, Del, Esc work at once).
+  const ran = (e: MouseEvent) => { const b = (e.target as HTMLElement).closest(".rb"); if (!b || b.querySelector(".car") || b.matches(".split, .bot") || / ▾$/.test(b.textContent ?? "")) return; if (ribbonFolded()) setTimeout(() => setRibbonPeek(false), 0); setTimeout(backToSheet, 0); };
   return (
     <div class="rhold" classList={{ folded: ribbonFolded(), peek: ribbonFolded() && ribbonPeek() }}>
     <section class="ribbon" ref={fitRibbon} onClick={ran}>
@@ -182,19 +195,21 @@ export const Ribbon = () => {
         <G l="Layers" h="layers"><S>{layer("process", "Process")}{layer("utility", "Utility")}</S><S>{layer("instrument", "Instruments")}{layer("notes", "Notes and marks")}</S></G>
         <G l="Select" h="select"><B big i="select" l="By Type" dd={e => openMenu(e, [...(["vessel", "rotating", "heat", "valve", "control", "fitting", "instrument", "primary", "mark", "connector"] as Cat[]).map(c => ({ label: lib()?.symbols.find(s => s.cat === c)?.cat_name ?? c, run: () => C.selectType(c) })), "-" as const, ...(lib()?.kinds ?? []).map(k => ({ label: `${k[1]} lines`, run: () => C.selectType(`line:${k[0]}`) }))])} /><B big i="line" l="By Line Number" dd={numberMenu} /></G>
         <G l="Colours" h="colours"><S><label class="ccol">On the screen <select onChange={e => setScreenMode(e.currentTarget.value as ColourMode)}><For each={MODES}>{([k, l]) => <option value={k} selected={screenMode() === k}>{l}</option>}</For></select></label><label class="ccol">In print <select onChange={e => setPrintMode(e.currentTarget.value as ColourMode)}><For each={MODES}>{([k, l]) => <option value={k} selected={printMode() === k}>{l}</option>}</For></select></label></S></G>
+        <G l="Selection" h="view"><S><label class="chk" title="A small bar of buttons by what you pick: rotate, mirror, reverse the flow, its datasheet…"><input type="checkbox" checked={quickBar()} onChange={e => setQuickBar(e.currentTarget.checked)} />Quick bar by the selection</label><label class="chk" title="Show the Inspector beside the drawing when you pick something (placing symbols keeps the Symbols panel)"><input type="checkbox" checked={followPick()} onChange={e => setFollowPick(e.currentTarget.checked)} />Inspector on a pick</label></S></G>
         <G l="Show" h="view"><S><label class="chk"><input type="checkbox" checked={opts().grid} onChange={e => setOpts({ ...opts(), grid: e.currentTarget.checked })} />Grid</label><label class="chk"><input type="checkbox" checked={showIssues()} onChange={e => setShowIssues(e.currentTarget.checked)} />Problems on the sheet</label></S></G>
       </Show>
       <Show when={tab() === "format"}>
-        <Show when={sel().length} fallback={<G l="Format"><div class="rnote">Select a symbol or a line on the sheet.</div></G>}>
-          <G l="Arrange" h="edit"><B big i="rotate" l="Rotate" run={C.rotate} off={!selItem() && sel().length < 2} /><B big i="flip" l="Mirror" run={C.flip} off={!selItem() && sel().length < 2} /><S><For each={[0.75, 1, 1.5]}>{x => <B i="scale" l={`${x}×`} off={!selItem()} on={selItem()?.scale === x} run={() => selItem() && act({ SetItem: { item: { ...selItem()!, scale: x } } })} />}</For></S></G>
+        <Show when={sel().length} fallback={<G l="Selection"><div class="rnote">Pick a symbol or a line on the sheet: what you can do with it appears here.</div></G>}>
+          <For each={[...new Set(selActions().map(x => x.group))]}>{g => <G l={g} h={g === "Flow" ? "lines" : g === "Data" ? "inspector" : g === "Off-page" ? "offpage" : "edit"}>
+            <For each={selActions().filter(x => x.group === g)}>{x => <B big i={x.i} l={x.l} title={`${x.l}${x.keys ? ` (${x.keys})` : ""}`} off={x.off} run={x.run} />}</For>
+          </G>}</For>
+          <Show when={selItem()}>{it => <G l="Size" h="edit"><S><For each={[0.75, 1, 1.5]}>{x => <B i="scale" l={`${x}×`} on={it().scale === x} run={() => act({ SetItem: { item: { ...it(), scale: x } } })} />}</For></S></G>}</Show>
+          <G l="Arrangement" h="arrangements"><B big i="symbols" l="Apply Arrangement" title="Place the standard valves, instruments, vents and drains round the selected equipment or control valve (Options › Arrangements)" run={() => applyArrangement()} dd={e => openMenu(e, [{ label: "Its own (by class)", run: () => applyArrangement() }, ...arrangementNames().map(n => ({ label: n, run: () => applyArrangement(n) }))])} /></G>
+          <G l="Assembly" h="assemblies"><B big i="symbols" l="Save as Assembly" title="Save the selection to place it again as one (a control valve station…)" run={() => import("./assemblies").then(m => m.saveAssembly())} /></G>
           <Show when={selLine()}>{l => <>
             <G l="Line Type" h="lines"><S><For each={(lib()?.kinds ?? []).slice(0, 3)}>{k => <B i="line" l={k[1]} on={l().kind === k[0]} run={() => act({ SetLine: { line: { ...l(), kind: k[0] } } })} />}</For></S><S><For each={(lib()?.kinds ?? []).slice(3, 6)}>{k => <B i="sig" l={k[1]} on={l().kind === k[0]} run={() => act({ SetLine: { line: { ...l(), kind: k[0] } } })} />}</For></S></G>
             <G l="Send" h="send"><B big i="export" l="To Datum Pipe" title="This line as a Datum Pipe model, to start its stress analysis" off={l().kind !== "major" && l().kind !== "minor" && l().kind !== "utility"} run={() => C.send("pipe", String(l().id))} /></G>
-            <G l="Flow" h="lines"><B big i="flow" l="Reverse Flow" run={() => C.reverse(l().id)} /><S><B i="line" l="Straighten" off={!l().pts.length} run={() => act({ SetPts: { id: l().id, pts: [] } })} /><B i="select" l="Whole Line Number" run={() => C.selectRun(l().id)} /></S></G>
           </>}</Show>
-          <G l="Edit" h="edit"><S><B i="copy" l="Copy" run={C.copy} /><B i="dup" l="Duplicate" run={C.duplicate} /><B i="del" l="Delete" run={C.del} /></S></G>
-          <G l="Arrangement" h="arrangements"><B big i="symbols" l="Apply Arrangement" title="Place the standard valves, instruments, vents and drains round the selected equipment or control valve (Options › Arrangements)" run={() => applyArrangement()} dd={e => openMenu(e, [{ label: "Its own (by class)", run: () => applyArrangement() }, ...arrangementNames().map(n => ({ label: n, run: () => applyArrangement(n) }))])} /></G>
-          <G l="Assembly" h="assemblies"><B big i="symbols" l="Save as Assembly" title="Save the selection to place it again as one (a control valve station…)" run={() => import("./assemblies").then(m => m.saveAssembly())} /></G>
         </Show>
       </Show>
       <Show when={tab() === "help"}>

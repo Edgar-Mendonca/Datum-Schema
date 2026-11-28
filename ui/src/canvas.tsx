@@ -4,7 +4,7 @@
 // dropped on a line goes into it). Everything drawn comes from the engine (view.rs): this file
 // draws it and sends edits.
 import { screenCss } from "./colours";
-import { screenMode } from "./store";
+import { quietPick, screenMode } from "./store";
 import { For, Show, JSX, createSignal, createMemo, createEffect, onMount, onCleanup, batch, on } from "solid-js";
 import { Pt, Prim, ItemView, LineView, End, Kind, Item, Line, Note } from "./api";
 import { derived, sel, setSel, act, proj, sheet, opts, tool, setTool, symOf, lib, openMenu, MenuItem, hiNumber, hidden, setSheetId, lineOf, onFit, bgs, loadBg, setPanel, setPanelOpen, showIssues } from "./store";
@@ -265,7 +265,7 @@ export const Canvas = () => {
     if (JSON.stringify(to) === JSON.stringify(d.from)) return;
     const s = sheet(); if (!s) return;
     const o = await act({ AddLine: { line: { id: 0, sheet: s.id, kind: d.kind, a: d.from, b: to, pts: [], flip: false, obj: 0 } as Line } });
-    if (o?.created.length) setSel([o.created[0]]);
+    if (o?.created.length) { quietPick(); setSel([o.created[0]]); }
   };
 
   const up = async (e: MouseEvent) => {

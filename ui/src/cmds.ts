@@ -1,6 +1,6 @@
 // Commands: what the ribbon, menus, keys and Tell Me run.
 import { Out, Pt, Item, Line, Note, NoteKind, Kind, Example, invoke } from "./api";
-import { setOut, act, call, sel, setSel, setBackstage, loadOut, toast, proj, sheet, setSheetId, itemOf, lineOf, derived, symOf, setTool, openMenu, setHiNumber, hidden, setHidden, setPanel, setPanelOpen } from "./store";
+import { quietPick, setOut, act, call, sel, setSel, setBackstage, loadOut, toast, proj, sheet, setSheetId, itemOf, lineOf, derived, symOf, setTool, openMenu, setHiNumber, hidden, setHidden, setPanel, setPanelOpen } from "./store";
 import * as D from "./dialogs";
 import { sheetSvg } from "./print";
 
@@ -38,13 +38,13 @@ export const C = {
       const placed = o.p.items.find(i => i.id === o!.created[0]);
       if (placed) o = (await act({ SetData: { ids: [placed.obj], key: "location", val: sym === "inst_dcs" ? "DCS" : sym === "inst_plc" ? "PLC" : sym === "inst_panel" ? "Control room panel" : sym === "inst_aux" ? "Local panel" : "Field" } }, true)) ?? o;
     }
-    if (o?.created.length) setSel([o.created[0]]);
+    if (o?.created.length) { quietPick(); setSel([o.created[0]]); }
     if (o && on !== null && s.inline) toast(`${s.name} put into the line; both halves keep its data.`, true);
   },
   addNote: async (kind: NoteKind, at: Pt) => {
     const text = kind === "hold" ? "" : kind === "leader" ? "Note" : "Note";
     const o = await act({ AddNote: { note: { id: 0, sheet: sid(), kind, x: at[0], y: at[1], w: kind === "hold" ? 60 : 0, h: kind === "hold" ? 35 : 0, text, to: [at[0] + 20, at[1] + 15] } } });
-    if (o?.created.length) { setSel([o.created[0]]); setTimeout(() => document.querySelector<HTMLTextAreaElement>(".insp textarea")?.focus(), 40); }
+    if (o?.created.length) { quietPick(); setSel([o.created[0]]); setTimeout(() => document.querySelector<HTMLTextAreaElement>(".insp textarea")?.focus(), 40); }
   },
   /** Delete the selection. When that would leave objects drawn nowhere, ask: delete the objects
    *  too, or only remove them from this sheet (they stay in the Plant panel). */
@@ -69,7 +69,7 @@ export const C = {
     const same = clip.items.some(i => i.sheet === sid());
     const [dx, dy] = same ? [10, 10] : [Math.round((c[0] - at[0]) / g) * g, Math.round((c[1] - at[1]) / g) * g];
     const o = await act({ Paste: { sheet: sid(), items: clip.items, lines: clip.lines, notes: clip.notes, dx, dy } });
-    if (o) setSel(o.created);
+    if (o) { quietPick(); setSel(o.created); }
   },
   duplicate: () => { C.copy(); C.paste(); },
   reverse: (id: number) => { const l = lineOf(id); if (l) act({ SetLine: { line: { ...l, flip: !l.flip } } }); },

@@ -1435,3 +1435,27 @@ tr.behind td { background: var(--err-bg); }
   .rail button span, .rail .rcap { display: none; }
   .rail button { padding: 7px 2px; }
 }
+
+/* 0.11.5: one drawer under the drawing; the Lists tab; a page in a tab. */
+.btabs .bsep { width: 1px; align-self: stretch; margin: 6px 6px; background: var(--line); flex: none; }
+.bottom.drawer { max-height: calc(100% - 160px); }
+.docl .btabs .lhint { margin-right: 8px; }
+.docpage { flex: 1; overflow: auto; padding: 16px 24px; background: var(--panel); min-height: 0; }
+
+/* 0.11.5: the Selection tab, coloured by what is picked, glowing for a moment when it appears. */
+.ctxgrp.k-symbol, .ctxgrp.k-symbols { border-top-color: #C08A00; background: #FBF1DA; }
+.ctxgrp.k-symbol small, .ctxgrp.k-symbols small { color: #8A6200; }
+.ctxgrp.k-line, .ctxgrp.k-lines { border-top-color: #2E9D57; background: #E2F3E8; }
+.ctxgrp.k-line small, .ctxgrp.k-lines small { color: #1F7A4D; }
+.ctxgrp.glow { animation: ctxglow 1.6s ease-out; }
+@keyframes ctxglow { 0%, 40% { box-shadow: 0 0 0 3px rgba(192, 138, 0, .45); } 100% { box-shadow: 0 0 0 0 rgba(192, 138, 0, 0); } }
+:root[data-theme="dark"] .ctxgrp.k-symbol, :root[data-theme="dark"] .ctxgrp.k-symbols { background: #3A2F14; }
+:root[data-theme="dark"] .ctxgrp.k-line, :root[data-theme="dark"] .ctxgrp.k-lines { background: #173826; }
+/* The quick bar by the selection. */
+.qbar { position: fixed; z-index: 15; display: flex; gap: 1px; padding: 3px; background: var(--bg2); border: 1px solid var(--line3, var(--line)); border-radius: 6px; box-shadow: 0 4px 14px rgba(20, 30, 60, .18); }
+.qbar button { width: 28px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 4px; border: 0; background: transparent; color: var(--text2); }
+.qbar button svg { width: 17px; height: 17px; }
+.qbar button:hover:not(:disabled) { background: var(--pale); }
+.qbar button:disabled { opacity: .4; }
+.qbar button.danger:hover { background: #FBE3E1; }
+.qbar .qmore { font-size: 15px; color: var(--muted); border-left: 1px solid var(--line); border-radius: 0 4px 4px 0; }

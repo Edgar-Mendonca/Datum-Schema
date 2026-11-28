@@ -3,7 +3,7 @@
 // drawing, edit a cell and the drawing follows.
 import { For, Show, JSX, createSignal, createMemo, createResource, createEffect, on } from "solid-js";
 import { List, Col, Row, parseNum, Issue, Change } from "./api";
-import { sel, setPanel, derived, call, out, act, proj, toast, openMenu, openDoc, docTabs, BOTTOM_KEYS, listKey, listOpen, setListOpen, bottomKey, bottomOpen, setBottomOpen, messages } from "./store";
+import { sel, setPanel, panel, derived, call, out, act, proj, toast, openMenu, BOTTOM_KEYS, listKey, setListOpen, bottomKey, setBottomOpen, messages, area, drawerOpen, setDrawerOpen, listsInTab, openListsTab, listsBack } from "./store";
 import { fromU } from "./units";
 import { C } from "./cmds";
 import { Help } from "./help";
@@ -123,7 +123,7 @@ export const PanelBody = (p: { k: string }) => (
 /** A list's title (its tab's name). */
 export const tabTitle = (k: string) => TABS.find(t => t[0] === k)?.[1] ?? (k.startsWith("report:") ? k.slice(7) : k);
 /** Opens a list as a tab beside the sheets. */
-export const openListTab = (k: string) => openDoc({ id: `list:${k}`, title: tabTitle(k), list: k });
+export const openListTab = (k: string) => openListsTab(k);
 
 /** The app's messages, newest first. */
 const MessagesPanel = () => {
@@ -150,9 +150,9 @@ const LogPanel = () => {
 const TabRow = (p: { tabs: [string, string][]; cur: string; open: boolean; pick: (k: string) => void; badge: (k: string) => string; children?: JSX.Element }) => {
   const [hid, setHid] = createSignal<string[]>([]);
   return (
-    <nav class="btabs" ref={el => { const fit = () => { const rest = [...el.querySelectorAll<HTMLElement>(":scope > :not(.bt):not(.grow):not(.bmore)")].reduce((w, x) => w + x.getBoundingClientRect().width, 0); const r = el.getBoundingClientRect().right - rest - 96; const bs = [...el.querySelectorAll<HTMLElement>(":scope > button.bt")]; bs.forEach(b => (b.style.display = "")); const off = bs.filter(b => b.getBoundingClientRect().right > r).map(b => b.dataset.k!); bs.forEach(b => { if (off.includes(b.dataset.k!)) b.style.display = "none"; }); setHid(off); }; new ResizeObserver(fit).observe(el); createEffect(on(() => [p.tabs, p.cur], () => queueMicrotask(fit))); }}>
-      <For each={p.tabs}>{([k, l]) => <button class="bt" data-k={k} classList={{ on: p.open && p.cur === k }} onClick={() => p.pick(k)}>{l}{p.badge(k)}</button>}</For>
-      <Show when={hid().length}><button class="bmore" title="The ones that do not fit" onClick={e => openMenu(e, p.tabs.filter(([k]) => hid().includes(k)).map(([k, l]) => ({ label: `${l}${p.badge(k)}`, on: p.open && p.cur === k, run: () => p.pick(k) })))}>More ▾</button></Show>
+    <nav class="btabs" ref={el => { const fit = () => { const rest = [...el.querySelectorAll<HTMLElement>(":scope > :not(.bt):not(.grow):not(.bmore):not(.bsep)")].reduce((w, x) => w + x.getBoundingClientRect().width, 0); const r = el.getBoundingClientRect().right - rest - 96; const bs = [...el.querySelectorAll<HTMLElement>(":scope > button.bt")]; bs.forEach(b => (b.style.display = "")); const off = bs.filter(b => b.getBoundingClientRect().right > r).map(b => b.dataset.k!); bs.forEach(b => { if (off.includes(b.dataset.k!)) b.style.display = "none"; }); setHid(off); }; new ResizeObserver(fit).observe(el); createEffect(on(() => [p.tabs, p.cur], () => queueMicrotask(fit))); }}>
+      <For each={p.tabs}>{([k, l]) => k === "|" ? <span class="bsep" /> : <button class="bt" data-k={k} classList={{ on: p.open && p.cur === k }} onClick={() => p.pick(k)}>{l}{p.badge(k)}</button>}</For>
+      <Show when={hid().length}><button class="bmore" title="The ones that do not fit" onClick={e => openMenu(e, p.tabs.filter(([k]) => k !== "|" && hid().includes(k)).map(([k, l]) => ({ label: `${l}${p.badge(k)}`, on: p.open && p.cur === k, run: () => p.pick(k) })))}>More ▾</button></Show>
       <span class="grow" />
       {p.children}
     </nav>
@@ -171,46 +171,40 @@ const useHeight = (key: string, d: number) => {
   return [h, resize] as const;
 };
 
-const listBadge = () => "";
-/** The lists under the drawing, in the drawing's own tab (0.11.3): for the review, the drawing and
- *  its lists side by side, linked both ways. A list moved to its own tab is not shown here. */
 /** Every list this project has to show (reports included), in order. */
 export const LIST_TABS = (): [string, string][] => [...TABS.filter(([k]) => !BOTTOM_KEYS.includes(k)), ...(proj()?.settings.reports ?? []).map(r => [`report:${r.name}`, r.name] as [string, string])].filter(([k]) => (k !== "streams" || proj()?.sheets.some(s => s.pfd)) && (!k.startsWith("hazop") || listKey() === k || !!(proj()?.settings.hazop as { nodes?: unknown[] } | undefined)?.nodes?.length) && (k !== "accepted" || listKey() === k || !!(proj()?.settings as { accepted?: unknown[] } | undefined)?.accepted?.length) && (k !== "testpacks" || listKey() === k || !!(proj()?.settings.testpacks as { packs?: unknown[] } | undefined)?.packs?.length) && (!ADD[k] || listKey() === k || !!proj()?.objects.some(o => o.class === ADD[k])));
-export const ReviewLists = () => {
-  const [h, resize] = useHeight("ds.lists.h", 260);
-  const tabs = createMemo(() => LIST_TABS().filter(([k]) => !docTabs().some(t => t.list === k) && (k !== "streams" || proj()?.sheets.some(s => s.pfd)) && (!k.startsWith("hazop") || listKey() === k || !!(proj()?.settings.hazop as { nodes?: unknown[] } | undefined)?.nodes?.length) && (k !== "accepted" || listKey() === k || !!(proj()?.settings as { accepted?: unknown[] } | undefined)?.accepted?.length) && (k !== "testpacks" || listKey() === k || !!(proj()?.settings.testpacks as { packs?: unknown[] } | undefined)?.packs?.length) && (!ADD[k] || listKey() === k || !!proj()?.objects.some(o => o.class === ADD[k]))));
-  const pick = (k: string) => { setPanel(k); setListOpen(true); };
-  const shown = () => listOpen() && !docTabs().some(t => t.list === listKey());
+/** The drawer under the drawing (0.11.5): one row of tabs (the checks, to-do and comments; the
+ *  lists, unless they are in their own tab; messages and the log) and one table shown. */
+export const Drawer = () => {
+  const [h, resize] = useHeight("ds.drawer.h", 220);
+  const badge = (k: string) => { if (k === "todo") { const n = todos()?.length ?? 0; return n ? ` (${n})` : ""; } if (k === "comments") { const n = (proj()?.comments ?? []).filter(c => !c.resolved).length; return n ? ` (${n})` : ""; } if (k !== "checks") return ""; const i = derived()?.issues ?? []; const e = i.filter(x => x.level === "error").length, w = i.filter(x => x.level === "warning").length; return e + w ? ` (${e + w})` : ""; };
+  const tabs = createMemo((): [string, string][] => [["checks", "Checks"], ["todo", "To do"], ["comments", "Comments"], ...(listsInTab() ? [] : [["|", ""] as [string, string], ...LIST_TABS()]), ["|", ""], ["messages", "Messages"], ["log", "Log"]]);
+  const cur = () => (area() === "lists" && listsInTab() ? "" : panel());
+  const open = () => drawerOpen() && cur() !== "";
+  const pick = (k: string) => { setPanel(k); if (BOTTOM_KEYS.includes(k)) setBottomOpen(true); else setListOpen(true); };
   return (
-    <section class="bottom lowerlists" style={{ height: shown() ? `${h()}px` : "30px" }}>
-      <Show when={shown()}><div class="bhandle" onMouseDown={resize} /></Show>
-      <TabRow tabs={tabs()} cur={listKey()} open={shown()} pick={pick} badge={listBadge}>
-        <span class="lcap muted">Lists</span>
-        <button class="bcollapse bdoc" title="Move this list to its own tab, full size (for working through it); Show under the drawing brings it back" onClick={() => { openListTab(listKey()); }}>⧉ Own tab</button>
-        <Help k={listKey().startsWith("report:") ? "reports" : "lists"} />
-        <button class="bcollapse" title={shown() ? "Fold the lists away" : "Show the lists under the drawing"} onClick={() => setListOpen(!listOpen())}>{shown() ? "▾" : "▴"}</button>
+    <section class="bottom drawer" classList={{ lists: area() === "lists" }} style={{ height: open() ? `${h()}px` : "30px" }}>
+      <Show when={open()}><div class="bhandle" onMouseDown={resize} /></Show>
+      <TabRow tabs={tabs()} cur={cur()} open={open()} pick={pick} badge={badge}>
+        <Show when={open() && area() === "lists"}><button class="bcollapse bdoc" title="Move the lists, all of them, to a tab of their own over the sheet (for working through them); the tab stays until you close it" onClick={() => openListsTab(listKey())}>⧉ Lists in a tab</button></Show>
+        <Help k={area() === "lists" ? (listKey().startsWith("report:") ? "reports" : "lists") : bottomKey() === "checks" ? "checks" : bottomKey() === "comments" ? "review" : bottomKey() === "todo" ? "todo" : "workspace"} />
+        <button class="bcollapse" title={open() ? "Fold the drawer away" : "Show the drawer"} onClick={() => (open() ? setDrawerOpen(false) : pick(cur() || "checks"))}>{open() ? "▾" : "▴"}</button>
       </TabRow>
-      <Show when={shown()}><PanelBody k={listKey()} /></Show>
-    </section>
-  );
-};
-
-/** The slim bottom pane (0.11.3): checks, the to-do list, comments, messages and the log. */
-export const Bottom = () => {
-  const [h, resize] = useHeight("ds.bottom.h", 170);
-  const badge = (k: string) => { if (k === "todo") { const n = todos()?.length ?? 0; return n ? ` (${n})` : ""; } if (k === "comments") { const n = (proj()?.comments ?? []).filter(c => !c.resolved).length; return n ? ` (${n})` : ""; } if (k !== "checks") return ""; const i = derived()?.issues ?? []; const e = i.filter(x => x.level === "error").length, w = i.filter(x => x.level === "warning").length; return e || w ? ` (${e} · ${w})` : ""; };
-  const tabs: [string, string][] = [["checks", "Checks"], ["todo", "To do"], ["comments", "Comments"], ["messages", "Messages"], ["log", "Log"]];
-  const pick = (k: string) => { setPanel(k); setBottomOpen(true); };
-  return (
-    <section class="bottom slim" style={{ height: bottomOpen() ? `${h()}px` : "30px" }}>
-      <Show when={bottomOpen()}><div class="bhandle" onMouseDown={resize} /></Show>
-      <TabRow tabs={tabs} cur={bottomKey()} open={bottomOpen()} pick={pick} badge={badge}>
-        <Help k={bottomKey() === "checks" ? "checks" : bottomKey() === "comments" ? "review" : bottomKey() === "todo" ? "todo" : "workspace"} />
-        <button class="bcollapse" title={bottomOpen() ? "Fold the pane away" : "Show the pane"} onClick={() => setBottomOpen(!bottomOpen())}>{bottomOpen() ? "▾" : "▴"}</button>
-      </TabRow>
-      <Show when={bottomOpen()}>
-        <Show when={bottomKey() === "messages"} fallback={<Show when={bottomKey() === "log"} fallback={<PanelBody k={bottomKey()} />}><LogPanel /></Show>}><MessagesPanel /></Show>
+      <Show when={open()}>
+        <Show when={cur() === "messages"} fallback={<Show when={cur() === "log"} fallback={<PanelBody k={cur()} />}><LogPanel /></Show>}><MessagesPanel /></Show>
       </Show>
     </section>
   );
 };
+
+/** The Lists tab over the sheet (0.11.5): every list as one set, for working through them. */
+export const ListsDoc = () => (
+  <div class="lists docl">
+    <TabRow tabs={LIST_TABS()} cur={listKey()} open={true} pick={k => setPanel(k)} badge={() => ""}>
+      <span class="muted small lhint">Click a row to go to it on the drawing.</span>
+      <button class="bcollapse bunder" title="Put the lists back under the drawing, to review the drawing against them" onClick={listsBack}>↓ Under the drawing</button>
+      <Help k={listKey().startsWith("report:") ? "reports" : "lists"} />
+    </TabRow>
+    <PanelBody k={listKey()} />
+  </div>
+);

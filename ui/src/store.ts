@@ -116,36 +116,67 @@ export type Tool = { k: "select" } | { k: "line"; kind: Kind } | { k: "place"; s
 export const [tool, setTool] = createSignal<Tool>({ k: "select" });
 /** Problems (errors and warnings) marked on the sheet, with their rule number. */
 export const [showIssues, setShowIssues] = createSignal(false);
+/** View choices for the selection (0.11.5), kept on this computer: the quick bar by the selection,
+ *  and the Inspector opened when something is picked. Both on unless switched off. */
+const boolPref = (k: string): [() => boolean, (v: boolean) => void] => {
+  const [g, s] = createSignal((() => { try { return localStorage.getItem(k) !== "0"; } catch { return true; } })());
+  return [g, (v: boolean) => { s(v); try { localStorage.setItem(k, v ? "1" : "0"); } catch { /* private window */ } }];
+};
+export const [quickBar, setQuickBar] = boolPref("ds.quickbar");
+export const [followPick, setFollowPick] = boolPref("ds.follow");
+/** The next change of the selection is the app's (a symbol placed, a paste), not the user's pick. */
+let quiet = false;
+export const quietPick = () => { quiet = true; };
+export const takeQuiet = () => { const q = quiet; quiet = false; return q; };
 /** The line number highlighted on every sheet (Select › By line number). */
 export const [hiNumber, setHiNumber] = createSignal("");
-/** The bottom panel's tab, and whether it is open. */
-// Two places show tables (0.11.3): the lists under the drawing (in the drawing's own tab, linked
-// both ways with it, for the review) and the slim bottom pane (checks, to-do, comments, messages,
-// the log). `setPanel` sends a key to the right one and opens it.
+/** The drawer under the drawing (0.11.5): one area, one row of tabs, one table shown: the checks,
+ *  the to-do list and comments, the lists (linked both ways with the drawing, for the review), and
+ *  messages and the log. The lists can move, as one set, to a "Lists" tab over the sheet (for the
+ *  paperwork); then the drawer keeps the rest. `setPanel` sends a key to the right place. */
 export const BOTTOM_KEYS = ["checks", "todo", "comments", "messages", "log"];
 const prefKeep = (k: string, d: string) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
 const prefSave = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* private window */ } };
 export const [listKey, setListKey] = createSignal(prefKeep("ds.lists.key", "lines"));
-export const [listOpen, setListOpenRaw] = createSignal(prefKeep("ds.lists.open", "0") === "1");
-export const setListOpen = (v: boolean) => { setListOpenRaw(v); prefSave("ds.lists.open", v ? "1" : "0"); queueMicrotask(() => window.dispatchEvent(new Event("resize"))); };
 export const [bottomKey, setBottomKey] = createSignal("checks");
+/** Which kind of table the drawer shows: a list, or one of the others (checks, to-do…). */
+export const [area, setArea] = createSignal<"lists" | "bottom">("bottom");
 // Folded unless the user opened it (kept) or a project opens with errors (0.11.4: notes alone no
 // longer take a fifth of a small screen).
-export const [bottomOpen, setBottomOpenRaw] = createSignal(prefKeep("ds.bottom.open", "0") === "1");
-export const setBottomOpen = (v: boolean) => { setBottomOpenRaw(v); prefSave("ds.bottom.open", v ? "1" : "0"); queueMicrotask(() => window.dispatchEvent(new Event("resize"))); };
-let lastArea: "lists" | "bottom" = "bottom";
+export const [drawerOpen, setDrawerOpenRaw] = createSignal(prefKeep("ds.bottom.open", "0") === "1");
+export const setDrawerOpen = (v: boolean) => { setDrawerOpenRaw(v); prefSave("ds.bottom.open", v ? "1" : "0"); queueMicrotask(() => window.dispatchEvent(new Event("resize"))); };
+/** The lists in the drawer, open. */
+export const listOpen = () => drawerOpen() && area() === "lists" && !listsInTab();
+export const setListOpen = (v: boolean) => { if (v) { setArea("lists"); if (listsInTab()) setActiveDoc(LISTS_TAB); else setDrawerOpen(true); } else if (area() === "lists") setDrawerOpen(false); };
+/** The checks, to-do, comments, messages or log in the drawer, open. */
+export const bottomOpen = () => drawerOpen() && area() === "bottom";
+export const setBottomOpen = (v: boolean) => { if (v) { setArea("bottom"); setDrawerOpen(true); } else if (area() === "bottom") setDrawerOpen(false); };
+/** The "Lists" tab over the sheet: every list as one set, kept open (and opened again with the
+ *  next project) until it is closed. */
+export const LISTS_TAB = "lists";
+export const listsInTab = () => docTabs().some(t => t.id === LISTS_TAB);
+export const openListsTab = (k?: string, show = true) => {
+  if (k) { setListKey(k); prefSave("ds.lists.key", k); }
+  setArea("lists");
+  if (!listsInTab()) setDocTabs(v => [...v, { id: LISTS_TAB, title: "Lists", list: "*" }]);
+  prefSave("ds.lists.tab", "1");
+  if (show) { setBackstage(null); setActiveDoc(LISTS_TAB); }
+  if (drawerOpen() && area() === "lists") setDrawerOpen(false);
+};
+export const listsTabKept = () => prefKeep("ds.lists.tab", "0") === "1";
+/** The Lists tab closed: its list goes back under the drawing. */
+export const listsBack = () => { const k = listKey(); closeDoc(LISTS_TAB); setActiveDoc(null); setPanel(k); setListOpen(true); };
 /** The key last shown (for help), and the one place to send a list or a panel to. */
-export const panel = () => (lastArea === "bottom" ? bottomKey() : listKey());
+export const panel = () => (area() === "bottom" ? bottomKey() : listKey());
 export const setPanel = (k: string) => {
-  if (BOTTOM_KEYS.includes(k)) { lastArea = "bottom"; setBottomKey(k); return; }
-  lastArea = "lists"; setListKey(k); prefSave("ds.lists.key", k);
-  // A list moved to its own tab opens there.
-  const t = docTabs().find(x => x.list === k);
-  if (t) { setActiveDoc(t.id); return; }
+  if (BOTTOM_KEYS.includes(k)) { setArea("bottom"); setBottomKey(k); return; }
+  setArea("lists"); setListKey(k); prefSave("ds.lists.key", k);
+  // With the lists in their tab, a list opens there.
+  if (listsInTab()) { setBackstage(null); setActiveDoc(LISTS_TAB); return; }
   setActiveDoc(null);
 };
-export const panelOpen = () => (lastArea === "bottom" ? bottomOpen() : listOpen());
-export const setPanelOpen = (v: boolean) => (lastArea === "bottom" ? setBottomOpen(v) : docTabs().some(x => x.list === listKey()) ? undefined : setListOpen(v));
+export const panelOpen = () => (area() === "bottom" ? bottomOpen() : listsInTab() ? activeDoc() === LISTS_TAB : listOpen());
+export const setPanelOpen = (v: boolean) => (area() === "bottom" ? setBottomOpen(v) : setListOpen(v));
 /** How the drawing is coloured on the screen and in print (0.11.3), kept on this computer. */
 export const [screenMode, setScreenModeRaw] = createSignal<ColourMode>((["colour", "grey", "bw"].includes(prefKeep("ds.colour.screen", "colour")) ? prefKeep("ds.colour.screen", "colour") : "colour") as ColourMode);
 export const setScreenMode = (m: ColourMode) => { setScreenModeRaw(m); prefSave("ds.colour.screen", m); };
@@ -201,7 +232,7 @@ export type DocTab = { id: string; title: string; list?: string; render?: () => 
 export const [docTabs, setDocTabs] = createSignal<DocTab[]>([]);
 export const [activeDoc, setActiveDoc] = createSignal<string | null>(null);
 export const openDoc = (t: DocTab) => { setBackstage(null); setDocTabs(v => (v.some(x => x.id === t.id) ? v : [...v, t])); setActiveDoc(t.id); };
-export const closeDoc = (id: string) => { const v = docTabs(), i = v.findIndex(x => x.id === id); setDocTabs(v.filter(x => x.id !== id)); if (activeDoc() === id) setActiveDoc(v[i + 1]?.id ?? v[i - 1]?.id ?? null); };
+export const closeDoc = (id: string) => { if (id === LISTS_TAB) prefSave("ds.lists.tab", "0"); const v = docTabs(), i = v.findIndex(x => x.id === id); setDocTabs(v.filter(x => x.id !== id)); if (activeDoc() === id) setActiveDoc(v[i + 1]?.id ?? v[i - 1]?.id ?? null); };
 // 0.11.4: the old "lists as tabs" and "big windows as tabs" choices are gone (their menu went in
 // 0.11.3, but a saved choice still moved windows into hidden tabs); forget them.
 try { localStorage.removeItem("ds.lists.where"); localStorage.removeItem("ds.big.where"); } catch { /* private window */ }

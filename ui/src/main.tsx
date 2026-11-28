@@ -11,14 +11,15 @@ import "@fontsource/ibm-plex-mono/latin-500.css";
 import "@fontsource/ibm-plex-mono/latin-600.css";
 import "./styles.css";
 import { invoke, listen, Out, Options, Shown } from "./api";
-import { loads, setBottomOpen, toggleRibbon, ribbonPeek, setRibbonPeek, out, setOut, backstage, setBackstage, setOpts, opts, dialogs, toast, loadOut, setThemeRaw, applyTheme, sel, proj, sheet, setSheetId, refreshLibs, derived, tool, setTool, openMenu, hidden, docTabs, activeDoc, setActiveDoc, closeDoc, setPanel, setListOpen } from "./store";
+import { symOf, itemOf, lineOf, LISTS_TAB, listsTabKept, openListsTab, listKey, loads, setBottomOpen, toggleRibbon, ribbonPeek, setRibbonPeek, out, setOut, backstage, setBackstage, setOpts, opts, dialogs, toast, loadOut, setThemeRaw, applyTheme, sel, proj, sheet, setSheetId, refreshLibs, derived, tool, setTool, openMenu, hidden, docTabs, activeDoc, setActiveDoc, closeDoc, setPanel } from "./store";
 import { C, setFit, setCentre, setCopy, setViewCentre } from "./cmds";
 import { TitleBar, Ribbon, palette } from "./ribbon";
 import { Backstage, update, checkUpdate } from "./backstage";
 import { Canvas, fit, fitSheet, goTo, copySelection, viewCenter } from "./canvas";
 import { Rail, SidePanel, followSelection } from "./rail";
-import { Bottom, PanelBody, ReviewLists } from "./panels";
+import { Drawer, PanelBody, ListsDoc } from "./panels";
 import { Menu, Toast, DlgFn, InTab } from "./ui";
+import { QuickBar } from "./selbar";
 import { setUnitTable } from "./units";
 import * as D from "./dialogs";
 
@@ -39,11 +40,26 @@ const SheetTabs = () => (
   </div>
 );
 
+/** The status line's hint (0.11.5): the tool, the next step, and its keys. */
+const hint = () => {
+  const t = tool();
+  if (t.k === "place") { const o = t.obj !== undefined; return `Placing ${symOf(t.sym)?.name ?? "a symbol"}: click the sheet${o ? "" : " (Shift+click keeps placing)"} · Esc stops`; }
+  if (t.k === "line") return "Drawing a line: drag from a port to a port, a line or an empty spot · Esc stops";
+  if (t.k === "note") return "Click where the note goes · Esc stops";
+  if (t.k === "comment") return "Click where the comment goes · Esc stops";
+  if (t.k === "assembly") return `Placing ${t.name}: click the sheet · Esc stops`;
+  if (t.k === "nozzle") return "Click the equipment's outline where the nozzle goes · Esc stops";
+  const s = sel(); if (!s.length) return "Ready";
+  if (s.length === 1 && itemOf(s[0])) return "R rotate · M mirror · Ctrl+D duplicate · Del delete";
+  if (s.length === 1 && lineOf(s[0])) return "Drag a bend to move it · Del delete";
+  return "Drag to move · R rotate · Del delete";
+};
+
 const Status = () => {
   const counts = () => { const i = derived()?.issues ?? []; return [i.filter(x => x.level === "error").length, i.filter(x => x.level === "warning").length]; };
   return (
     <footer class="status">
-      <span>{tool().k === "select" ? "Ready" : "Drawing"}</span>
+      <span class="shint" title="What the pointer does now, and the keys for it">{hint()}</span>
       <button class="sbtn" classList={{ bad: counts()[0] > 0, warn: counts()[0] === 0 && counts()[1] > 0 }} onClick={() => C.panel("checks")} title="Open the Checks panel">{counts()[0] === 0 && counts()[1] === 0 ? "✓ " : ""}{counts()[0]} errors · {counts()[1]} warnings</button>
       <span class="muted">{proj() ? `${proj()!.sheets.length} sheets · ${proj()!.items.length} symbols · ${proj()!.lines.length} lines` : ""}</span>
       <Show when={sel().length}><span class="muted">{sel().length} selected</span></Show>
@@ -74,7 +90,7 @@ const App = () => {
   followSelection();
   // A project that opens with errors opens the Checks pane; notes and warnings alone leave it folded.
   let fresh = false;
-  createEffect(on(loads, () => { fresh = true; }, { defer: true }));
+  createEffect(on(loads, () => { fresh = true; if (listsTabKept() && !docTabs().some(t => t.id === LISTS_TAB)) { openListsTab(listKey(), false); setActiveDoc(null); } }, { defer: true }));
   createEffect(on(derived, d => { if (!fresh || !d) return; fresh = false; if (d.issues.some(x => x.level === "error")) { setPanel("checks"); setBottomOpen(true); } }));
   // Back on a sheet from a tab: the drawing measures its room again.
   createEffect(on(activeDoc, () => queueMicrotask(() => window.dispatchEvent(new Event("resize"))), { defer: true }));
@@ -108,16 +124,16 @@ const App = () => {
           <Show when={out()}>
             <SheetTabs />
             <div class="sheetarea"><div class="canvhold" style={{ display: activeDoc() ? "none" : "contents" }}><Canvas /></div>
-              <Show when={!activeDoc()}><ReviewLists /></Show>
-              <For each={docTabs()}>{t => <div class="docview" style={{ display: activeDoc() === t.id ? "flex" : "none" }}><InTab.Provider value={t.id}>{t.list ? <div class="lists docl"><div class="docbar"><b>{t.title}</b><span class="muted small">Click a row to go to it on the drawing.</span><span class="grow" /><button class="btn sm" title="Put this list back under the drawing, to review the drawing against it" onClick={() => { const k = t.list!; closeDoc(t.id); setPanel(k); setListOpen(true); }}>Show under the drawing</button></div><PanelBody k={t.list} /></div> : untrack(() => t.render?.())}</InTab.Provider></div>}</For>
+              <For each={docTabs()}>{t => <div class="docview" style={{ display: activeDoc() === t.id ? "flex" : "none" }}><InTab.Provider value={t.id}>{t.id === LISTS_TAB ? <ListsDoc /> : t.list ? <div class="lists docl"><PanelBody k={t.list} /></div> : untrack(() => t.render?.())}</InTab.Provider></div>}</For>
             </div>
-            <Bottom />
+            <Drawer />
           </Show>
         </div>
       </main>
       <Status />
       <Show when={backstage()}><Backstage /></Show>
       <For each={dialogs()}>{d => <DlgFn.Provider value={d}>{untrack(d)}</DlgFn.Provider>}</For>
+      <QuickBar />
       <Menu /><Toast />
     </div>
   );

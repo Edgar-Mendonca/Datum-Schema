@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.5 — 2026-11-28
+
+The workspace: what you can do with a symbol or a line is where you look, and the tables share one drawer.
+
+**The Selection tab and the quick bar.** Pick something and a coloured tab appears on the ribbon, named for it: **Symbol tools › Symbol** (amber) or **Line tools › Line** (green). It glows for a moment the first time, and holds everything for what is picked: Rotate, Mirror, Turn round, Duplicate, Copy, Delete, Properties, its Datasheet and Loop diagram, Show in the list, size, line type, Reverse flow, Straighten, the whole line number, Go to partner, arrangements and assemblies. A **quick bar** by the selection holds the common ones (Rotate, Mirror, Turn round, Reverse flow, Duplicate, Properties, Datasheet, Delete; ⋯ opens the tab); it keeps out of the way while you drag or draw. **View › Selection** switches the quick bar off, or the Inspector opening on a pick. Let go of the selection and the ribbon goes back to the tab you were on.
+
+**One drawer under the drawing.** The checks, the to-do list, comments, the lists, messages and the log share one row of tabs and one table, so only one bar sits under the drawing. **⧉ Lists in a tab** moves the lists, all of them, to a **Lists** tab over the sheet for the paperwork; it stays (with the next project too) until you close it, Documents › Lists opens any list in it, and **↓ Under the drawing** puts them back.
+
+**The rail's tools behave alike:** Checks and Lists open their place and close it again; **Libraries opens as a tab** beside the sheets (click again to go back to the drawing).
+
+**The status line says what the pointer does** and the keys for it ("Placing Gate valve: click the sheet (Shift+click keeps placing) · Esc stops", "R rotate · M mirror · Ctrl+D duplicate · Del delete").
+
+**Placing keeps the Symbols panel** by rule, not by timing: only your own picks open the Inspector.
+
 ## 0.11.4 — 2026-11-28
 
 Fixes and fit: the window on a laptop screen, and the problems found after 0.11.3.
