@@ -2,8 +2,9 @@
 // Instruments · Check · Lists · Sheets · View · Help, and the contextual Format tab). Copied from
 // Datum Plan's ribbon by way of Datum Pipe.
 import { MODES, ColourMode } from "./colours";
+import { ribbonFolded, ribbonPeek, setRibbonPeek, toggleRibbon } from "./store";
 import { screenMode, setScreenMode, printMode, setPrintMode } from "./store";
-import { For, Show, JSX, createSignal, createMemo, onMount } from "solid-js";
+import { For, Show, JSX, createSignal, createMemo, onMount, onCleanup } from "solid-js";
 import { call, out, proj, tab, setTab, setBackstage, openMenu, openDialog, closeDialog, theme, setTheme, sel, tool, setTool, lib, derived, hidden, opts, setOpts, itemOf, lineOf, act, sheet, showIssues, setShowIssues } from "./store";
 import { C, ALL_CMDS, exampleMenu } from "./cmds";
 import * as D from "./dialogs";
@@ -18,6 +19,9 @@ import { openLoops } from "./loops";
 import { openCause } from "./cause";
 
 const GH = "https://github.com/Edgar-Mendonca/Datum-Schema";
+
+/** A ribbon tab picked: folded, it shows the ribbon over the drawing for a moment. */
+export const pickTab = (k: string) => { if (ribbonFolded()) setRibbonPeek(!(ribbonPeek() && tab() === k)); setTab(k); };
 
 export const B = (p: { i: string; l: string; run?: (e: MouseEvent) => void; big?: boolean; on?: boolean; off?: boolean; dd?: (e: MouseEvent) => void; title?: string }) => p.big && p.run && p.dd ? (
   <div class="rbw big splitbig" classList={{ on: p.on }}>
@@ -70,8 +74,10 @@ export const TitleBar = (p: { update: string | null }) => (
     </div>
     <nav class="tabs">
       <button class="file" onClick={() => setBackstage("home")}>File</button>
-      <For each={TABS}>{([k, l]) => <button classList={{ on: tab() === k }} onClick={() => setTab(k)}>{l}</button>}</For>
-      <div class="ctxgrp" style={{ visibility: sel().length ? "visible" : "hidden" }}><small>Selection</small><button classList={{ on: tab() === "format" }} onClick={() => setTab("format")}>Format</button></div>
+      <For each={TABS}>{([k, l]) => <button classList={{ on: tab() === k && !(ribbonFolded() && !ribbonPeek()) }} onClick={() => pickTab(k)} onDblClick={toggleRibbon}>{l}</button>}</For>
+      <div class="ctxgrp" style={{ visibility: sel().length ? "visible" : "hidden" }}><small>Selection</small><button classList={{ on: tab() === "format" && !(ribbonFolded() && !ribbonPeek()) }} onClick={() => pickTab("format")} onDblClick={toggleRibbon}>Format</button></div>
+      <span class="grow" />
+      <button class="rfold" title={ribbonFolded() ? "Keep the ribbon open (Ctrl+F1)" : "Fold the ribbon to its tabs, for more drawing room (Ctrl+F1)"} onClick={toggleRibbon}>{ribbonFolded() ? "⌄" : "⌃"}</button>
     </nav>
   </header>
 );
@@ -107,8 +113,14 @@ export const Ribbon = () => {
   const one = () => (sel().length === 1 ? sel()[0] : null);
   const selItem = () => (one() !== null ? itemOf(one()!) : undefined);
   const selLine = () => (one() !== null ? lineOf(one()!) : undefined);
+  // Folded, a peek closes when a command runs or the user clicks outside the ribbon and its tabs.
+  const away = (e: PointerEvent) => { const t = e.target as HTMLElement; if (ribbonPeek() && !t.closest(".ribbon, .tabs, .menu")) setRibbonPeek(false); };
+  onMount(() => document.addEventListener("pointerdown", away, true));
+  onCleanup(() => document.removeEventListener("pointerdown", away, true));
+  const ran = (e: MouseEvent) => { const b = (e.target as HTMLElement).closest(".rb"); if (b && !b.querySelector(".car") && !b.matches(".split, .bot") && !/ ▾$/.test(b.textContent ?? "") && ribbonFolded()) setTimeout(() => setRibbonPeek(false), 0); };
   return (
-    <section class="ribbon" ref={fitRibbon}>
+    <div class="rhold" classList={{ folded: ribbonFolded(), peek: ribbonFolded() && ribbonPeek() }}>
+    <section class="ribbon" ref={fitRibbon} onClick={ran}>
       <Show when={tab() === "home"}>
         <G l="Clipboard" h="edit"><B big i="paste" l="Paste" run={C.paste} /><S><B i="copy" l="Copy" run={C.copy} off={!sel().length} /><B i="dup" l="Duplicate" run={C.duplicate} off={!sel().length} /><B i="del" l="Delete" run={C.del} off={!sel().length} /></S></G>
         <G l="Draw" h="draw"><B big i="select" l="Select" on={tool().k === "select"} run={() => setTool({ k: "select" })} /><LineB big k="major" i="line" l="Line" /><B big i="symbols" l="Add Symbol" run={() => C.quickInsert()} title="Type a symbol's name (double-click the sheet does the same)" /></G>
@@ -191,5 +203,6 @@ export const Ribbon = () => {
         <G l="Updates"><B big i="upd" l="Check for Updates" run={() => setBackstage("about")} /><B big i="list" l="Roadmap" run={() => setBackstage("roadmap")} /></G>
       </Show>
     </section>
+    </div>
   );
 };

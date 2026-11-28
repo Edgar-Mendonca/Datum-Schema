@@ -51,7 +51,7 @@ const shots = process.env.SHOTS;
   await p.click(".tile:has(b:text-is('Blank project'))"); await p.waitForTimeout(500);
 
   // 2. The window: ribbon tabs, the sheet with its frame and title block.
-  check("ribbon tabs", JSON.stringify(await p.$$eval(".tabs > button:not(.file)", els => els.map(e => e.textContent))) === JSON.stringify(["Home", "Draw", "Symbols", "Lines", "Instruments", "Check", "Lists", "Sheets", "View", "Help"]));
+  check("ribbon tabs", JSON.stringify(await p.$$eval(".tabs > button:not(.file):not(.rfold)", els => els.map(e => e.textContent))) === JSON.stringify(["Home", "Draw", "Symbols", "Lines", "Instruments", "Check", "Lists", "Sheets", "View", "Help"]));
   const frame = await p.$$eval(".frame text", els => els.map(e => e.textContent));
   check("the sheet has zones and a title block", ["A", "H", "8", "PID-001", "DRAWING NO.", "1 of 1"].every(t => frame.includes(t)), JSON.stringify(frame.slice(0, 12)));
   check("the palette has about 80 symbols", (await p.$$(".psym")).length >= 50);
@@ -1076,11 +1076,11 @@ const shots = process.env.SHOTS;
   // the lists under the drawing linked both ways with it; a list moved to its own tab and back; the
   // datasheet as a tab stepping through every datasheet; the slim bottom pane; colours for the screen.
   await openEx("Compressor package");
-  check("the rail opens one panel at a time", (await p.$$(".rail button[data-side]")).length === 4 && (await p.$$(".sidep")).length <= 1);
+  check("the rail opens one panel at a time", (await p.$$(".rail button[data-side]")).length === 4 && (await p.$$(".sidep:visible")).length <= 1);
   await side("symbols");
   check("the symbols are a tree with folding branches", (await p.$$(".palette .tgrp")).length >= 8 && (await p.$$(".palette .ti.psym")).length >= 20);
   await p.click(".rail button[data-side='symbols']"); await p.waitForTimeout(200);
-  check("the panel folds away", !(await p.$(".sidep")));
+  check("the panel folds away", !(await p.$(".sidep:visible")));
   await p.click(".rail button:has-text('Lists')"); await p.waitForTimeout(300);
   await btab('Equipment'); await p.waitForTimeout(500);
   await p.waitForSelector(".lowerlists .egrid tbody tr.f");
@@ -1154,6 +1154,49 @@ const shots = process.env.SHOTS;
     const hits = names.filter(n => bundle.includes(n) || shown.includes(n));
     check("no product name in the window's text", hits.length === 0 && shown.length > 500, hits.join(", ") + ` (${shown.length} characters read)`);
     check("the product-name check would see one", ["Datum Schema", ...names].every(n => rot(rot(n)) === n) && bundle.includes("Datum Schema") && shown.includes("Datum Schema")); }
+
+  // 81. Small screens (0.11.4): a laptop at 125–150 % scaling, less the taskbar, gives a window of
+  // about 1280 × 640. The ribbon folds to its tabs, the rail and the File page fit without
+  // scrolling, the drawing keeps its room, and a stale "big windows as tabs" choice from 0.11.2
+  // no longer hides the symbol editor behind the File page.
+  for (const [w, h] of [[1280, 640], [1366, 680]]) {
+    const q = await b.newPage({ viewport: { width: w, height: h } });
+    q.on("pageerror", e => errors.push(e.message));
+    await q.addInitScript(() => { localStorage.setItem("ds.big.where", "tab");
+      window.__TAURI__ = { core: { invoke: async (cmd, args) => { const r = await fetch("/invoke", { method: "POST", body: JSON.stringify({ cmd, args: args ?? {} }) }); const j = await r.json(); if ("err" in j) throw j.err; return j.ok; } }, event: { listen: async () => () => {} } }; });
+    await q.goto(url); await q.waitForTimeout(1000);
+    const over = sel => q.evaluate(s => { const e = document.querySelector(s); return e ? e.scrollHeight - e.clientHeight : -1; }, sel);
+    check(`${w}×${h}: the File page's side fits`, (await over(".bs aside")) === 0);
+    check(`${w}×${h}: the File page's icons are white on its colour`, await q.evaluate(() => { const u = document.querySelector(".bs aside button svg"); return !!u && getComputedStyle(u).getPropertyValue("--ic").trim() === "currentColor"; }));
+    await q.click(".tile:has(b:text-is('Blank project'))"); await q.waitForTimeout(400);
+    await q.evaluate(() => document.querySelector(".tabs .file").click()); await q.waitForTimeout(200);
+    await q.click(".tile:has(b:text-is('Pump transfer'))"); await q.waitForTimeout(400);
+    { const d = await q.$('.dlg button:has-text("Don\'t save")'); if (d) { await d.click(); await q.waitForTimeout(900); } }
+    const disp = () => q.evaluate(() => getComputedStyle(document.querySelector(".ribbon")).display);
+    check(`${w}×${h}: the ribbon is folded to its tabs`, (await disp()) === "none");
+    check(`${w}×${h}: the rail fits`, (await over(".rail")) === 0);
+    const ch = await q.evaluate(() => Math.round(document.querySelector(".canvhold .canvas").getBoundingClientRect().height));
+    check(`${w}×${h}: the drawing keeps its room`, ch >= 380, `${ch} px`);
+    check(`${w}×${h}: notes alone leave the Checks pane folded`, await q.evaluate(() => document.querySelector(".bottom.slim").getBoundingClientRect().height <= 40));
+    await q.click(".tabs button:text-is('Draw')"); await q.waitForTimeout(150);
+    const shown = await disp();
+    await q.mouse.click(w / 2, h / 2 + 40); await q.waitForTimeout(150);
+    check(`${w}×${h}: a tab shows the ribbon over the drawing, a click elsewhere folds it`, shown === "flex" && (await disp()) === "none");
+    await q.keyboard.press("Control+F1"); await q.waitForTimeout(150);
+    const pinned = await disp(); await q.keyboard.press("Control+F1"); await q.waitForTimeout(150);
+    check(`${w}×${h}: Ctrl+F1 keeps the ribbon open, and folds it again`, pinned === "flex" && (await disp()) === "none");
+    if (!(await q.$(".rail button[data-side='symbols'].on"))) await q.click(".rail button[data-side='symbols']");
+    await q.fill(".psearch", "gate"); await q.click(".rail button[data-side='plant']"); await q.waitForTimeout(100); await q.click(".rail button[data-side='symbols']"); await q.waitForTimeout(100);
+    check(`${w}×${h}: Symbols keeps its search while another panel is shown`, (await q.inputValue(".psearch")) === "gate");
+    await q.evaluate(() => document.querySelector(".tabs .file").click()); await q.waitForTimeout(200);
+    await q.click(".bs aside button:has-text('Libraries')"); await q.waitForTimeout(200);
+    await q.click(".libraries button:has-text('New library')"); await q.waitForTimeout(200);
+    await q.click(".libbtns button:has-text('New symbol')"); await q.waitForTimeout(400);
+    const dl = await q.$(".dlg:not(.intab)");
+    const fits = dl ? await dl.evaluate(e => { const r = e.querySelector("footer").getBoundingClientRect(); return r.bottom <= window.innerHeight; }) : false;
+    check(`${w}×${h}: New symbol opens the editor, its buttons on the screen, no hidden tabs`, !!dl && fits && (await q.$$(".stabs .dtab")).length === 0);
+    await q.close();
+  }
 
   check("no errors in the window", errors.length === 0, errors.join(" | "));
   await b.close();

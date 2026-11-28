@@ -251,7 +251,7 @@ tr.link:hover td { background: var(--pale); }
 
 /* Backstage */
 .bs { position: fixed; inset: 0; display: flex; background: var(--panel); z-index: 10; }
-.bs aside { width: 140px; background: var(--blue); display: flex; flex-direction: column; padding-bottom: 10px; color: var(--bg2); }
+.bs aside { width: 140px; background: var(--blue); display: flex; flex-direction: column; padding-bottom: 10px; color: var(--bg2); overflow-y: auto; --ic: currentColor; --icf: rgba(255,255,255,.28); }
 .bs aside button { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 0; color: #FAEBF6; }
 :root[data-theme="dark"] .bs aside { background: #4E1043; }
 .bs aside button:hover { background: rgba(255,255,255,.12); }
@@ -1362,9 +1362,10 @@ tr.behind td { background: var(--err-bg); }
 .sideh b { font: 600 12.5px var(--sans); }
 .sideh .grow { flex: 1; }
 .sideb { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.sideb > .palette, .sideb > .insp, .sideb > .docs, .sideb > .plant { flex: 1; min-height: 0; display: flex; flex-direction: column; width: auto !important; border: 0; background: transparent; }
+.sideb > .keep { flex: 1; min-height: 0; flex-direction: column; }
+.sideb > .palette, .sideb > .insp, .sideb > .docs, .sideb > .plant, .sideb > .keep > .palette, .sideb > .keep > .docs, .sideb > .keep > .plant { flex: 1; min-height: 0; display: flex; flex-direction: column; width: auto !important; border: 0; background: transparent; }
 .sideb > .insp .ibody { flex: 1; overflow: auto; }
-.sideb > .palette .pbody, .docs .tbody { flex: 1; overflow: auto; }
+.sideb .palette .pbody, .docs .tbody { flex: 1; overflow: auto; }
 .docs .ti { display: flex; align-items: center; gap: 7px; padding: 3px 8px; font-size: 12px; border-left: 2px solid transparent; text-align: left; width: 100%; }
 .docs .ti .ic { width: 14px; height: 14px; flex: none; }
 .docs .ti span { white-space: nowrap; }
@@ -1407,3 +1408,30 @@ tr.behind td { background: var(--err-bg); }
 .toolbadge { pointer-events: none; }
 .lowerlists { max-height: calc(100% - 160px); }
 .bottom.slim { max-height: 34vh; }
+
+/* 0.11.4: the ribbon folds to its tabs (short windows, or the user's choice); a tab shows it over the drawing. */
+.tabs .grow { flex: 1; }
+.tabs .rfold { align-self: center; padding: 2px 10px; margin-right: 4px; color: var(--muted); border: 0; font-size: 13px; }
+.tabs .rfold:hover { color: var(--blue); }
+.rhold { flex: none; }
+.rhold.folded { position: relative; height: 0; z-index: 30; }
+.rhold.folded .ribbon { display: none; }
+.rhold.peek .ribbon { display: flex; position: absolute; left: 0; right: 0; top: 0; box-shadow: 0 8px 20px rgba(20, 30, 60, .18); }
+/* 0.11.4: short windows (a laptop at 125–150 % scaling, less the taskbar): the rail, the File page and
+   dialogs give their height to the content. */
+@media (max-height: 720px) {
+  .rail button { padding: 6px 2px 5px; gap: 2px; }
+  .rail button svg { width: 20px; height: 20px; }
+  .rail .rextra svg { width: 18px; height: 18px; }
+  .rail .rcap { padding: 3px 0 1px; }
+  .bs aside button { flex-direction: row; justify-content: flex-start; gap: 10px; padding: 7px 16px; }
+  .bs aside .back { padding: 6px 0 8px; }
+  .tile .pic { height: 64px; }
+  .dlg { max-height: 96vh; }
+  .dlg header { padding-top: 8px; }
+  .dlg footer { padding: 6px 16px 9px; }
+}
+@media (max-height: 600px) {
+  .rail button span, .rail .rcap { display: none; }
+  .rail button { padding: 7px 2px; }
+}

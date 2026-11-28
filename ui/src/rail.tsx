@@ -80,16 +80,24 @@ const Documents = () => {
   );
 };
 
+/** A panel kept as it was left (its search, scroll and open branches) while another one is shown:
+ *  built the first time it is opened, then only hidden (0.11.4). */
+const seen = new Set<string>();
+const Keep = (p: { k: Side; children: any }) => {
+  const on = () => side() === p.k;
+  return <Show when={on() || seen.has(p.k)}>{(() => { seen.add(p.k); return <div class="keep" style={{ display: on() ? "flex" : "none" }}>{p.children}</div>; })()}</Show>;
+};
+
 /** The panel beside the rail. */
 export const SidePanel = () => (
-  <Show when={side()}>
-    <aside class="sidep" style={{ width: `${paneW()}px` }}>
+  <Show when={side() || seen.size}>
+    <aside class="sidep" style={{ width: `${paneW()}px`, display: side() ? undefined : "none" }}>
       <header class="sideh"><b>{PANELS.find(p => p[0] === side())?.[2]}</b><Help k={side() === "inspector" ? "inspector" : side() === "plant" ? "plant" : side() === "documents" ? "workspace" : "palette"} /><span class="grow" /><button class="pfold" title="Fold the panel away (click its icon to bring it back)" onClick={() => setSide("")}>«</button></header>
       <div class="sideb">
-        <Show when={side() === "symbols"}><Palette /></Show>
-        <Show when={side() === "plant"}><PlantPanel /></Show>
+        <Keep k="symbols"><Palette /></Keep>
+        <Keep k="plant"><PlantPanel /></Keep>
         <Show when={side() === "inspector"}><Inspector /></Show>
-        <Show when={side() === "documents"}><Documents /></Show>
+        <Keep k="documents"><Documents /></Keep>
       </div>
       <div class="vgrip pgrip" title="Drag to widen or narrow this panel" onPointerDown={e => grip(e, paneW, setPaneW, "ds.pane.w", 1, 220, 560)} />
     </aside>

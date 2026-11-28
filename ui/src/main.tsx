@@ -11,7 +11,7 @@ import "@fontsource/ibm-plex-mono/latin-500.css";
 import "@fontsource/ibm-plex-mono/latin-600.css";
 import "./styles.css";
 import { invoke, listen, Out, Options, Shown } from "./api";
-import { out, setOut, backstage, setBackstage, setOpts, opts, dialogs, toast, loadOut, setThemeRaw, applyTheme, sel, proj, sheet, setSheetId, refreshLibs, derived, tool, setTool, openMenu, hidden, docTabs, activeDoc, setActiveDoc, closeDoc, setPanel, setListOpen } from "./store";
+import { loads, setBottomOpen, toggleRibbon, ribbonPeek, setRibbonPeek, out, setOut, backstage, setBackstage, setOpts, opts, dialogs, toast, loadOut, setThemeRaw, applyTheme, sel, proj, sheet, setSheetId, refreshLibs, derived, tool, setTool, openMenu, hidden, docTabs, activeDoc, setActiveDoc, closeDoc, setPanel, setListOpen } from "./store";
 import { C, setFit, setCentre, setCopy, setViewCentre } from "./cmds";
 import { TitleBar, Ribbon, palette } from "./ribbon";
 import { Backstage, update, checkUpdate } from "./backstage";
@@ -72,10 +72,15 @@ const App = () => {
     } catch (e) { toast(String(e)); }
   });
   followSelection();
+  // A project that opens with errors opens the Checks pane; notes and warnings alone leave it folded.
+  let fresh = false;
+  createEffect(on(loads, () => { fresh = true; }, { defer: true }));
+  createEffect(on(derived, d => { if (!fresh || !d) return; fresh = false; if (d.issues.some(x => x.level === "error")) { setPanel("checks"); setBottomOpen(true); } }));
   // Back on a sheet from a tab: the drawing measures its room again.
   createEffect(on(activeDoc, () => queueMicrotask(() => window.dispatchEvent(new Event("resize"))), { defer: true }));
   const keys = (e: KeyboardEvent) => {
     const ctrl = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+    if (e.key === "Escape" && ribbonPeek()) { setRibbonPeek(false); return; }
     if (dialogs().length) return;
     const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement;
     if ((ctrl && k === "k") || (e.altKey && k === "q")) { e.preventDefault(); palette(); }
@@ -86,6 +91,7 @@ const App = () => {
     else if (ctrl && k === "f") { e.preventDefault(); import("./find").then(m => m.openFind()); }
     else if (ctrl && k === "z" && !typing) { e.preventDefault(); C.undo(); }
     else if (ctrl && k === "y" && !typing) { e.preventDefault(); C.redo(); }
+    else if (e.key === "F1" && e.ctrlKey) { e.preventDefault(); toggleRibbon(); }
     else if (e.key === "F1") { e.preventDefault(); D.shortcuts(); }
     else if (!typing && !ctrl && !backstage() && k === "f") (e.shiftKey ? fitSheet() : C.fit());
     else if (e.key === "Escape" && backstage() && out()) setBackstage(null);

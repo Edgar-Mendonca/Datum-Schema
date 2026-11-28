@@ -1,6 +1,6 @@
 // Small building blocks: icons, menus, dialogs, tabs and form rows.
 import { For, Show, JSX, createSignal, onMount, onCleanup, createContext, useContext, untrack } from "solid-js";
-import { menu, setMenu, MenuItem as Item, closeDialog, msg, setMsg, setDialogs, openDoc, closeDoc, bigWhere } from "./store";
+import { menu, setMenu, MenuItem as Item, closeDialog, msg, setMsg, setDialogs, openDoc, closeDoc } from "./store";
 import { Help } from "./help";
 
 export const Icon = (p: { n: string; size?: number }) => (
@@ -47,7 +47,7 @@ export const DlgFn = createContext<(() => JSX.Element) | null>(null);
 export const InTab = createContext<string | null>(null);
 
 /** A modal dialog. `ok` returns false to keep it open. A wide one can be opened as a tab beside the
- *  sheets instead (its ⧉ button, or always, by the user's choice). */
+ *  sheets instead (its ⧉ button). */
 export const Dialog = (p: { title: string; wide?: boolean; children: JSX.Element; ok?: () => boolean | void | Promise<boolean | void>; okText?: string; extra?: JSX.Element; cancel?: string; help?: string }) => {
   const fn = useContext(DlgFn), tab = useContext(InTab);
   const close = () => (tab ? closeDoc(tab) : closeDialog());
@@ -59,7 +59,6 @@ export const Dialog = (p: { title: string; wide?: boolean; children: JSX.Element
   };
   let el!: HTMLDivElement;
   onMount(() => {
-    if (!tab && p.wide && fn && bigWhere() === "tab") return queueMicrotask(toTab);
     ((el.querySelector("input:not([type=checkbox]),textarea") ?? el.querySelector(".btn.pri") ?? el.querySelector("footer .btn")) as HTMLElement | null)?.focus();
   });
   const body = () => (

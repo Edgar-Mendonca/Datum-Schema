@@ -93,6 +93,21 @@ export const [opts, setOpts] = createSignal<Options>({ autosave: 5, beta: false,
 
 export const [backstage, setBackstage] = createSignal<string | null>("home");
 export const [tab, setTab] = createSignal("home");
+/** The ribbon folded to its tab row (0.11.4): the user's choice ("open", "min") or, by default, folded
+ *  when the window is short (under 760 px), where its 92 px are better spent on the drawing. A tab
+ *  clicked while folded shows the ribbon over the drawing until a command is run or the user clicks
+ *  elsewhere. */
+export const [ribbonPref, setRibbonPrefRaw] = createSignal<string>((() => { try { return localStorage.getItem("ds.ribbon") ?? "auto"; } catch { return "auto"; } })());
+export const [winH, setWinH] = createSignal(typeof window === "undefined" ? 900 : window.innerHeight);
+if (typeof window !== "undefined") window.addEventListener("resize", () => setWinH(window.innerHeight));
+export const ribbonFolded = () => ribbonPref() === "min" || (ribbonPref() === "auto" && winH() < 760);
+export const [ribbonPeek, setRibbonPeek] = createSignal(false);
+export const toggleRibbon = () => {
+  const v = ribbonFolded() ? "open" : "min";
+  setRibbonPrefRaw(v); setRibbonPeek(false);
+  try { localStorage.setItem("ds.ribbon", v); } catch { /* private window */ }
+  queueMicrotask(() => window.dispatchEvent(new Event("resize")));
+};
 
 // ---------- selection and tools ----------
 /** Selected items, lines and notes (ids are unique across all three). */
@@ -114,8 +129,10 @@ export const [listKey, setListKey] = createSignal(prefKeep("ds.lists.key", "line
 export const [listOpen, setListOpenRaw] = createSignal(prefKeep("ds.lists.open", "0") === "1");
 export const setListOpen = (v: boolean) => { setListOpenRaw(v); prefSave("ds.lists.open", v ? "1" : "0"); queueMicrotask(() => window.dispatchEvent(new Event("resize"))); };
 export const [bottomKey, setBottomKey] = createSignal("checks");
-export const [bottomOpen, setBottomOpenRaw] = createSignal(true);
-export const setBottomOpen = (v: boolean) => { setBottomOpenRaw(v); queueMicrotask(() => window.dispatchEvent(new Event("resize"))); };
+// Folded unless the user opened it (kept) or a project opens with errors (0.11.4: notes alone no
+// longer take a fifth of a small screen).
+export const [bottomOpen, setBottomOpenRaw] = createSignal(prefKeep("ds.bottom.open", "0") === "1");
+export const setBottomOpen = (v: boolean) => { setBottomOpenRaw(v); prefSave("ds.bottom.open", v ? "1" : "0"); queueMicrotask(() => window.dispatchEvent(new Event("resize"))); };
 let lastArea: "lists" | "bottom" = "bottom";
 /** The key last shown (for help), and the one place to send a list or a panel to. */
 export const panel = () => (lastArea === "bottom" ? bottomKey() : listKey());
@@ -183,13 +200,8 @@ export const closeDialog = () => setDialogs(v => v.slice(0, -1));
 export type DocTab = { id: string; title: string; list?: string; render?: () => JSX.Element };
 export const [docTabs, setDocTabs] = createSignal<DocTab[]>([]);
 export const [activeDoc, setActiveDoc] = createSignal<string | null>(null);
-export const openDoc = (t: DocTab) => { setDocTabs(v => (v.some(x => x.id === t.id) ? v : [...v, t])); setActiveDoc(t.id); };
+export const openDoc = (t: DocTab) => { setBackstage(null); setDocTabs(v => (v.some(x => x.id === t.id) ? v : [...v, t])); setActiveDoc(t.id); };
 export const closeDoc = (id: string) => { const v = docTabs(), i = v.findIndex(x => x.id === id); setDocTabs(v.filter(x => x.id !== id)); if (activeDoc() === id) setActiveDoc(v[i + 1]?.id ?? v[i - 1]?.id ?? null); };
-const keepPref = (k: string, d: string) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
-const savePref = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* private window */ } };
-/** Where lists open (the user's choice, kept): in the panel below the sheet, or as tabs beside the sheets. */
-export const [listWhere, setListWhereRaw] = createSignal<"below" | "tab">(keepPref("ds.lists.where", "below") === "tab" ? "tab" : "below");
-export const setListWhere = (v: "below" | "tab") => { setListWhereRaw(v); savePref("ds.lists.where", v); };
-/** Where big windows (datasheets, loop diagrams, reports…) open: over the sheet, or as tabs. */
-export const [bigWhere, setBigWhereRaw] = createSignal<"window" | "tab">(keepPref("ds.big.where", "window") === "tab" ? "tab" : "window");
-export const setBigWhere = (v: "window" | "tab") => { setBigWhereRaw(v); savePref("ds.big.where", v); };
+// 0.11.4: the old "lists as tabs" and "big windows as tabs" choices are gone (their menu went in
+// 0.11.3, but a saved choice still moved windows into hidden tabs); forget them.
+try { localStorage.removeItem("ds.lists.where"); localStorage.removeItem("ds.big.where"); } catch { /* private window */ }

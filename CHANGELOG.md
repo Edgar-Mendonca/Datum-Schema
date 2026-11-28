@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.11.4 — 2026-11-28
+
+Fixes and fit: the window on a laptop screen, and the problems found after 0.11.3.
+
+**Room on a laptop screen.** On a short window (under 760 px, a laptop at 125 or 150 % scaling) the ribbon folds to its tabs: click a tab to show it over the drawing; it folds again when you run a command or click elsewhere. **Ctrl+F1** (or **⌃** at the end of the tabs) keeps it open or folded, on any screen. At 1280 × 640 the drawing has 451 px of height where it had under 300. The rail, the File page and dialogs tighten up on short windows so nothing is cut off; the File page's side lists its commands in rows.
+
+**The Checks pane stays folded** unless a project opens with errors; notes alone no longer take a fifth of the screen. The status bar keeps the counts; click them to open it. It remembers whether you left it open.
+
+**Fixed:**
+- **Libraries › New symbol did nothing** for anyone who had chosen "open big windows as tabs" in 0.11.2: the editor opened in a tab hidden behind the File page, one more each click. That choice is gone (its menu went in 0.11.3), and any tab that opens now closes the File page.
+- **The File page's icons are white again** on its colour (the ribbon and the rail keep their colours).
+- **A panel keeps its place:** Symbols keeps its search, and Plant and Documents their open branches and scroll, while another panel is shown.
+
 ## 0.11.3 — 2026-11-28
 
 Easier to work with: one panel at a time on the left, the drawing and its lists together for the review, datasheets one after another for the paperwork, colours your way, and a better symbol editor.
