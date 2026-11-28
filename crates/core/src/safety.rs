@@ -62,7 +62,9 @@ pub fn normalize(v: &mut Vec<Need>) {
 fn needs(p: &Project, class: &str) -> Vec<String> {
     let chain = crate::classes::chain(class);
     let names: Vec<&str> = if chain.is_empty() { vec![class] } else { chain.iter().map(|c| c.name.as_str()).collect() };
-    names.iter().find_map(|n| p.settings.safety.iter().find(|x| x.class == *n)).map(|x| x.codes.clone()).unwrap_or_default()
+    // `chain` runs from the root down: the nearest row is the last one that has a row (0.11.8: a
+    // tank took the vessel's pressure protections before its own row).
+    names.iter().rev().find_map(|n| p.settings.safety.iter().find(|x| x.class == *n)).map(|x| x.codes.clone()).unwrap_or_default()
 }
 
 /// One requirement and what meets it.
@@ -84,13 +86,29 @@ pub fn analysis(p: &Project, net: &Net) -> Vec<Row> {
     // Each instrument's or relief device's process source, once.
     let mut sources: Vec<(u32, String, &'static str)> = vec![];
     let mut seen_obj = std::collections::HashSet::new();
+    // Built once (0.11.8): the loops, each object's drawings, the process lines on each item, and
+    // the objects by tag, so nothing below scans the whole project per piece of equipment.
+    let loops = crate::datasheets::Loops::new(p);
+    let mut drawn: std::collections::HashMap<u32, Vec<&crate::model::Item>> = Default::default();
+    for i in &p.items {
+        drawn.entry(i.obj).or_default().push(i);
+    }
+    let mut on_item: std::collections::HashMap<u32, Vec<u32>> = Default::default();
+    for l in p.lines.iter().filter(|l| l.kind.process() && l.obj != 0) {
+        for e in [&l.a, &l.b] {
+            if let Some((item, _)) = e.item() {
+                on_item.entry(item).or_default().push(l.obj);
+            }
+        }
+    }
+    let by_tag: std::collections::HashMap<&str, &crate::model::Obj> = p.objects.iter().filter(|o| !o.tag.is_empty()).map(|o| (o.tag.as_str(), o)).collect();
     for it in p.items.iter().filter(|i| i.obj != 0 && !pfd.contains(&i.sheet)) {
         let Some(s) = symbols::get(&it.sym) else { continue };
         let relief = matches!(it.base_key().as_str(), "psv" | "rupture" | "breather");
         if !(s.cat.instrument() || relief) || !seen_obj.insert(it.obj) {
             continue;
         }
-        let Some((src, _)) = crate::datasheets::process_source(p, net, it) else { continue };
+        let Some((src, _)) = crate::datasheets::process_source_in(p, net, it, Some(&loops)) else { continue };
         let tag = p.tag_of(it).to_string();
         sources.push((src, tag, if relief { "relief" } else { "instrument" }));
     }
@@ -107,10 +125,10 @@ pub fn analysis(p: &Project, net: &Net) -> Vec<Row> {
         }
         // The equipment and the lines on its nozzles (on every sheet that shows it).
         let mut mine: std::collections::HashSet<u32> = [o.id].into();
-        for v in p.items.iter().filter(|i| i.obj == o.id) {
-            for l in p.lines.iter().filter(|l| l.kind.process() && l.obj != 0 && [&l.a, &l.b].iter().any(|e| e.item().is_some_and(|x| x.0 == v.id))) {
-                if p.obj(l.obj).is_some_and(|x| x.class == LINE_CLASS) {
-                    mine.insert(l.obj);
+        for v in drawn.get(&o.id).into_iter().flatten() {
+            for &lo in on_item.get(&v.id).into_iter().flatten() {
+                if p.obj(lo).is_some_and(|x| x.class == LINE_CLASS) {
+                    mine.insert(lo);
                 }
             }
         }
@@ -129,7 +147,7 @@ pub fn analysis(p: &Project, net: &Net) -> Vec<Row> {
                     let (l, _) = crate::tags::loop_of(tag);
                     letters.iter().any(|x| l == *x) || {
                         // An instrument of that variable whose setpoints name the protection (an alarm in a transmitter or controller).
-                        l.len() >= 2 && l.starts_with(&c[..1]) && p.objects.iter().find(|x| x.tag == *tag).and_then(|x| x.data.get("setpoints")).is_some_and(|v| {
+                        l.len() >= 2 && l.starts_with(&c[..1]) && by_tag.get(tag.as_str()).and_then(|x| x.data.get("setpoints")).is_some_and(|v| {
                             let t = v.text().to_uppercase();
                             letters.iter().any(|w| t.split(|ch: char| !ch.is_ascii_alphanumeric()).any(|word| word == *w))
                         })
@@ -171,6 +189,17 @@ mod tests {
     use super::*;
     use crate::doc::{Doc, Op};
     use crate::model::Val;
+
+    #[test]
+    fn a_class_takes_its_nearest_row() {
+        // T-101 is a Tank (a kind of Vessel): the tank's row (level switches), not the vessel's
+        // pressure protections and relief valve.
+        let d = Doc::new(crate::examples::get("pump").unwrap());
+        let codes: Vec<String> = rows(&d, "T-101").into_iter().map(|r| r.code).collect();
+        assert_eq!(codes, vec!["LSH", "LSL"]);
+        let v: Vec<String> = rows(&d, "V-101").into_iter().map(|r| r.code).collect();
+        assert!(v.contains(&"PSV".to_string()) && v.contains(&"PSH".to_string()));
+    }
 
     fn rows(d: &Doc, tag: &str) -> Vec<Row> {
         analysis(&d.p, &Net::new(&d.p)).into_iter().filter(|r| r.tag == tag).collect()

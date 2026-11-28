@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.11.8 — 2026-11-28
+
+Speed and keyboard, and a fix to the safety check.
+
+**Fixed: a tank was asked for a vessel's protections.** The safety check (27) took the furthest class's row instead of the nearest: a tank (a kind of vessel) was asked for pressure switches and a relief valve as well as its own level switches. It now takes its own row (Tank: LSH, LSL). Check your accepted rule-27 notes on tanks and columns: some will have changed.
+
+**Faster checks on big projects.** The safety check finds each piece of equipment's lines, each object's drawings and each controller's transmitter by index, not by searching the whole project: 2,640 symbols checked in 16 ms instead of 55.
+
+**Windows keep the keyboard.** A window says what it is to a screen reader, Tab and Shift+Tab go round its own fields, Esc closes only the top one, and closing it gives the keyboard back to where it was (the drawing, so R, M and Del work at once).
+
 ## 0.11.7 — 2026-11-28
 
 The symbol editor, rebuilt on Datum Mesh's way of sketching.

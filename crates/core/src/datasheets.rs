@@ -141,6 +141,33 @@ fn variable(letters: &str) -> &'static str {
 /// vessel), else another member of its loop (a controller takes its transmitter's line). Returns
 /// the object and how to name it ("line 3\"-P-1003-A1A", "V-101").
 pub fn process_source(p: &Project, net: &Net, it: &Item) -> Option<(u32, String)> {
+    process_source_in(p, net, it, None)
+}
+
+/// A loop's key: the first letter and the number of its tag (LIC-101 and LT-101 share L 101).
+fn loop_key(tag: &str) -> (Option<char>, String) {
+    let (letters, n) = tags::loop_of(tag);
+    (letters.chars().next(), n)
+}
+
+/// The project's items grouped by loop, built once for a pass over many items (0.11.8): finding
+/// a controller's measurement is then a lookup, not a scan of every item.
+pub struct Loops<'a>(std::collections::HashMap<(Option<char>, String), Vec<&'a Item>>);
+impl<'a> Loops<'a> {
+    pub fn new(p: &'a Project) -> Self {
+        let mut m: std::collections::HashMap<(Option<char>, String), Vec<&'a Item>> = Default::default();
+        for it in &p.items {
+            let k = loop_key(p.tag_of(it));
+            if !k.1.is_empty() {
+                m.entry(k).or_default().push(it);
+            }
+        }
+        Loops(m)
+    }
+}
+
+/// [`process_source`], with the loops already grouped (the same answer, found faster).
+pub fn process_source_in(p: &Project, net: &Net, it: &Item, loops: Option<&Loops>) -> Option<(u32, String)> {
     let as_line = |o: u32| (o, format!("line {}", crate::graph::obj_number(p, o)));
     let direct = |it: &Item| -> Option<(u32, String)> {
         let s = symbols::get(&it.sym)?;
@@ -186,16 +213,15 @@ pub fn process_source(p: &Project, net: &Net, it: &Item) -> Option<(u32, String)
     }
     // A controller or indicator: the source of another member of its loop (same first letter
     // and number: LIC-101 goes with LT-101, not with PVSV-101).
-    let key = |tag: &str| {
-        let (letters, n) = tags::loop_of(tag);
-        (letters.chars().next(), n)
-    };
-    let me = key(p.tag_of(it));
+    let me = loop_key(p.tag_of(it));
     if me.1.is_empty() {
         return None;
     }
     // The measurement first (a transmitter or an element), then the rest of the loop.
-    let mut members: Vec<&Item> = p.items.iter().filter(|o| o.id != it.id && key(p.tag_of(o)) == me).collect();
+    let mut members: Vec<&Item> = match loops {
+        Some(l) => l.0.get(&me).map(|v| v.iter().copied().filter(|o| o.id != it.id).collect()).unwrap_or_default(),
+        None => p.items.iter().filter(|o| o.id != it.id && loop_key(p.tag_of(o)) == me).collect(),
+    };
     members.sort_by_key(|o| !tags::loop_of(p.tag_of(o)).0.chars().skip(1).any(|c| c == 'T' || c == 'E'));
     members.into_iter().find_map(direct)
 }

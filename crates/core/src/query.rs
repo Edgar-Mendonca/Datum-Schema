@@ -642,7 +642,7 @@ mod tests {
         let i = crate::checks::run(&d.p, &net, &hyd).into_iter().find(|i| i.rule == 27).unwrap();
         assert!(d.apply(Op::Accept { rule: i.rule, ids: i.ids.clone(), msg: i.msg.clone(), reason: "".into(), by: String::new(), date: String::new() }).is_err(), "a reason is needed");
         d.user = "EM".into();
-        d.apply(Op::Accept { rule: i.rule, ids: i.ids.clone(), msg: i.msg.clone(), reason: "Tank vents to atmosphere; no PSH needed".into(), by: String::new(), date: "2026-11-21".into() }).unwrap();
+        d.apply(Op::Accept { rule: i.rule, ids: i.ids.clone(), msg: i.msg.clone(), reason: "High level overflows to the bund; no LSH needed".into(), by: String::new(), date: "2026-11-21".into() }).unwrap();
         let now = crate::checks::run(&d.p, &Net::new(&d.p), &hyd);
         assert_eq!(now.iter().find(|x| x.msg == i.msg).unwrap().level, "accepted");
         let l = crate::lists::build(&d.p, "accepted").unwrap();
@@ -650,7 +650,7 @@ mod tests {
         assert!(find(&d.p, "equipment with accepted problems").unwrap().rows.len() == 1);
         // The drawing changes what the check says: open again, and the audit list says so.
         let t101 = d.p.items.iter().find(|x| d.p.tag_of(x) == "T-101").unwrap().obj;
-        d.apply(Op::SetData { ids: vec![t101], key: "safety_na".into(), val: Some(Val::Text("PSH".into())) }).unwrap();
+        d.apply(Op::SetData { ids: vec![t101], key: "safety_na".into(), val: Some(Val::Text("LSH".into())) }).unwrap();
         let after = crate::checks::run(&d.p, &Net::new(&d.p), &crate::hydraulics::all(&d.p, &Net::new(&d.p)));
         assert!(after.iter().filter(|x| x.rule == 27 && x.ids == i.ids).all(|x| x.level != "accepted"));
         assert_eq!(crate::lists::build(&d.p, "accepted").unwrap().rows[0].cells[5], "Changed: check it again");

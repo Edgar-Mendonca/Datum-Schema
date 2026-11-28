@@ -162,7 +162,7 @@
         "0.11.5: the workspace: a Selection tab and a quick bar with the commands for what is picked, one drawer under the drawing, the lists as one set in their own tab (done)",
         "0.11.6: drawing feel: the target named before a line joins it, recently placed symbols, Locate and Back (done)",
         "0.11.7: the symbol editor as a full tab with guides, typed sizes and lines that chain (done)",
-        "0.11.8: speed and keyboard",
+        "0.11.8: speed and keyboard (done)",
         "0.11.9: DEXPI in both current schema versions, tested with the official examples; tested on a 50-sheet project",
         "0.11.10: recorded steps replayed, and design variants: a working copy compared and merged back"
       ]

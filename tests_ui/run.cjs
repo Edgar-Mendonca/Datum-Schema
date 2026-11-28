@@ -1277,6 +1277,19 @@ const shots = process.env.SHOTS;
     await row.click(); await p.waitForTimeout(600); const secondSheet = await p.textContent(".stabs > button.on");
     check("a tag drawn twice: its row finds one drawing, then the other", twice.length === 2 && firstSheet !== secondSheet, JSON.stringify([twice.length, firstSheet, secondSheet, !!s2])); }
 
+  // 84. Keyboard (0.11.8): a window says it is one (role, name), keeps the keyboard while open
+  // (Tab goes round its own fields) and gives it back to the drawing when closed.
+  await openEx("Pump transfer");
+  await clickAt(10, 10); await p.waitForTimeout(150);
+  await p.keyboard.press("Control+f"); await p.waitForSelector(".ov .dlg[role='dialog']");
+  { const named = await p.evaluate(() => { const d = document.querySelector(".ov .dlg[role='dialog']"); const id = d?.getAttribute("aria-labelledby"); return d?.getAttribute("aria-modal") === "true" && !!id && (document.getElementById(id)?.textContent ?? "").length > 2; });
+    let inside = true;
+    for (let k = 0; k < 25; k++) { await p.keyboard.press("Tab"); inside = inside && await p.evaluate(() => !!document.activeElement?.closest(".ov .dlg")); }
+    await p.keyboard.press("Shift+Tab"); inside = inside && await p.evaluate(() => !!document.activeElement?.closest(".ov .dlg"));
+    check("a window says what it is, and Tab stays in it", named && inside);
+    await p.keyboard.press("Escape"); await p.waitForTimeout(200);
+    check("closed, it gives the keyboard back to the drawing", !(await p.$(".ov .dlg")) && await p.evaluate(() => !!document.activeElement?.classList.contains("canvas"))); }
+
   // 81. Small screens (0.11.4): a laptop at 125–150 % scaling, less the taskbar, gives a window of
   // about 1280 × 640. The ribbon folds to its tabs, the rail and the File page fit without
   // scrolling, the drawing keeps its room, and a stale "big windows as tabs" choice from 0.11.2

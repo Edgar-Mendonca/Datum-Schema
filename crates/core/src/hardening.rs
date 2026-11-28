@@ -296,6 +296,21 @@ fn speed_gate_500_items() {
     assert!(ms < limit, "derived took {ms} ms");
 }
 
+#[test]
+fn speed_safety_check_large() {
+    // The safety check (27) on about 2,600 symbols (the pump transfer 120 times): every piece of
+    // equipment, its nozzle lines and each instrument's process source found once, by index (0.11.8).
+    let big = crate::examples::big(120);
+    let net = crate::graph::Net::new(&big);
+    let t = std::time::Instant::now();
+    let rows = crate::safety::analysis(&big, &net);
+    let ms = t.elapsed().as_millis();
+    eprintln!("safety analysis, {} symbols: {} rows in {ms} ms", big.items.len(), rows.len());
+    assert!(rows.len() >= 4 * 120);
+    let limit = if cfg!(debug_assertions) { 3_000 } else { 150 };
+    assert!(ms < limit, "safety analysis took {ms} ms");
+}
+
 /// Regressions for the findings of the independent engine review (0.1.3).
 mod review {
     use super::*;

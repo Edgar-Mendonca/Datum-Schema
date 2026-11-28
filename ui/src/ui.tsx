@@ -55,15 +55,24 @@ export const Dialog = (p: { title: string; wide?: boolean; children: JSX.Element
   const done = async () => { if (!p.ok || (await p.ok()) !== false) close(); };
   const key = (e: KeyboardEvent) => {
     if (e.key === "Escape" && !tab) { e.stopPropagation(); close(); }
+    // A window keeps the keyboard (0.11.8): Tab and Shift+Tab go round its own fields.
+    if (e.key === "Tab" && !tab) {
+      const f = [...el.querySelectorAll<HTMLElement>("input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex='-1'])")].filter(x => x.offsetParent !== null);
+      if (f.length) { const i = f.indexOf(document.activeElement as HTMLElement); if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); } }
+    }
     if (e.key === "Enter" && !(e.target instanceof HTMLTextAreaElement) && !(e.target instanceof HTMLButtonElement) && !(e.target instanceof HTMLSelectElement)) { e.preventDefault(); done(); }
   };
   let el!: HTMLDivElement;
+  // Closed, the keyboard goes back where it was (the drawing, a list, a field).
+  const before = document.activeElement as HTMLElement | null;
+  onCleanup(() => { if (!tab && before && before.isConnected && before !== document.body) queueMicrotask(() => { if (!document.querySelector(".ov .dlg")) before.focus({ preventScroll: true }); }); });
+  const hid = `dlg-${Math.random().toString(36).slice(2, 8)}`;
   onMount(() => {
     ((el.querySelector("input:not([type=checkbox]),textarea") ?? el.querySelector(".btn.pri") ?? el.querySelector("footer .btn")) as HTMLElement | null)?.focus();
   });
   const body = () => (
-    <div class="dlg" classList={{ wide: p.wide, intab: !!tab }} ref={el} onKeyDown={tab ? key : undefined}>
-      <header>{p.title}{p.help && <Help k={p.help} />}<span class="grow" /><Show when={!tab && p.wide && fn}><button class="totab" title="Open in a tab beside the sheets (full size)" onClick={toTab}>⧉</button></Show><button class="x" title={tab ? "Close this tab" : "Close"} onClick={close}>×</button></header>
+    <div class="dlg" classList={{ wide: p.wide, intab: !!tab }} ref={el} onKeyDown={tab ? key : undefined} role={tab ? undefined : "dialog"} aria-modal={tab ? undefined : "true"} aria-labelledby={hid}>
+      <header><span id={hid}>{p.title}</span>{p.help && <Help k={p.help} />}<span class="grow" /><Show when={!tab && p.wide && fn}><button class="totab" title="Open in a tab beside the sheets (full size)" onClick={toTab}>⧉</button></Show><button class="x" title={tab ? "Close this tab" : "Close"} onClick={close}>×</button></header>
       <div class="bd">{p.children}</div>
       <footer>{p.extra}<span class="grow" />{p.ok && <button class="btn pri" onClick={done}>{p.okText ?? "OK"}</button>}<button class="btn" onClick={close}>{p.cancel ?? (p.ok ? "Cancel" : "Close")}</button></footer>
     </div>
