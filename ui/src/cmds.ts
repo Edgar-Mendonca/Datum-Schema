@@ -1,6 +1,6 @@
 // Commands: what the ribbon, menus, keys and Tell Me run.
 import { Out, Pt, Item, Line, Note, NoteKind, Kind, Example, invoke } from "./api";
-import { quietPick, setOut, act, call, sel, setSel, setBackstage, loadOut, toast, proj, sheet, setSheetId, itemOf, lineOf, derived, symOf, setTool, openMenu, setHiNumber, hidden, setHidden, setPanel, setPanelOpen } from "./store";
+import { noteRecent, quietPick, setOut, act, call, sel, setSel, setBackstage, loadOut, toast, proj, sheet, setSheetId, itemOf, lineOf, derived, symOf, setTool, openMenu, setHiNumber, hidden, setHidden, setPanel, setPanelOpen } from "./store";
 import * as D from "./dialogs";
 import { sheetSvg } from "./print";
 
@@ -38,7 +38,7 @@ export const C = {
       const placed = o.p.items.find(i => i.id === o!.created[0]);
       if (placed) o = (await act({ SetData: { ids: [placed.obj], key: "location", val: sym === "inst_dcs" ? "DCS" : sym === "inst_plc" ? "PLC" : sym === "inst_panel" ? "Control room panel" : sym === "inst_aux" ? "Local panel" : "Field" } }, true)) ?? o;
     }
-    if (o?.created.length) { quietPick(); setSel([o.created[0]]); }
+    if (o?.created.length) { quietPick(); setSel([o.created[0]]); if (obj === undefined) noteRecent(sym, tag ?? ""); }
     if (o && on !== null && s.inline) toast(`${s.name} put into the line; both halves keep its data.`, true);
   },
   addNote: async (kind: NoteKind, at: Pt) => {

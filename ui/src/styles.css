@@ -1459,3 +1459,12 @@ tr.behind td { background: var(--err-bg); }
 .qbar button:disabled { opacity: .4; }
 .qbar button.danger:hover { background: #FBE3E1; }
 .qbar .qmore { font-size: 15px; color: var(--muted); border-left: 1px solid var(--line); border-radius: 0 4px 4px 0; }
+
+/* 0.11.6: the target named while a line is drawn; Back; the Inspector's scope line. */
+.wlabel rect { fill: var(--bg2); stroke: var(--blue); stroke-width: .2; opacity: .95; }
+.wlabel text { fill: var(--blue); font-family: var(--sans); font-weight: 600; }
+.wlabel.free rect { stroke: var(--muted); }
+.wlabel.free text { fill: var(--muted); }
+.zoomctl .zback { color: var(--blue); font-weight: 600; padding: 0 8px; border-right: 1px solid var(--line); }
+.iscope { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 4px; padding: 6px 8px; margin: 2px 0 8px; background: var(--pale); border-left: 3px solid var(--blue); font-size: 12px; }
+.iscope small { flex-basis: 100%; font-size: 11px; line-height: 1.35; margin-top: 2px; }

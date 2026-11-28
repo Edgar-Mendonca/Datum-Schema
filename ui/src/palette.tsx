@@ -3,7 +3,7 @@
 // sheet.
 import { AssembliesPanel } from "./assemblies";
 import { For, Show, createSignal, createMemo, JSX } from "solid-js";
-import { lib, setTool, tool, allLibs, proj } from "./store";
+import { recent, lib, setTool, tool, allLibs, proj } from "./store";
 import { SymInfo, Cat } from "./api";
 import { PrimEl } from "./canvas";
 
@@ -52,7 +52,7 @@ const Branch = (p: { t: string; n: number; open: boolean; toggle: () => void; ch
 
 export const Palette = () => {
   const [q, setQ] = createSignal("");
-  const [open, setOpen] = createSignal<Record<string, boolean>>(JSON.parse(keep("ds.pane.open", '{"vessel":true,"rotating":true,"valve":true,"presets":true}')));
+  const [open, setOpen] = createSignal<Record<string, boolean>>(JSON.parse(keep("ds.pane.open", '{"recent":true,"vessel":true,"rotating":true,"valve":true,"presets":true}')));
   const toggle = (k: string) => { const v = { ...open(), [k]: !open()[k] }; setOpen(v); store("ds.pane.open", JSON.stringify(v)); };
   const isOpen = (k: string) => !!q().trim() || !!open()[k];
   const match = (x: { name: string; cat_name?: string; key?: string }) => { const s = q().trim().toLowerCase(); return !s || x.name.toLowerCase().includes(s) || (x.cat_name ?? "").toLowerCase().includes(s) || (x.key ?? "").includes(s); };
@@ -77,6 +77,8 @@ export const Palette = () => {
     <div class="palette">
       <label class="tfilter"><svg class="ic"><use href="#i-search" /></svg><input class="psearch" type="search" placeholder="Find a symbol (ball valve, pump…)" value={q()} onInput={e => setQ(e.currentTarget.value)} /></label>
       <div class="pbody tbody">
+        <Show when={!q().trim() && recent().some(([k]) => sym(k))}><Branch t="Recently placed" n={recent().filter(([k]) => sym(k)).length} open={isOpen("recent")} toggle={() => toggle("recent")}>
+          <For each={recent().filter(([k]) => sym(k))}>{([k, t]) => <Row s={sym(k)!} pic={shown(sym(k)!)} label={t ? `${t}: ${sym(k)!.name}` : sym(k)!.name} tag={t || undefined} title={`${sym(k)!.name}: click, then the sheet (Shift+click the sheet to place several)`} />}</For></Branch></Show>
         <For each={groups()}>{g => <Branch t={g.name} n={g.syms.length} open={isOpen(g.c)} toggle={() => toggle(g.c)}>
           <For each={g.syms}>{s => <Row s={s} pic={shown(s)} label={s.name} />}</For></Branch>}</For>
         <Show when={presets().length}><Branch t="Common instruments" n={presets().length} open={isOpen("presets")} toggle={() => toggle("presets")}>

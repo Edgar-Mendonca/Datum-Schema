@@ -69,6 +69,10 @@ const ItemPanel = (p: { it: Item }) => {
   const partner = () => proj()?.items.find(i => i.id === p.it.link);
   return <>
     <div class="iwhat"><b>{s()?.name ?? p.it.sym}</b><span class="muted small"> · {lib()?.classes.find(c => c.name === o()?.class)?.label ?? o()?.class} · {s()?.cat_name}</span><Help k={`cat:${s()?.cat ?? "mark"}`} /></div>
+    <Show when={o()}>{ob => { const drawn = () => proj()!.items.filter(i => i.obj === ob().id); const sheets = () => [...new Set(drawn().map(i => proj()!.sheets.find(s => s.id === i.sheet)?.number))].filter(Boolean);
+      return <div class="iscope" title="A symbol is one drawing of a plant object: its data belongs to the object, its place to this drawing">
+        <b class="mono">{ob().tag || "No tag yet"}</b><span> · {drawn().length > 1 ? `drawn ${drawn().length}× (${sheets().join(", ")})` : `on ${sheets()[0] ?? "this sheet"}`}</span>
+        <small class="muted">{drawn().length > 1 ? "Tag and data change it on every sheet; moving, turning and size change this drawing only." : "Tag and data belong to the object; moving, turning and size to this drawing."}</small></div>; }}</Show>
     <Show when={p.it.virt}><div class="ivirt">Virtual: in its loop, the lists, the I/O and its datasheet, not drawn on the sheet. <button class="btn sm" onClick={() => { const [x, y] = C.centre(); act({ SetItem: { item: { ...p.it, virt: false, x, y } } }).then(o => o && toast("Drawn in the middle of the view.", true)); }}>Draw it here</button></div></Show>
     <Show when={!p.it.virt && s()?.cat === "instrument" && !(proj()?.lines ?? []).some(l => (l.a.at === "port" && l.a.item === p.it.id) || (l.b.at === "port" && l.b.item === p.it.id))}><div class="ibtns"><button class="btn sm" title="Keep it in its loop, the lists, the I/O and its datasheet, but do not draw it (a function in the control system, an alarm, a calculated tag)" onClick={() => act({ SetItem: { item: { ...p.it, virt: true } } }).then(o => o && toast("Virtual now: no longer drawn, still in its loop and the lists. The Inspector draws it again.", true))}>Make it virtual</button></div></Show>
     <Show when={s() && !["mark", "connector"].includes(s()!.cat)}>

@@ -123,6 +123,10 @@ const boolPref = (k: string): [() => boolean, (v: boolean) => void] => {
   return [g, (v: boolean) => { s(v); try { localStorage.setItem(k, v ? "1" : "0"); } catch { /* private window */ } }];
 };
 export const [quickBar, setQuickBar] = boolPref("ds.quickbar");
+/** The symbols placed last (newest first, at most 8), kept on this computer: the Symbols panel's
+ *  "Recently placed" branch (0.11.6). A preset keeps its letters. */
+export const [recent, setRecentRaw] = createSignal<[string, string][]>((() => { try { const v = JSON.parse(localStorage.getItem("ds.recent") ?? "[]"); return Array.isArray(v) ? v.filter(x => Array.isArray(x) && typeof x[0] === "string").slice(0, 8) : []; } catch { return []; } })());
+export const noteRecent = (key: string, tag = "") => { const v = [[key, tag] as [string, string], ...recent().filter(([k, t]) => k !== key || t !== tag)].slice(0, 8); setRecentRaw(v); try { localStorage.setItem("ds.recent", JSON.stringify(v)); } catch { /* private window */ } };
 export const [followPick, setFollowPick] = boolPref("ds.follow");
 /** The next change of the selection is the app's (a symbol placed, a paste), not the user's pick. */
 let quiet = false;

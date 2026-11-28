@@ -4,8 +4,8 @@
 // dropped on a line goes into it). Everything drawn comes from the engine (view.rs): this file
 // draws it and sends edits.
 import { screenCss } from "./colours";
-import { quietPick, screenMode } from "./store";
-import { For, Show, JSX, createSignal, createMemo, createEffect, onMount, onCleanup, batch, on } from "solid-js";
+import { loads, toast, itemOf, quietPick, screenMode } from "./store";
+import { createRoot, For, Show, JSX, createSignal, createMemo, createEffect, onMount, onCleanup, batch, on } from "solid-js";
 import { Pt, Prim, ItemView, LineView, End, Kind, Item, Line, Note } from "./api";
 import { derived, sel, setSel, act, proj, sheet, opts, tool, setTool, symOf, lib, openMenu, MenuItem, hiNumber, hidden, setSheetId, lineOf, onFit, bgs, loadBg, setPanel, setPanelOpen, showIssues } from "./store";
 import { C } from "./cmds";
@@ -450,12 +450,20 @@ export const Canvas = () => {
             if (x.k === "wire") {
               // Snaps to the port under the mouse, which is ringed.
               const po = portAt(x.b);
-              const b = po ? po.it.ports[po.k].p : x.b;
+              // What the line will join, named before the click (0.11.6): a port, a line (a tee), or nothing.
+              const ln = po ? null : lineAt(x.b, lines(), tol());
+              const b = po ? po.it.ports[po.k].p : ln ? ln.at : x.b;
               const signal = !["major", "minor", "utility"].includes(x.kind);
+              const ps = po ? symOf(itemOf(po.it.id)?.sym ?? po.it.sym)?.ports[po.k] : undefined;
+              const label = po ? `${po.it.tag || symOf(po.it.sym)?.name || "Symbol"} · ${ps?.name || `point ${po.k + 1}`}` : ln ? `Joins ${ln.l.number || "this line"} (a tee)` : "Free end";
+              const fs = 11 / zoom(), tw = label.length * fs * 0.6 + fs;
               return <g class="wiring">
                 <path d={`M${x.a[0]} ${x.a[1]}H${(x.a[0] + b[0]) / 2}V${b[1]}H${b[0]}`} class={`temp ${signal ? "sig" : "proc"}`} />
                 <circle cx={x.a[0]} cy={x.a[1]} r={1.1} class="wstart" />
-                <circle cx={b[0]} cy={b[1]} r={po ? 1.8 : 0.9} class={po ? "wsnap" : "wend"} />
+                <circle cx={b[0]} cy={b[1]} r={po || ln ? 1.8 : 0.9} class={po || ln ? "wsnap" : "wend"} />
+                <g class="wlabel" classList={{ free: !po && !ln }} transform={`translate(${b[0] + 10 / zoom()} ${b[1] - 10 / zoom()})`}>
+                  <rect x={0} y={-fs * 1.15} width={tw} height={fs * 1.5} rx={fs * 0.25} /><text x={fs * 0.5} y={0} style={{ "font-size": `${fs}px` }}>{label}</text>
+                </g>
               </g>;
             }
             if (x.k === "box") return <rect x={Math.min(x.a[0], x.b[0])} y={Math.min(x.a[1], x.b[1])} width={Math.abs(x.b[0] - x.a[0])} height={Math.abs(x.b[1] - x.a[1])} class="marquee" />;
@@ -469,7 +477,7 @@ export const Canvas = () => {
         <div class="empty"><b>A blank sheet</b><span>Drag a symbol from the palette on the left (or double-click the sheet and type its name). Then drag from a port (the small circles on a symbol) to another to draw a line. Every symbol and line carries its data; the lists and checks below follow the drawing.</span>
           <span><button class="btn sm" onClick={() => C.examples()}>Open an example</button></span></div>
       </Show>
-      <div class="zoomctl"><button title="Zoom out" onClick={() => zoomBy(1 / 1.25)}>−</button><span>{Math.round(zoom() / 3.78 * 100)}%</span><button title="Zoom in" onClick={() => zoomBy(1.25)}>+</button><button title="Fit the drawing in the window (F)" onClick={fit}>Fit</button><button title="The whole sheet (Shift+F)" onClick={fitSheet}>Sheet</button></div>
+      <div class="zoomctl"><Show when={backStack().length}><button class="zback" title="Back to where you were before the last jump (Alt+←)" onClick={goBack}>← Back</button></Show><button title="Zoom out" onClick={() => zoomBy(1 / 1.25)}>−</button><span>{Math.round(zoom() / 3.78 * 100)}%</span><button title="Zoom in" onClick={() => zoomBy(1.25)}>+</button><button title="Fit the drawing in the window (F)" onClick={fit}>Fit</button><button title="The whole sheet (Shift+F)" onClick={fitSheet}>Sheet</button></div>
       <Show when={mouse()}>{m => <div class="coords">{v() && sheet() ? zoneOf(m()) : ""} · {Math.round(m()[0])}, {Math.round(m()[1])} mm</div>}</Show>
       <Show when={tool().k !== "select"}><div class="toolbadge" onClick={() => setTool({ k: "select" })}>{toolText()} · Esc to stop</div></Show>
     </div>
@@ -515,8 +523,30 @@ export const copySelection = (): { items: Item[]; lines: Line[]; notes: Note[] }
 };
 
 /** Jump to the item or line an issue or list row points at: open its sheet, select it, centre it. */
-export const goTo = (ids: number[], sheetId: number) => {
-  const p = proj(); if (!p || !ids.length) return;
+/** Where the view was before each jump (Locate, Go to partner, Find…), for Back (Alt+←). */
+type Spot = { sheet: number; zoom: number; pan: Pt; sel: number[] };
+export const [backStack, setBackStack] = createSignal<Spot[]>([]);
+// A new project starts a new history: Back never leads into the one before.
+createRoot(() => createEffect(on(loads, () => setBackStack([]), { defer: true })));
+export const goBack = () => {
+  const st = backStack(); const s = st[st.length - 1]; if (!s) return;
+  setBackStack(st.slice(0, -1));
+  if (sheet()?.id !== s.sheet) setSheetId(s.sheet);
+  setSel(s.sel); batch(() => { setZoom(s.zoom); setPan(s.pan); });
+};
+let lastGo = "";
+export const goTo = (ids0: number[], sheetId0: number) => {
+  const p = proj(); if (!p || !ids0.length) return;
+  let ids = ids0, sheetId = sheetId0;
+  // The same tag asked for again, when it is drawn more than once: the next place it is drawn.
+  const key = `${ids0.join()}@${sheetId0}`;
+  const objs = [...new Set(ids0.map(id => p.items.find(i => i.id === id)?.obj))];
+  const obj = objs.length === 1 ? objs[0] : undefined;
+  if (obj && key === lastGo) {
+    const all = p.items.filter(i => i.obj === obj);
+    if (all.length > 1) { const at = all.findIndex(i => i.sheet === sheet()?.id && sel().includes(i.id)); const nx = all[(at + 1) % all.length]; ids = [nx.id]; sheetId = nx.sheet; if (sheetId !== sheet()?.id) toast(`${p.objects.find(o => o.id === obj)?.tag || "It"} is drawn ${all.length} times: this is ${(at + 1) % all.length + 1} of ${all.length}.`, true); }
+  } else lastGo = key;
+  const s0 = sheet(); if (s0) setBackStack(v => [...v.slice(-29), { sheet: s0.id, zoom: zoom(), pan: pan(), sel: sel() }]);
   if (sheet()?.id !== sheetId) setSheetId(sheetId);
   setSel(ids);
   const tryCentre = (n: number) => {

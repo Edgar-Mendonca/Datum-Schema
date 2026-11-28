@@ -30,7 +30,7 @@ const shots = process.env.SHOTS;
   // A point on the sheet, on the screen; the lists under the drawing are folded first, so the
   // drawing has its room.
   const scr = async (x, y) => { const at = () => p.evaluate(([x, y]) => window.__toScreen(x, y), [x, y]);
-    const inside = ([sx, sy]) => p.evaluate(([sx, sy]) => { const c = document.querySelector(".canvhold .canvas")?.getBoundingClientRect(); return !!c && sx > c.left + 4 && sx < c.right - 4 && sy > c.top + 4 && sy < c.bottom - 4; }, [sx, sy]);
+    const inside = ([sx, sy]) => p.evaluate(([sx, sy]) => { const c = document.querySelector(".canvhold .canvas")?.getBoundingClientRect(); return !!c && sx > c.left + 4 && sx < c.right - 4 && sy > c.top + 4 && sy < c.bottom - 4 && !!document.elementFromPoint(sx, sy)?.closest(".dsvg"); }, [sx, sy]);
     let q = await at();
     // A point off the visible drawing: the view is moved to it (same zoom) and looked at again.
     if (!(await inside(q))) { await p.evaluate(([x, y]) => window.__centre(x, y), [x, y]); await p.waitForTimeout(150); q = await at(); }
@@ -1213,6 +1213,54 @@ const shots = process.env.SHOTS;
   await p.click(".rail button[data-tool='libraries']"); await p.waitForTimeout(200);
   check("the rail's Libraries opens a tab, and goes back to the drawing", libOn && await p.isVisible(".canvhold svg"));
   await p.click(".stabs .dtab .dx").catch(() => {});
+
+  // 83. Drawing feel (0.11.6): the target named before a line joins it, Esc adding nothing,
+  // recently placed symbols, what an edit changes at the top of the Inspector, Back after a jump,
+  // and a tag drawn twice found in turn from its list row.
+  await openEx("Pump transfer");
+  if (await p.evaluate(() => document.querySelector(".drawer").getBoundingClientRect().height > 40)) { await p.click(".drawer .bcollapse:not(.bdoc)"); await p.waitForTimeout(200); }
+  { const vw = (await inv("views"))[0], q = await project();
+    const itv = t => vw.items.find(i => i.tag === t);
+    const a = itv("P-101A"), bq = itv("P-101B");
+    const n0 = q.lines.length;
+    const [x0, y0] = await scr(...a.ports[0].p); await p.mouse.click(x0, y0); await p.waitForTimeout(150);
+    const [x1, y1] = await scr(...bq.ports[0].p); await p.mouse.move(x1, y1, { steps: 4 }); await p.waitForTimeout(150);
+    const lPort = (await p.textContent(".dsvg .wlabel text").catch(() => "")) ?? "";
+    const ln = vw.lines.find(l => l.kind === "major" && l.segs.some(sg => sg.length >= 2 && Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]) > 20));
+    const sg = ln.segs.find(sg => sg.length >= 2 && Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]) > 20);
+    const [x2, y2] = await scr((sg[0][0] + sg[1][0]) / 2, (sg[0][1] + sg[1][1]) / 2); await p.mouse.move(x2, y2, { steps: 4 }); await p.waitForTimeout(150);
+    const lLine = (await p.textContent(".dsvg .wlabel text").catch(() => "")) ?? "";
+    const [x3, y3] = await scr(20, 20); await p.mouse.move(x3, y3, { steps: 4 }); await p.waitForTimeout(150);
+    const lFree = (await p.textContent(".dsvg .wlabel text").catch(() => "")) ?? "";
+    check("the target is named before the line joins it: a port, a line, a free end", lPort.includes("P-101B") && lLine.startsWith("Joins") && lFree === "Free end", JSON.stringify([lPort, lLine, lFree]));
+    await p.keyboard.press("Escape"); await p.waitForTimeout(200);
+    check("Esc drops it and adds nothing", !(await p.$(".dsvg .wiring")) && (await project()).lines.length === n0);
+    await side("symbols");
+    check("the symbols placed last are a branch of the tree", ((await p.textContent(".palette .tgrp:has-text('Recently placed')").catch(() => "")) ?? "").includes("Gate valve"));
+    await clickAt(a.x, a.y);
+    await side("inspector");
+    check("the Inspector says what an edit changes", ((await p.textContent(".sidep .iscope").catch(() => "")) ?? "").includes("P-101A") && ((await p.textContent(".sidep .iscope")) ?? "").includes("this drawing"), `${await p.textContent(".sidep").catch(() => "-")}`.slice(0, 200) + " | " + await p.textContent(".status"));
+    // A jump from a list, then Back.
+    await p.keyboard.press("Escape"); await p.waitForTimeout(100);
+    const z0 = await p.textContent(".zoomctl span");
+    await p.click(".rail button[data-tool='lists']"); await btab("Equipment"); await p.waitForTimeout(400);
+    await p.fill(".drawer .lsearch", "V-101"); await p.waitForTimeout(300);
+    await p.locator(".drawer .egrid tbody tr.f").first().locator("td:not(:has(input))").first().click(); await p.waitForTimeout(500);
+    const jumped = (await p.$$(".dsvg .it.sel")).length === 1 && await p.isVisible(".zoomctl .zback");
+    await p.click(".zoomctl .zback"); await p.waitForTimeout(300);
+    check("a jump from a list can be undone with Back", jumped && (await p.$$(".dsvg .it.sel")).length === 0 && (await p.textContent(".zoomctl span")) === z0);
+    // P-101A drawn a second time (on a new sheet): its row finds one drawing, then the other.
+    await p.click(".stabs .sadd"); await p.waitForTimeout(500); const s2 = true;
+    const q2 = await project(); const sh2 = q2.sheets[q2.sheets.length - 1];
+    const o = q2.objects.find(x => x.tag === "P-101A");
+    if (sh2 && sh2.id !== q2.sheets[0].id) await inv("apply", { op: { AddItem: { item: { id: 0, sheet: sh2.id, sym: "pump_cent", x: 100, y: 100, rot: 0, flip: false, scale: 1, obj: 0, link: 0, base: "" }, on: null, tag: "", obj: o.id } } }).catch(() => null);
+    await p.click("button[title^='Undo']"); await p.waitForTimeout(300); await p.click("button[title^='Redo']"); await p.waitForTimeout(500);
+    const q3 = await project(); const twice = q3.items.filter(i => i.obj === o.id);
+    await p.fill(".drawer .lsearch", "P-101A"); await p.waitForTimeout(300);
+    const row = p.locator(".drawer .egrid tbody tr.f").first().locator("td:not(:has(input))").first();
+    await row.click(); await p.waitForTimeout(500); const firstSheet = (await project()) && await p.textContent(".stabs > button.on");
+    await row.click(); await p.waitForTimeout(600); const secondSheet = await p.textContent(".stabs > button.on");
+    check("a tag drawn twice: its row finds one drawing, then the other", twice.length === 2 && firstSheet !== secondSheet, JSON.stringify([twice.length, firstSheet, secondSheet, !!s2])); }
 
   // 81. Small screens (0.11.4): a laptop at 125–150 % scaling, less the taskbar, gives a window of
   // about 1280 × 640. The ribbon folds to its tabs, the rail and the File page fit without

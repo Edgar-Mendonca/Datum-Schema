@@ -97,6 +97,7 @@ const App = () => {
   const keys = (e: KeyboardEvent) => {
     const ctrl = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
     if (e.key === "Escape" && ribbonPeek()) { setRibbonPeek(false); return; }
+    if (e.altKey && e.key === "ArrowLeft") { e.preventDefault(); import("./canvas").then(m => m.goBack()); return; }
     if (dialogs().length) return;
     const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement;
     if ((ctrl && k === "k") || (e.altKey && k === "q")) { e.preventDefault(); palette(); }

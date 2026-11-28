@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.6 — 2026-11-28
+
+Drawing feel: you see where a line will go before you click, and you can always get back.
+
+**The target named before a line joins it.** While a line is drawn, a label by the pointer says what the click will join: a symbol's point ("P-101B · suction"), another line ("Joins 3"-P-1003-A1A (a tee)") with a ring where the tee goes, or "Free end". Esc drops the line and records nothing.
+
+**Recently placed.** The Symbols tree starts with the symbols you placed last (instrument presets keep their letters), so the next valve is one click away. Shift+click the sheet places several.
+
+**What an edit changes.** The Inspector starts with the tag and where it is drawn, and says what an edit changes: its tag and data belong to the plant object (on every sheet it is drawn), its place, turn and size to this drawing only.
+
+**Locate and Back.** A jump from a list, a check, Find or an off-page connector can be undone: **← Back** by the zoom buttons (or **Alt+←**) returns to the sheet, the view and the selection you had. Up to 30 jumps are kept.
+
+**A tag drawn more than once.** Clicking its row again goes to the next place it is drawn ("P-101A is drawn 2 times: this is 2 of 2").
+
 ## 0.11.5 — 2026-11-28
 
 The workspace: what you can do with a symbol or a line is where you look, and the tables share one drawer.
