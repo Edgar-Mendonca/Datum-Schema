@@ -1,5 +1,6 @@
 // Window state: the open project, the open sheet, what the engine works out from it (the sheet's
 // drawing, the checks, the hydraulics), the selection, the drawing tool, menus, dialogs and messages.
+import type { ColourMode } from "./colours";
 import { createSignal, createMemo, batch, JSX } from "solid-js";
 import { invoke, Out, Options, Project, Derived, Library, SymInfo, Kind, NoteKind, Item, Line, Obj, LibView, SymLibrary } from "./api";
 
@@ -103,8 +104,42 @@ export const [showIssues, setShowIssues] = createSignal(false);
 /** The line number highlighted on every sheet (Select › By line number). */
 export const [hiNumber, setHiNumber] = createSignal("");
 /** The bottom panel's tab, and whether it is open. */
-export const [panel, setPanel] = createSignal("checks");
-export const [panelOpen, setPanelOpen] = createSignal(true);
+// Two places show tables (0.11.3): the lists under the drawing (in the drawing's own tab, linked
+// both ways with it, for the review) and the slim bottom pane (checks, to-do, comments, messages,
+// the log). `setPanel` sends a key to the right one and opens it.
+export const BOTTOM_KEYS = ["checks", "todo", "comments", "messages", "log"];
+const prefKeep = (k: string, d: string) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
+const prefSave = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* private window */ } };
+export const [listKey, setListKey] = createSignal(prefKeep("ds.lists.key", "lines"));
+export const [listOpen, setListOpenRaw] = createSignal(prefKeep("ds.lists.open", "0") === "1");
+export const setListOpen = (v: boolean) => { setListOpenRaw(v); prefSave("ds.lists.open", v ? "1" : "0"); queueMicrotask(() => window.dispatchEvent(new Event("resize"))); };
+export const [bottomKey, setBottomKey] = createSignal("checks");
+export const [bottomOpen, setBottomOpenRaw] = createSignal(true);
+export const setBottomOpen = (v: boolean) => { setBottomOpenRaw(v); queueMicrotask(() => window.dispatchEvent(new Event("resize"))); };
+let lastArea: "lists" | "bottom" = "bottom";
+/** The key last shown (for help), and the one place to send a list or a panel to. */
+export const panel = () => (lastArea === "bottom" ? bottomKey() : listKey());
+export const setPanel = (k: string) => {
+  if (BOTTOM_KEYS.includes(k)) { lastArea = "bottom"; setBottomKey(k); return; }
+  lastArea = "lists"; setListKey(k); prefSave("ds.lists.key", k);
+  // A list moved to its own tab opens there.
+  const t = docTabs().find(x => x.list === k);
+  if (t) { setActiveDoc(t.id); return; }
+  setActiveDoc(null);
+};
+export const panelOpen = () => (lastArea === "bottom" ? bottomOpen() : listOpen());
+export const setPanelOpen = (v: boolean) => (lastArea === "bottom" ? setBottomOpen(v) : docTabs().some(x => x.list === listKey()) ? undefined : setListOpen(v));
+/** How the drawing is coloured on the screen and in print (0.11.3), kept on this computer. */
+export const [screenMode, setScreenModeRaw] = createSignal<ColourMode>((["colour", "grey", "bw"].includes(prefKeep("ds.colour.screen", "colour")) ? prefKeep("ds.colour.screen", "colour") : "colour") as ColourMode);
+export const setScreenMode = (m: ColourMode) => { setScreenModeRaw(m); prefSave("ds.colour.screen", m); };
+export const [printMode, setPrintModeRaw] = createSignal<ColourMode>((["colour", "grey", "bw"].includes(prefKeep("ds.colour.print", "bw")) ? prefKeep("ds.colour.print", "bw") : "bw") as ColourMode);
+export const setPrintMode = (m: ColourMode) => { setPrintModeRaw(m); prefSave("ds.colour.print", m); };
+/** What the app said, newest last (the Messages panel). */
+export const [messages, setMessages] = createSignal<{ time: number; text: string; ok: boolean }[]>([]);
+/** The left side (0.11.3): which panel is open beside the rail (none: folded). */
+export type Side = "symbols" | "plant" | "inspector" | "documents" | "";
+export const [side, setSideRaw] = createSignal<Side>((["symbols", "plant", "inspector", "documents", ""].includes(prefKeep("ds.side", "symbols")) ? prefKeep("ds.side", "symbols") : "symbols") as Side);
+export const setSide = (v: Side) => { setSideRaw(v); prefSave("ds.side", v); queueMicrotask(() => window.dispatchEvent(new Event("resize"))); };
 /** Hidden layers: process, utility, instrument, notes. */
 export const [hidden, setHidden] = createSignal<string[]>([]);
 
@@ -130,7 +165,7 @@ export const loadOut = async (cmd: string, args?: object) => {
 // ---------- messages, menus, dialogs ----------
 export const [msg, setMsg] = createSignal<{ text: string; ok: boolean } | null>(null);
 let timer = 0;
-export const toast = (text: string, ok = false) => { setMsg({ text, ok }); clearTimeout(timer); timer = window.setTimeout(() => setMsg(null), ok ? 3000 : 7000); };
+export const toast = (text: string, ok = false) => { setMsg({ text, ok }); setMessages(v => [...v.slice(-199), { time: Date.now(), text, ok }]); clearTimeout(timer); timer = window.setTimeout(() => setMsg(null), ok ? 3000 : 7000); };
 export type MenuItem = { label: string; run?: () => void; keys?: string; off?: boolean; on?: boolean; sub?: MenuItem[]; icon?: string } | "-";
 export type Item_ = MenuItem;
 export const [menu, setMenu] = createSignal<{ x: number; y: number; items: MenuItem[] } | null>(null);

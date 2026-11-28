@@ -156,8 +156,9 @@
         "0.11.0: old DXF P&IDs turned into live drawings: blocks mapped to symbols, lines traced and connected, with a review (done)",
         "0.11.1: vector PDF P&IDs the same way; scanned drawings traced with help (done)",
         "0.11.2: your own symbols and codes (symbol editor, libraries per project or for all projects, abbreviations from the legend sheet), DWG drawings, and a workspace you arrange (done)",
-        "0.11.3: DEXPI in both current schema versions, tested with the official examples; tested on a 50-sheet project",
-        "0.11.4: recorded steps replayed, and design variants: a working copy compared and merged back"
+        "0.11.3: easier to work with: one rail on the left, the drawing and its lists together, datasheets as tabs stepped one by one, colours for screen and print, a better symbol editor (done)",
+        "0.11.4: DEXPI in both current schema versions, tested with the official examples; tested on a 50-sheet project",
+        "0.11.5: recorded steps replayed, and design variants: a working copy compared and merged back"
       ]
     },
     {

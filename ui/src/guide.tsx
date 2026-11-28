@@ -11,7 +11,7 @@ type Chapter = { id: string; t: string; intro: string; keys: string[] };
 
 /** The chapters and the help topics in each; topics not named here go into "More". */
 const CHAPTERS: Chapter[] = [
-  { id: "drawing", t: "Drawing the plant", intro: "Place symbols, draw lines that route themselves, carry lines between sheets, and mark up the drawing.", keys: ["palette", "workspace", "draw", "edit", "select", "lines", "signals", "offpage", "notes", "tags", "isa", "sheets", "view", "layers"] },
+  { id: "drawing", t: "Drawing the plant", intro: "Place symbols, draw lines that route themselves, carry lines between sheets, and mark up the drawing.", keys: ["workspace", "palette", "colours", "draw", "edit", "select", "lines", "signals", "offpage", "notes", "tags", "isa", "sheets", "view", "layers"] },
   { id: "data", t: "Data and objects", intro: "Every symbol and line is a view of a plant object with its data, in a plant › unit › area hierarchy, with every change recorded.", keys: ["inspector", "plant", "history", "units"] },
   { id: "checks", t: "Checks and hydraulics", intro: "The drawing is checked on every change; every line with a flow is sized. Hydraulic results are a sizing aid, checked by the engineer.", keys: ["checks", "rules", "hydraulics"] },
   { id: "lists", t: "Lists and reports", intro: "Lists written from the drawing, always in step with it: edit them, export them to Excel or CSV, print them.", keys: ["lists", "io", "takeoff", "export"] },

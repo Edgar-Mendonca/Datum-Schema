@@ -1,9 +1,9 @@
 // The bottom panel: Checks · Line list · Equipment · Instruments · Valves. The lists come from the
 // engine (lists.rs) in display units; sort, filter and group them, click a row to find it on the
 // drawing, edit a cell and the drawing follows.
-import { For, Show, createSignal, createMemo, createResource, createEffect, on } from "solid-js";
-import { List, Col, Row, parseNum, Issue } from "./api";
-import { panel, setPanel, panelOpen, setPanelOpen, derived, call, out, act, proj, toast, openMenu, openDoc, listWhere, setListWhere, bigWhere, setBigWhere } from "./store";
+import { For, Show, JSX, createSignal, createMemo, createResource, createEffect, on } from "solid-js";
+import { List, Col, Row, parseNum, Issue, Change } from "./api";
+import { sel, setPanel, derived, call, out, act, proj, toast, openMenu, openDoc, docTabs, BOTTOM_KEYS, listKey, listOpen, setListOpen, bottomKey, bottomOpen, setBottomOpen, messages } from "./store";
 import { fromU } from "./units";
 import { C } from "./cmds";
 import { Help } from "./help";
@@ -97,12 +97,12 @@ const ListView = (p: { kind: string }) => {
         <button class="btn sm" onClick={() => C.exportList(p.kind, "xlsx")}>Excel</button><Show when={!p.kind.startsWith("find:") && p.kind !== "accepted"}><button class="btn sm" title="Read this list back after editing it in Excel (export it first): the changes are shown before anything changes" onClick={() => importList({ kind: p.kind })}>Read back…</button></Show><button class="btn sm" onClick={() => C.exportList(p.kind, "csv")}>CSV</button><button class="btn sm" onClick={C.print}>Print</button>
       </div>
       <div class="lscroll">
-        <Show when={list()} fallback={<div class="cempty"><span class="muted">{list.error ? String(list.error) : "…"}</span></div>}>{l => <table class="egrid">
+        <Show when={list()} fallback={<div class="cempty"><span class="muted">{list.error ? String(list.error) : "…"}</span></div>}>{l => <table class="egrid" ref={el => createEffect(on(sel, () => queueMicrotask(() => el.querySelector("tr.f.sel")?.scrollIntoView({ block: "nearest" })), { defer: true }))}>
           <thead><tr><For each={l().cols}>{(c, i) => <th classList={{ r: c.num }} onClick={() => setSort(sort()?.col === i() ? { col: i(), dir: (-sort()!.dir) as 1 | -1 } : { col: i(), dir: 1 })}>{c.label}{sort()?.col === i() ? (sort()!.dir > 0 ? " ▲" : " ▼") : ""}</th>}</For></tr></thead>
           <tbody>
             <For each={rows()} fallback={<tr><td colSpan={l().cols.length} class="muted" style={{ padding: "8px" }}>{l().kind === "takeoff" ? "Valves and fittings on the P&IDs appear here, counted by type, size, pipe class and rating." : l().kind === "io" ? "Transmitters, switches and control valves appear here, counted by control system (Inspector › Wiring › Control system) and I/O kind." : l().kind === "streams" ? "Streams appear here: draw process lines on a PFD sheet." : l().kind === "lines" ? "Lines with a number appear here: draw a process line and give it a size, fluid, sequence and class." : "Tagged items appear here as you place them."}</td></tr>}>{(r, ri) => <>
               <Show when={group() >= 0 && (ri() === 0 || rows()[ri() - 1].cells[group()] !== r.cells[group()])}><tr class="grow"><td colSpan={l().cols.length}><b>{l().cols[group()].label}: {r.cells[group()] || "—"}</b></td></tr></Show>
-              <Show when={heads().has(r)} fallback={<tr class="f" classList={{ bad: r.status === 2, warn: r.status === 1 }} onClick={() => p.kind === "datasheets" ? openDatasheet(r.ids[0]) : p.kind === "register" && r.sheet === 0 ? placeRegistered(r.ids[0]) : C.goTo(r.ids, r.sheet)}>
+              <Show when={heads().has(r)} fallback={<tr class="f" classList={{ bad: r.status === 2, warn: r.status === 1, sel: r.ids.some(i => sel().includes(i)) }} onClick={() => p.kind === "datasheets" ? openDatasheet(r.ids[0]) : p.kind === "register" && r.sheet === 0 ? placeRegistered(r.ids[0]) : C.goTo(r.ids, r.sheet)}>
                 <For each={l().cols}>{(c, i) => <td classList={{ r: c.num }}>
                   <Show when={c.edit} fallback={<span>{r.cells[i()]}</span>}><input value={r.cells[i()]} classList={{ mono: c.num }} onClick={e => e.stopPropagation()} onChange={e => edit(r, c, e.currentTarget.value)} /></Show>
                 </td>}</For>
@@ -125,36 +125,91 @@ export const tabTitle = (k: string) => TABS.find(t => t[0] === k)?.[1] ?? (k.sta
 /** Opens a list as a tab beside the sheets. */
 export const openListTab = (k: string) => openDoc({ id: `list:${k}`, title: tabTitle(k), list: k });
 
-export const Bottom = () => {
-  const [h, setH] = createSignal(230);
+/** The app's messages, newest first. */
+const MessagesPanel = () => {
+  const when = (t: number) => new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return <div class="cscroll"><table class="tbl ctbl msgtbl"><tbody>
+    <For each={[...messages()].reverse()} fallback={<tr><td class="muted" style={{ padding: "8px" }}>What Datum Schema tells you appears here, newest first: saved files, imports, conversions, and anything that went wrong.</td></tr>}>{m => <tr classList={{ warning: !m.ok }}><td class="muted mono">{when(m.time)}</td><td>{m.text}</td></tr>}</For>
+  </tbody></table></div>;
+};
+
+/** Every recorded change of the project, newest first, with who and when; click one to go to it. */
+const LogPanel = () => {
+  const [rows] = createResource(() => proj(), () => call<Change[]>("changes", { id: 0 }));
+  const when = (t: number) => new Date(t * 1000).toLocaleString([], { dateStyle: "short", timeStyle: "medium" });
+  const tagOf = (id: number) => proj()?.objects.find(o => o.id === id)?.tag || "";
+  const go = (id: number) => { const it = proj()?.items.find(i => i.obj === id) ?? proj()?.lines.find(l => l.obj === id); if (it) C.goTo([it.id], it.sheet); };
+  return <div class="cscroll"><table class="tbl ctbl logtbl"><thead><tr><th>When</th><th>Who</th><th>Object</th><th>What</th><th>Was</th><th>Now</th></tr></thead><tbody>
+    <For each={(rows() ?? []).slice(0, 500)} fallback={<tr><td colSpan={6} class="muted" style={{ padding: "8px" }}>Every change to the project is recorded here as you work, with who made it and when.</td></tr>}>{c => <tr class="f" onClick={() => go(c.obj)}>
+      <td class="muted mono">{when(c.time)}</td><td>{c.user}</td><td class="mono">{tagOf(c.obj) || `#${c.obj}`}</td><td>{c.what === "set" || c.what === "clear" ? c.key : c.what}</td><td class="muted">{c.old}</td><td>{c.new}</td>
+    </tr>}</For>
+  </tbody></table></div>;
+};
+
+/** A row of tabs over a table area: tabs that do not fit go under More. */
+const TabRow = (p: { tabs: [string, string][]; cur: string; open: boolean; pick: (k: string) => void; badge: (k: string) => string; children?: JSX.Element }) => {
+  const [hid, setHid] = createSignal<string[]>([]);
+  return (
+    <nav class="btabs" ref={el => { const fit = () => { const rest = [...el.querySelectorAll<HTMLElement>(":scope > :not(.bt):not(.grow):not(.bmore)")].reduce((w, x) => w + x.getBoundingClientRect().width, 0); const r = el.getBoundingClientRect().right - rest - 96; const bs = [...el.querySelectorAll<HTMLElement>(":scope > button.bt")]; bs.forEach(b => (b.style.display = "")); const off = bs.filter(b => b.getBoundingClientRect().right > r).map(b => b.dataset.k!); bs.forEach(b => { if (off.includes(b.dataset.k!)) b.style.display = "none"; }); setHid(off); }; new ResizeObserver(fit).observe(el); createEffect(on(() => [p.tabs, p.cur], () => queueMicrotask(fit))); }}>
+      <For each={p.tabs}>{([k, l]) => <button class="bt" data-k={k} classList={{ on: p.open && p.cur === k }} onClick={() => p.pick(k)}>{l}{p.badge(k)}</button>}</For>
+      <Show when={hid().length}><button class="bmore" title="The ones that do not fit" onClick={e => openMenu(e, p.tabs.filter(([k]) => hid().includes(k)).map(([k, l]) => ({ label: `${l}${p.badge(k)}`, on: p.open && p.cur === k, run: () => p.pick(k) })))}>More ▾</button></Show>
+      <span class="grow" />
+      {p.children}
+    </nav>
+  );
+};
+
+/** A resizable table area's height, kept. */
+const useHeight = (key: string, d: number) => {
+  const [h, setH] = createSignal(Math.max(90, +(localStorage.getItem(key) ?? d) || d));
   const resize = (e: MouseEvent) => {
     const y0 = e.clientY, h0 = h();
-    const mv = (m: MouseEvent) => setH(Math.max(90, Math.min(innerHeight * 0.7, h0 + y0 - m.clientY)));
-    const upf = () => { removeEventListener("mousemove", mv); removeEventListener("mouseup", upf); };
+    const mv = (m: MouseEvent) => setH(Math.max(90, Math.min(innerHeight * 0.75, h0 + y0 - m.clientY)));
+    const upf = () => { removeEventListener("mousemove", mv); removeEventListener("mouseup", upf); try { localStorage.setItem(key, String(h())); } catch { /* private window */ } window.dispatchEvent(new Event("resize")); };
     addEventListener("mousemove", mv); addEventListener("mouseup", upf);
   };
-  const badge = (k: string) => { if (k === "todo") { const n = todos()?.length ?? 0; return n ? ` (${n})` : ""; } if (k === "comments") { const n = (proj()?.comments ?? []).filter(c => !c.resolved).length; return n ? ` (${n})` : ""; } if (k !== "checks") return ""; const i = derived()?.issues ?? []; const e = i.filter(x => x.level === "error").length, w = i.filter(x => x.level === "warning").length; return e || w ? ` (${e} · ${w})` : ""; };
-  const shownTabs = createMemo(() => [...TABS, ...(proj()?.settings.reports ?? []).map(r => [`report:${r.name}`, r.name] as [string, string])].filter(([k]) => (k !== "streams" || proj()?.sheets.some(s => s.pfd)) && (!k.startsWith("hazop") || panel() === k || !!(proj()?.settings.hazop as { nodes?: unknown[] } | undefined)?.nodes?.length) && (k !== "accepted" || panel() === k || !!(proj()?.settings as { accepted?: unknown[] } | undefined)?.accepted?.length) && (k !== "testpacks" || panel() === k || !!(proj()?.settings.testpacks as { packs?: unknown[] } | undefined)?.packs?.length) && (!ADD[k] || panel() === k || !!proj()?.objects.some(o => o.class === ADD[k]))));
-  const [hiddenTabs, setHiddenTabs] = createSignal<string[]>([]);
-  const pickTab = (k: string) => { if (listWhere() === "tab") return openListTab(k); if (panel() === k && panelOpen()) setPanelOpen(false); else { setPanel(k); setPanelOpen(true); } };
+  return [h, resize] as const;
+};
+
+const listBadge = () => "";
+/** The lists under the drawing, in the drawing's own tab (0.11.3): for the review, the drawing and
+ *  its lists side by side, linked both ways. A list moved to its own tab is not shown here. */
+/** Every list this project has to show (reports included), in order. */
+export const LIST_TABS = (): [string, string][] => [...TABS.filter(([k]) => !BOTTOM_KEYS.includes(k)), ...(proj()?.settings.reports ?? []).map(r => [`report:${r.name}`, r.name] as [string, string])].filter(([k]) => (k !== "streams" || proj()?.sheets.some(s => s.pfd)) && (!k.startsWith("hazop") || listKey() === k || !!(proj()?.settings.hazop as { nodes?: unknown[] } | undefined)?.nodes?.length) && (k !== "accepted" || listKey() === k || !!(proj()?.settings as { accepted?: unknown[] } | undefined)?.accepted?.length) && (k !== "testpacks" || listKey() === k || !!(proj()?.settings.testpacks as { packs?: unknown[] } | undefined)?.packs?.length) && (!ADD[k] || listKey() === k || !!proj()?.objects.some(o => o.class === ADD[k])));
+export const ReviewLists = () => {
+  const [h, resize] = useHeight("ds.lists.h", 260);
+  const tabs = createMemo(() => LIST_TABS().filter(([k]) => !docTabs().some(t => t.list === k) && (k !== "streams" || proj()?.sheets.some(s => s.pfd)) && (!k.startsWith("hazop") || listKey() === k || !!(proj()?.settings.hazop as { nodes?: unknown[] } | undefined)?.nodes?.length) && (k !== "accepted" || listKey() === k || !!(proj()?.settings as { accepted?: unknown[] } | undefined)?.accepted?.length) && (k !== "testpacks" || listKey() === k || !!(proj()?.settings.testpacks as { packs?: unknown[] } | undefined)?.packs?.length) && (!ADD[k] || listKey() === k || !!proj()?.objects.some(o => o.class === ADD[k]))));
+  const pick = (k: string) => { setPanel(k); setListOpen(true); };
+  const shown = () => listOpen() && !docTabs().some(t => t.list === listKey());
   return (
-    <section class="bottom" style={{ height: panelOpen() ? `${h()}px` : "30px" }}>
-      <Show when={panelOpen()}><div class="bhandle" onMouseDown={resize} /></Show>
-      <nav class="btabs" ref={el => { const fit = () => { const rest = [...el.querySelectorAll<HTMLElement>(":scope > :not(.bt):not(.grow):not(.bmore)")].reduce((w, x) => w + x.getBoundingClientRect().width, 0); const r = el.getBoundingClientRect().right - rest - 96; const bs = [...el.querySelectorAll<HTMLElement>(":scope > button.bt")]; bs.forEach(b => (b.style.display = "")); const off = bs.filter(b => b.getBoundingClientRect().right > r).map(b => b.dataset.k!); bs.forEach(b => { if (off.includes(b.dataset.k!)) b.style.display = "none"; }); setHiddenTabs(off); }; new ResizeObserver(fit).observe(el); createEffect(on([proj, panel], () => queueMicrotask(fit))); }}>
-        <For each={shownTabs()}>{([k, l]) => <button class="bt" data-k={k} classList={{ on: panelOpen() && panel() === k }} onClick={() => pickTab(k)}>{l}{badge(k)}</button>}</For>
-        <Show when={hiddenTabs().length}><button class="bmore" title="The lists that do not fit" onClick={e => openMenu(e, shownTabs().filter(([k]) => hiddenTabs().includes(k)).map(([k, l]) => ({ label: `${l}${badge(k)}`, on: panelOpen() && panel() === k, run: () => pickTab(k) })))}>More ▾</button></Show>
-        <span class="grow" />
-        <button class="bcollapse bdoc" title="Open this list in a tab beside the sheets (full size)" onClick={() => { openListTab(panel()); setPanelOpen(false); }}>⧉</button>
-        <button class="bcollapse bwhere" title="Where lists and big windows open" onClick={e => openMenu(e, [
-          { label: "Lists open in this panel, below the sheet", on: listWhere() === "below", run: () => setListWhere("below") },
-          { label: "Lists open as tabs beside the sheets", on: listWhere() === "tab", run: () => setListWhere("tab") }, "-",
-          { label: "Datasheets, loop diagrams and other big windows open over the sheet", on: bigWhere() === "window", run: () => setBigWhere("window") },
-          { label: "Datasheets, loop diagrams and other big windows open as tabs", on: bigWhere() === "tab", run: () => setBigWhere("tab") }])}>⋯</button>
-        <Help k={panel() === "checks" ? "checks" : panel() === "comments" ? "review" : panel() === "todo" ? "todo" : panel().startsWith("report:") ? "reports" : "lists"} />
-        <button class="bcollapse" title={panelOpen() ? "Hide the panel" : "Show the panel"} onClick={() => setPanelOpen(!panelOpen())}>{panelOpen() ? "▾" : "▴"}</button>
-      </nav>
-      <Show when={panelOpen()}>
-        <PanelBody k={panel()} />
+    <section class="bottom lowerlists" style={{ height: shown() ? `${h()}px` : "30px" }}>
+      <Show when={shown()}><div class="bhandle" onMouseDown={resize} /></Show>
+      <TabRow tabs={tabs()} cur={listKey()} open={shown()} pick={pick} badge={listBadge}>
+        <span class="lcap muted">Lists</span>
+        <button class="bcollapse bdoc" title="Move this list to its own tab, full size (for working through it); Show under the drawing brings it back" onClick={() => { openListTab(listKey()); }}>⧉ Own tab</button>
+        <Help k={listKey().startsWith("report:") ? "reports" : "lists"} />
+        <button class="bcollapse" title={shown() ? "Fold the lists away" : "Show the lists under the drawing"} onClick={() => setListOpen(!listOpen())}>{shown() ? "▾" : "▴"}</button>
+      </TabRow>
+      <Show when={shown()}><PanelBody k={listKey()} /></Show>
+    </section>
+  );
+};
+
+/** The slim bottom pane (0.11.3): checks, the to-do list, comments, messages and the log. */
+export const Bottom = () => {
+  const [h, resize] = useHeight("ds.bottom.h", 170);
+  const badge = (k: string) => { if (k === "todo") { const n = todos()?.length ?? 0; return n ? ` (${n})` : ""; } if (k === "comments") { const n = (proj()?.comments ?? []).filter(c => !c.resolved).length; return n ? ` (${n})` : ""; } if (k !== "checks") return ""; const i = derived()?.issues ?? []; const e = i.filter(x => x.level === "error").length, w = i.filter(x => x.level === "warning").length; return e || w ? ` (${e} · ${w})` : ""; };
+  const tabs: [string, string][] = [["checks", "Checks"], ["todo", "To do"], ["comments", "Comments"], ["messages", "Messages"], ["log", "Log"]];
+  const pick = (k: string) => { setPanel(k); setBottomOpen(true); };
+  return (
+    <section class="bottom slim" style={{ height: bottomOpen() ? `${h()}px` : "30px" }}>
+      <Show when={bottomOpen()}><div class="bhandle" onMouseDown={resize} /></Show>
+      <TabRow tabs={tabs} cur={bottomKey()} open={bottomOpen()} pick={pick} badge={badge}>
+        <Help k={bottomKey() === "checks" ? "checks" : bottomKey() === "comments" ? "review" : bottomKey() === "todo" ? "todo" : "workspace"} />
+        <button class="bcollapse" title={bottomOpen() ? "Fold the pane away" : "Show the pane"} onClick={() => setBottomOpen(!bottomOpen())}>{bottomOpen() ? "▾" : "▴"}</button>
+      </TabRow>
+      <Show when={bottomOpen()}>
+        <Show when={bottomKey() === "messages"} fallback={<Show when={bottomKey() === "log"} fallback={<PanelBody k={bottomKey()} />}><LogPanel /></Show>}><MessagesPanel /></Show>
       </Show>
     </section>
   );

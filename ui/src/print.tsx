@@ -2,6 +2,8 @@
 // as SVG at real size and printed with the WebView's print dialog, where "Save as PDF" makes a PDF.
 // The sheets print at their own size or fitted to A3; the lists flow over A3 pages with a header
 // and footer on every page; the legend comes last. The same SVG writer saves a sheet as SVG.
+import { lineColour, catColour } from "./colours";
+import { printMode } from "./store";
 import { For, Show, JSX, createSignal, createMemo, createResource, onMount, onCleanup } from "solid-js";
 import { Portal } from "solid-js/web";
 import { SheetView, Prim, List, Datasheet, LoopInfo, LoopView, CauseMatrix } from "./api";
@@ -37,7 +39,8 @@ const WIDTH: Record<string, number> = { major: 0.6, minor: 0.35, utility: 0.45, 
 /** A sheet as a standalone SVG drawing (millimetres, black on white). */
 export const svgString = (v: SheetView, opts: { width?: number; height?: number } = {}): string => {
   const used = new Set([...v.items.map(i => i.sym), ...v.legend_rows.map(r => r.sym).filter(Boolean) as string[]]);
-  const defs = (lib()?.symbols ?? []).filter(s => used.has(s.key)).map(s => `<g id="s-${s.key}" stroke-width="0.25">${s.svg.replace(/class="sf"/g, 'fill="#000"')}</g>`).join("");
+  const mode = printMode();
+  const defs = (lib()?.symbols ?? []).filter(s => used.has(s.key)).map(s => `<g id="s-${s.key}" stroke-width="0.25">${s.svg.replace(/class="sf"/g, 'fill="currentColor"')}</g>`).join("");
   const body: string[] = [];
   body.push(`<rect width="${n(v.w)}" height="${n(v.h)}" fill="#fff" stroke="none"/>`);
   const u = v.underlay;
@@ -47,11 +50,13 @@ export const svgString = (v: SheetView, opts: { width?: number; height?: number 
   if (v.logo && lg) body.push(`<image href="${esc(lg)}" x="${n(v.logo[0])}" y="${n(v.logo[1])}" width="${n(v.logo[2])}" height="${n(v.logo[3])}" preserveAspectRatio="xMidYMid meet"/>`);
   for (const l of v.lines) {
     const dash = l.kind === "electric" ? ' stroke-dasharray="1.5 1"' : "";
-    body.push(`<g stroke-width="${WIDTH[l.kind] ?? 0.35}"${dash}>${l.segs.map(s => `<polyline points="${s.map(q => `${n(q[0])},${n(q[1])}`).join(" ")}"/>`).join("")}</g>`);
-    body.push(`<g>${l.marks.map(m => prim(m)).join("")}</g>`);
+    const lc = lineColour(mode, l.kind), col = lc ? ` stroke="${lc}"` : "";
+    body.push(`<g stroke-width="${WIDTH[l.kind] ?? 0.35}"${dash}${col}>${l.segs.map(s => `<polyline points="${s.map(q => `${n(q[0])},${n(q[1])}`).join(" ")}"/>`).join("")}</g>`);
+    body.push(`<g${col}>${l.marks.map(m => lc ? prim(m).replace(/fill="#000"/g, `fill="${lc}"`) : prim(m)).join("")}</g>`);
   }
   for (const it of v.items) {
-    body.push(`<g transform="translate(${n(it.x)} ${n(it.y)}) rotate(${it.rot * 90}) scale(${n(it.flip ? -it.scale : it.scale)} ${n(it.scale)})"><use href="#s-${it.sym}"/></g>`);
+    const ic = catColour(mode, it.cat) || "#000";
+    body.push(`<g transform="translate(${n(it.x)} ${n(it.y)}) rotate(${it.rot * 90}) scale(${n(it.flip ? -it.scale : it.scale)} ${n(it.scale)})" stroke="${ic}" color="${ic}"><use href="#s-${it.sym}"/></g>`);
     body.push(it.texts.map(t => prim(t)).join(""));
   }
   for (const nt of v.notes) body.push(nt.prims.map(p => prim(p)).join(""));

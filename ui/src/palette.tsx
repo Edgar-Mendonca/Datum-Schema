@@ -6,8 +6,6 @@ import { For, Show, createSignal, createMemo, JSX } from "solid-js";
 import { lib, setTool, tool, allLibs, proj } from "./store";
 import { SymInfo, Cat } from "./api";
 import { PrimEl } from "./canvas";
-import { Help } from "./help";
-import { PlantPanel } from "./plant";
 
 /** Common instruments: letters and the bubble they usually sit in (ISA-5.1). */
 export const PRESETS: [string, string, string][] = [
@@ -67,7 +65,6 @@ export const Palette = () => {
   const drag = (e: DragEvent, sym: string, tag?: string) => { e.dataTransfer?.setData("text/x-datum-sym", sym); if (tag) e.dataTransfer?.setData("text/x-datum-tag", tag); e.dataTransfer!.effectAllowed = "copy"; };
   const on = (sym: string, tag?: string) => { const t = tool(); return t.k === "place" && t.sym === sym && (t.tag ?? "") === (tag ?? ""); };
   const sym = (k: string) => lib()?.symbols.find(s => s.key === k);
-  const [side, setSide] = createSignal<"symbols" | "plant">("symbols");
   // With a drawing standard, our symbols are shown as the library draws them.
   const shown = (s: SymInfo) => { const k = proj()?.settings.standard.map[s.key]; return (k && sym(k)) || s; };
   const libGroups = createMemo(() => allLibs().filter(v => v.shown).map(v => ({ name: v.library.name, syms: v.library.symbols.map(c => sym(c.key)).filter((x): x is SymInfo => !!x && match(x)) })).filter(g => g.syms.length));
@@ -77,16 +74,7 @@ export const Palette = () => {
       <SymPic s={r.pic} size={20} letters={r.tag} /><span>{r.label}</span></button>
   );
   return (
-    <Show when={!paneFolded()} fallback={
-      <aside class="prail" aria-label="Symbols and plant (folded)">
-        <button title="Show the panel" onClick={() => foldPane(false)}>»</button>
-        <button title="Symbols" classList={{ on: side() === "symbols" }} onClick={() => { setSide("symbols"); foldPane(false); }}><svg class="ic"><use href="#i-plus" /></svg></button>
-        <button title="Plant" classList={{ on: side() === "plant" }} onClick={() => { setSide("plant"); foldPane(false); }}><svg class="ic"><use href="#i-tag" /></svg></button>
-      </aside>}>
-    <aside class="palette" style={{ width: `${paneW()}px` }}>
-      <header class="ttabs" role="tablist"><button role="tab" classList={{ on: side() === "symbols" }} onClick={() => setSide("symbols")}>Symbols</button><button role="tab" classList={{ on: side() === "plant" }} onClick={() => setSide("plant")}>Plant</button><Help k={side() === "plant" ? "plant" : "palette"} /><button class="pfold" title="Fold the panel to a strip (more room for the sheet)" onClick={() => foldPane(true)}>«</button></header>
-      <Show when={side() === "plant"}><PlantPanel /></Show>
-      <Show when={side() === "symbols"}>
+    <div class="palette">
       <label class="tfilter"><svg class="ic"><use href="#i-search" /></svg><input class="psearch" type="search" placeholder="Find a symbol (ball valve, pump…)" value={q()} onInput={e => setQ(e.currentTarget.value)} /></label>
       <div class="pbody tbody">
         <For each={groups()}>{g => <Branch t={g.name} n={g.syms.length} open={isOpen(g.c)} toggle={() => toggle(g.c)}>
@@ -98,9 +86,6 @@ export const Palette = () => {
         <Show when={asm().length}><Branch t="Assemblies" n={asm().length} open={isOpen("asm")} toggle={() => toggle("asm")}><AssembliesPanel /></Branch></Show>
         <Show when={!groups().length && !presets().length && !libGroups().length && !asm().length}><p class="muted pnone">No symbol is called that.</p></Show>
       </div>
-      </Show>
-      <div class="vgrip pgrip" title="Drag to widen or narrow this panel" onPointerDown={e => grip(e, paneW, setPaneW, "ds.pane.w", 1, 190, 480)} />
-    </aside>
-    </Show>
+    </div>
   );
 };

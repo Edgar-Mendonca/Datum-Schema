@@ -7,6 +7,7 @@
 import { For, Show, createMemo, createResource, createSignal } from "solid-js";
 import { Datasheet, DsRow, DsLayout, ImportPlan, Val, parseNum, STATUSES } from "./api";
 import { call, act, proj, openDialog, closeDialog, setBackstage, toast, opts, setOpts } from "./store";
+void closeDialog;
 import { fromU } from "./units";
 import { Dialog, Pick } from "./ui";
 import { C } from "./cmds";
@@ -88,27 +89,53 @@ export const issueDialog = (ids: number[], d?: Datasheet) => openDialog(() => {
   );
 });
 
-export const openDatasheet = (id: number) => openDialog(() => {
-  const [d] = createResource(() => [id, proj()] as const, ([i]) => call<Datasheet>("datasheet", { id: i }));
+/** The datasheet open in its tab (0.11.3): one tab, stepping from one datasheet to the next. */
+export const [dsId, setDsId] = createSignal(0);
+
+/** A datasheet, full size in a tab beside the sheets: ‹ › step through every datasheet in tag order,
+ *  Go to the symbol shows it on the drawing (the tab stays open). */
+const DatasheetPage = () => {
+  const [d] = createResource(() => [dsId(), proj()] as const, ([i]) => call<Datasheet>("datasheet", { id: i }));
+  const [order] = createResource(() => proj(), () => call<{ rows: { ids: number[]; cells: string[] }[] }>("list", { kind: "datasheets" }));
+  const ids = () => (order()?.rows ?? []).map(r => r.ids[0]);
+  const at = () => ids().indexOf(dsId());
+  const step = (k: number) => { const v = ids(); if (!v.length) return; const n = v[(Math.max(0, at()) + k + v.length) % v.length]; openDatasheet(n); };
   return (
-    <Dialog title={d() ? `${d()!.title} · ${d()!.tag}` : "Datasheet"} wide help="datasheets"
-      extra={<>
-        <button class="btn pri" onClick={() => { const x = d(); if (x) issueDialog([x.obj], x); }}>Issue…</button>
-        <button class="btn" onClick={() => { const x = d(); if (x) { closeDialog(); C.goTo([x.item], x.sheet); } }}>Go to the symbol</button>
-        <button class="btn" onClick={() => { setPrintOnly(id); closeDialog(); setBackstage("print"); }}>Print…</button>
-        <button class="btn" onClick={C.exportDatasheets}>Excel (every datasheet)</button>
-      </>}>
-      <Show when={d()} fallback={<p class="muted">Making the datasheet…</p>}>
-        <Show when={d()!.logo || d()!.form}><p class="dsco"><Show when={d()!.logo}><img class="dslogo" src={d()!.logo} alt="" /></Show><span class="muted small">{d()!.form ? `Form ${d()!.form}` : ""}</span></p></Show>
-        <p class="dsrev"><b>{revLine(d()!)}</b>{d()!.by ? <span class="muted"> · issued by {d()!.by}</span> : ""}</p>
-        <p class="muted small">Type the object's own values here or in the Inspector; grey rows come from the line or the drawing and change there. Δ marks a value changed since the last issue (hover for what it was).</p>
-        <DatasheetTable d={d()!} edit />
-        <RevBlock d={d()!} />
-        <Show when={d()!.footer}><p class="muted small">{d()!.footer}</p></Show>
-      </Show>
-    </Dialog>
+    <div class="dspage">
+      <div class="dsbar">
+        <button class="btn sm" title="The previous datasheet (by tag)" onClick={() => step(-1)}>‹</button>
+        <b>{d() ? `${d()!.tag} · ${d()!.title}` : "Datasheet"}</b>
+        <button class="btn sm" title="The next datasheet (by tag)" onClick={() => step(1)}>›</button>
+        <span class="muted small">{at() >= 0 ? `${at() + 1} of ${ids().length}` : ""}</span>
+        <span class="grow" />
+        <button class="btn sm pri" onClick={() => { const x = d(); if (x) issueDialog([x.obj], x); }}>Issue…</button>
+        <button class="btn sm" onClick={() => { const x = d(); if (x) { import("./store").then(m => m.setActiveDoc(null)); C.goTo([x.item], x.sheet); } }}>Go to the symbol</button>
+        <button class="btn sm" onClick={() => { setPrintOnly(dsId()); setBackstage("print"); }}>Print…</button>
+        <button class="btn sm" onClick={C.exportDatasheets}>Excel (every datasheet)</button>
+      </div>
+      <div class="dsbody">
+        <Show when={d()} fallback={<p class="muted">Making the datasheet…</p>}>
+          <Show when={d()!.logo || d()!.form}><p class="dsco"><Show when={d()!.logo}><img class="dslogo" src={d()!.logo} alt="" /></Show><span class="muted small">{d()!.form ? `Form ${d()!.form}` : ""}</span></p></Show>
+          <p class="dsrev"><b>{revLine(d()!)}</b>{d()!.by ? <span class="muted"> · issued by {d()!.by}</span> : ""}</p>
+          <p class="muted small">Type the object's own values here or in the Inspector; grey rows come from the line or the drawing and change there. Δ marks a value changed since the last issue (hover for what it was).</p>
+          <DatasheetTable d={d()!} edit />
+          <RevBlock d={d()!} />
+          <Show when={d()!.footer}><p class="muted small">{d()!.footer}</p></Show>
+        </Show>
+      </div>
+    </div>
   );
-});
+};
+
+/** Opens an object's datasheet in the Datasheet tab beside the sheets. */
+export const openDatasheet = (id: number) => {
+  setDsId(id);
+  import("./store").then(m => {
+    const tag = m.proj()?.objects.find(o => o.id === id)?.tag || "Datasheet";
+    m.openDoc({ id: "datasheet", title: tag, render: () => <DatasheetPage /> });
+    m.setDocTabs(v => v.map(t => (t.id === "datasheet" ? { ...t, title: tag } : t)));
+  });
+};
 
 /** Import datasheet values from an Excel workbook: the engine's plan is shown first; only the
  *  ticked values are written, as one edit that Undo takes back. */

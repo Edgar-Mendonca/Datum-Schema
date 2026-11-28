@@ -1,6 +1,8 @@
 // Title bar, quick access toolbar, Tell Me and the ribbon (Home · Draw · Symbols · Lines ·
 // Instruments · Check · Lists · Sheets · View · Help, and the contextual Format tab). Copied from
 // Datum Plan's ribbon by way of Datum Pipe.
+import { MODES, ColourMode } from "./colours";
+import { screenMode, setScreenMode, printMode, setPrintMode } from "./store";
 import { For, Show, JSX, createSignal, createMemo, onMount } from "solid-js";
 import { call, out, proj, tab, setTab, setBackstage, openMenu, openDialog, closeDialog, theme, setTheme, sel, tool, setTool, lib, derived, hidden, opts, setOpts, itemOf, lineOf, act, sheet, showIssues, setShowIssues } from "./store";
 import { C, ALL_CMDS, exampleMenu } from "./cmds";
@@ -167,6 +169,7 @@ export const Ribbon = () => {
         <G l="Zoom" h="view"><B big i="fit" l="Fit Drawing" run={C.fit} /><B big i="sheet" l="Whole Sheet" run={() => import("./canvas").then(c => c.fitSheet())} /></G>
         <G l="Layers" h="layers"><S>{layer("process", "Process")}{layer("utility", "Utility")}</S><S>{layer("instrument", "Instruments")}{layer("notes", "Notes and marks")}</S></G>
         <G l="Select" h="select"><B big i="select" l="By Type" dd={e => openMenu(e, [...(["vessel", "rotating", "heat", "valve", "control", "fitting", "instrument", "primary", "mark", "connector"] as Cat[]).map(c => ({ label: lib()?.symbols.find(s => s.cat === c)?.cat_name ?? c, run: () => C.selectType(c) })), "-" as const, ...(lib()?.kinds ?? []).map(k => ({ label: `${k[1]} lines`, run: () => C.selectType(`line:${k[0]}`) }))])} /><B big i="line" l="By Line Number" dd={numberMenu} /></G>
+        <G l="Colours" h="colours"><S><label class="ccol">On the screen <select onChange={e => setScreenMode(e.currentTarget.value as ColourMode)}><For each={MODES}>{([k, l]) => <option value={k} selected={screenMode() === k}>{l}</option>}</For></select></label><label class="ccol">In print <select onChange={e => setPrintMode(e.currentTarget.value as ColourMode)}><For each={MODES}>{([k, l]) => <option value={k} selected={printMode() === k}>{l}</option>}</For></select></label></S></G>
         <G l="Show" h="view"><S><label class="chk"><input type="checkbox" checked={opts().grid} onChange={e => setOpts({ ...opts(), grid: e.currentTarget.checked })} />Grid</label><label class="chk"><input type="checkbox" checked={showIssues()} onChange={e => setShowIssues(e.currentTarget.checked)} />Problems on the sheet</label></S></G>
       </Show>
       <Show when={tab() === "format"}>

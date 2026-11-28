@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.11.3 — 2026-11-28
+
+Easier to work with: one panel at a time on the left, the drawing and its lists together for the review, datasheets one after another for the paperwork, colours your way, and a better symbol editor.
+
+**One rail on the left.** A rail of icons down the left edge opens one panel beside it: **Symbols** (the symbols tree), **Plant**, **Inspector** and **Documents**. Nothing sits on the right any more, so the sheet has the room. Click an icon again to fold its panel away; drag the panel's edge to widen it. Pick something on the sheet and the Inspector opens with its data; click an empty part of the sheet and the panel you had comes back (placing symbols keeps the Symbols panel open). Below, the rail's tools: Checks, Lists, Libraries and Find.
+
+**Reviewing the drawing against its lists, in one tab.** The lists sit under the drawing, in the drawing's own tab: click a row and its symbol is picked on the drawing (and the Inspector shows it); pick a symbol and its row lights up. Drag the divider to share the room.
+
+**Working through the paperwork, tab by tab.**
+- **⧉ Own tab** moves a list to a tab of its own over the sheet, full size; **Show under the drawing** puts it back.
+- **Datasheets open as a tab**: **‹ ›** step to the previous and next datasheet by tag ("4 of 17"), with Issue, Go to the symbol and Print at hand.
+- **Documents** on the rail lists every sheet, list and datasheet, with the one open marked; the sheet tabs are over the sheet.
+
+**A slim bottom pane** keeps Checks, To do and Comments, and two new ones: **Messages** (everything Datum Schema told you, newest first) and **Log** (every change to the project with who and when; click one to go to it).
+
+**Colours your way** (View › Colours): the drawing **in colour** (process lines dark blue, utilities green, signals violet, pneumatic teal, data orange; equipment brown, valves red, fittings teal, instruments violet), **in greys**, or **black and white**, chosen separately for the screen and for print. What the drawing is doing as you work (the line being drawn, the selection, open ends and problems) keeps its own colours on the screen and is never printed.
+
+**The symbol editor, rebuilt** on the way Datum Mesh sketches: drawn black on white; lines, shapes, filled shapes, dashed lines, rectangles, circles, **arcs**, dots and text; points **snap to the ends, midpoints, centres, quadrants and crossings** of what is drawn (a green square names the snap), else to a 0.5 mm grid; **Shift** keeps a line level or upright; **Select** picks a shape to move or delete; Undo (Ctrl+Z). A copy of any symbol comes in as shapes you can change.
+
+**Colourful icons** across the ribbon and the rail, in the family's style.
+
 ## 0.11.2 — 2026-11-27
 
 Your own symbols and codes, DWG drawings, and a workspace you arrange.

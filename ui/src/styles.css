@@ -817,14 +817,14 @@ tr.behind td { background: var(--err-bg); }
 .pt.b { font-weight: 600; }
 .frame .pt { fill: var(--text2); }
 .lines .ln { fill: none; stroke: var(--text); stroke-linecap: round; stroke-linejoin: round; }
-.ln .lstroke { stroke: var(--text); }
+.ln .lstroke { stroke: var(--lc, var(--text)); }
 .ln.major .lstroke { stroke-width: .6; }
 .ln.minor .lstroke { stroke-width: .35; }
 .ln.utility .lstroke { stroke-width: .45; }
 .ln.pneumatic .lstroke, .ln.data .lstroke, .ln.capillary .lstroke { stroke-width: .25; }
 .ln.electric .lstroke { stroke-width: .25; stroke-dasharray: 1.5 1; }
-.ln .lmark { stroke: var(--text); }
-.ln .lmark.pf, .ln polygon.lmark.pf { fill: var(--text); }
+.ln .lmark { stroke: var(--lc, var(--text)); }
+.ln .lmark.pf, .ln polygon.lmark.pf { fill: var(--lc, var(--text)); }
 .ln .pt { fill: var(--text2); }
 .lhit { stroke: transparent; stroke-width: 3; fill: none; cursor: pointer; pointer-events: stroke; }
 .ln:hover .lstroke { stroke: var(--blue); }
@@ -834,7 +834,7 @@ tr.behind td { background: var(--err-bg); }
 .ln.err .lstroke { stroke: var(--crit); }
 .ln.warn .lstroke { stroke: var(--amber); }
 .items .it { cursor: move; }
-.it .sym { color: var(--text); }
+.it .sym { color: var(--ic, var(--text)); }
 .it .ihit { fill: transparent; stroke: none; }
 .it.hover .ihit { fill: var(--pale); }
 .it.sel .ihit { fill: var(--sel); stroke: var(--blue); stroke-width: .3; stroke-dasharray: 1 .6; }
@@ -1343,3 +1343,63 @@ tr.behind td { background: var(--err-bg); }
 .dlg header .totab:hover { color: var(--blue); }
 .dlg header .totab + .x { margin-left: 0; }
 .btabs > :not(.bt):not(.grow) { flex: none; }
+
+/* ---------------------------------------------------------------- 0.11.3 layout
+   The left rail (Datum Mesh's step rail) and the one panel beside it; the document tabs over the
+   sheet; the lists under the drawing; the slim bottom pane. */
+.rail { width: 74px; flex: none; display: flex; flex-direction: column; gap: 1px; padding: 4px 0; background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; }
+.rail button { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 9px 2px 8px; color: var(--text2); border-left: 3px solid transparent; }
+.rail button svg { width: 24px; height: 24px; }
+.rail button span { font: 500 9.5px var(--mono); letter-spacing: .05em; text-transform: uppercase; }
+.rail button:hover { background: var(--pale); color: var(--blue); }
+.rail button.on { background: var(--bg2); color: var(--blue); border-left-color: var(--blue); }
+.rail button.on span { font-weight: 600; }
+.rail .rgrow { flex: 1; }
+.rail .rcap { font: 500 8.5px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); text-align: center; padding: 6px 0 3px; }
+.rail .rextra svg { width: 20px; height: 20px; }
+.sidep { position: relative; flex: none; display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); background: var(--bg2); }
+.sideh { display: flex; align-items: center; gap: 6px; padding: 6px 6px 6px 12px; border-bottom: 1px solid var(--line); flex: none; }
+.sideh b { font: 600 12.5px var(--sans); }
+.sideh .grow { flex: 1; }
+.sideb { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.sideb > .palette, .sideb > .insp, .sideb > .docs, .sideb > .plant { flex: 1; min-height: 0; display: flex; flex-direction: column; width: auto !important; border: 0; background: transparent; }
+.sideb > .insp .ibody { flex: 1; overflow: auto; }
+.sideb > .palette .pbody, .docs .tbody { flex: 1; overflow: auto; }
+.docs .ti { display: flex; align-items: center; gap: 7px; padding: 3px 8px; font-size: 12px; border-left: 2px solid transparent; text-align: left; width: 100%; }
+.docs .ti .ic { width: 14px; height: 14px; flex: none; }
+.docs .ti span { white-space: nowrap; }
+.docs .ti small { margin-left: auto; color: var(--muted); font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 8px; }
+.docs .ti:hover { background: var(--pale); }
+.docs .ti.on { background: var(--sel); border-left-color: var(--blue); }
+.doctabs { border-top: 0; border-bottom: 1px solid var(--line); height: 30px; }
+.doctabs > button:not(.sadd) { border-bottom: 2px solid transparent; }
+.sheetarea { position: relative; }
+.docview { position: absolute; inset: 0; z-index: 4; }
+.docview > .lists, .docview > .dlg.intab, .docview > .dspage { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.docbar, .dsbar { display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-bottom: 1px solid var(--line); background: var(--panel); flex: none; }
+.docbar .grow, .dsbar .grow { flex: 1; }
+.dsbar b { font: 600 13px var(--sans); }
+.dsbody { flex: 1; overflow: auto; padding: 12px 18px 24px; }
+.lowerlists { border-top: 2px solid var(--line); }
+.lowerlists .lcap { font: 500 9.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; margin-right: 6px; }
+.bottom.slim { border-top: 1px solid var(--line); }
+.msgtbl tr.warning td { color: var(--warn-fg); }
+.logtbl tr.f { cursor: pointer; }
+.egrid tr.f.sel td { background: var(--sel) !important; }
+/* The symbol editor draws black on white, whatever the theme (0.11.3). */
+.symstage { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.symedsvg { background: #fff; }
+.symedsvg .symgridl { stroke: #E3E6EA; stroke-width: .05; }
+.symedsvg .symaxis { stroke: #9AA3AD; stroke-width: .06; stroke-dasharray: .5 .4; opacity: 1; }
+.symedsvg .symink { color: #000; stroke: #000; }
+.symedsvg .symink * { stroke: #000; }
+.symedsvg .symink .sf, .symedsvg .symink .pf { fill: #000; }
+.symedsvg .symink text { fill: #000; stroke: none; }
+.symedsvg .sympick polyline { fill: none; stroke: #2F6FD0; stroke-width: .45; opacity: .55; }
+.symedsvg .sympick circle { fill: none; stroke: #2F6FD0; stroke-width: .3; }
+.symedsvg .symcur { fill: none; stroke: #2F6FD0; stroke-width: .2; stroke-dasharray: .6 .4; }
+.symedsvg .symsq { fill: none; stroke: #17804A; stroke-width: .18; }
+.symedsvg .symwhy { font: 1.3px var(--sans); fill: #17804A; }
+.symedsvg .symhov { fill: #2F6FD0; opacity: .6; }
+.symhint { margin: 0; }
+.symedsvg .symink { fill: none; stroke-width: .3; stroke-linecap: round; stroke-linejoin: round; }

@@ -11,14 +11,13 @@ import "@fontsource/ibm-plex-mono/latin-500.css";
 import "@fontsource/ibm-plex-mono/latin-600.css";
 import "./styles.css";
 import { invoke, listen, Out, Options, Shown } from "./api";
-import { out, setOut, backstage, setBackstage, setOpts, opts, dialogs, toast, loadOut, setThemeRaw, applyTheme, sel, proj, sheet, setSheetId, refreshLibs, derived, tool, setTool, openMenu, hidden, docTabs, activeDoc, setActiveDoc, closeDoc } from "./store";
+import { out, setOut, backstage, setBackstage, setOpts, opts, dialogs, toast, loadOut, setThemeRaw, applyTheme, sel, proj, sheet, setSheetId, refreshLibs, derived, tool, setTool, openMenu, hidden, docTabs, activeDoc, setActiveDoc, closeDoc, setPanel, setListOpen } from "./store";
 import { C, setFit, setCentre, setCopy, setViewCentre } from "./cmds";
 import { TitleBar, Ribbon, palette } from "./ribbon";
 import { Backstage, update, checkUpdate } from "./backstage";
 import { Canvas, fit, fitSheet, goTo, copySelection, viewCenter } from "./canvas";
-import { Palette } from "./palette";
-import { Inspector } from "./inspector";
-import { Bottom, PanelBody } from "./panels";
+import { Rail, SidePanel, followSelection } from "./rail";
+import { Bottom, PanelBody, ReviewLists } from "./panels";
 import { Menu, Toast, DlgFn, InTab } from "./ui";
 import { setUnitTable } from "./units";
 import * as D from "./dialogs";
@@ -28,9 +27,10 @@ setCentre(goTo);
 setCopy(copySelection);
 setViewCentre(viewCenter);
 
-/** The sheet tab bar: one tab per sheet; right-click for sheet commands. */
+/** The document tabs, over the sheet (0.11.3): one tab per sheet (right-click for sheet commands),
+ *  then the lists and the datasheet moved to tabs of their own. */
 const SheetTabs = () => (
-  <div class="stabs">
+  <div class="stabs doctabs">
     <For each={proj()?.sheets ?? []}>{s => <button classList={{ on: !activeDoc() && sheet()?.id === s.id, legend: s.legend }} onClick={() => { setActiveDoc(null); setSheetId(s.id); }} title={s.title}
       onContextMenu={e => { setSheetId(s.id); openMenu(e, [{ label: "New sheet", run: () => C.addSheet() }, { label: "Legend sheet", run: () => C.addSheet(true) }, "-", { label: "Move left", run: () => C.moveSheet(-1) }, { label: "Move right", run: () => C.moveSheet(1) }, "-", { label: "Delete this sheet", icon: "del", run: C.deleteSheet }]); }}>
       {s.number}</button>}</For>
@@ -71,6 +71,7 @@ const App = () => {
       listen("close-requested", () => D.confirmClose(() => invoke("quit")));
     } catch (e) { toast(String(e)); }
   });
+  followSelection();
   // Back on a sheet from a tab: the drawing measures its room again.
   createEffect(on(activeDoc, () => queueMicrotask(() => window.dispatchEvent(new Event("resize"))), { defer: true }));
   const keys = (e: KeyboardEvent) => {
@@ -95,16 +96,18 @@ const App = () => {
       <TitleBar update={update()?.available ? update()!.latest : null} />
       <Ribbon />
       <main class="work">
-        <Palette />
+        <Rail />
+        <SidePanel />
         <div class="content">
           <Show when={out()}>
+            <SheetTabs />
             <div class="sheetarea"><div class="canvhold" style={{ display: activeDoc() ? "none" : "contents" }}><Canvas /></div>
-              <For each={docTabs()}>{t => <div class="docview" style={{ display: activeDoc() === t.id ? "flex" : "none" }}><InTab.Provider value={t.id}>{t.list ? <div class="lists docl"><PanelBody k={t.list} /></div> : untrack(() => t.render?.())}</InTab.Provider></div>}</For>
-              <SheetTabs /></div>
+              <Show when={!activeDoc()}><ReviewLists /></Show>
+              <For each={docTabs()}>{t => <div class="docview" style={{ display: activeDoc() === t.id ? "flex" : "none" }}><InTab.Provider value={t.id}>{t.list ? <div class="lists docl"><div class="docbar"><b>{t.title}</b><span class="muted small">Click a row to go to it on the drawing.</span><span class="grow" /><button class="btn sm" title="Put this list back under the drawing, to review the drawing against it" onClick={() => { const k = t.list!; closeDoc(t.id); setPanel(k); setListOpen(true); }}>Show under the drawing</button></div><PanelBody k={t.list} /></div> : untrack(() => t.render?.())}</InTab.Provider></div>}</For>
+            </div>
             <Bottom />
           </Show>
         </div>
-        <Inspector />
       </main>
       <Status />
       <Show when={backstage()}><Backstage /></Show>

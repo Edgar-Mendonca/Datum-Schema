@@ -27,10 +27,19 @@ const shots = process.env.SHOTS;
   });
   const inv = (cmd, args) => p.evaluate(([c, a]) => window.__TAURI__.core.invoke(c, a), [cmd, args ?? {}]);
   const project = () => inv("state").then(o => o.p);
-  const scr = (x, y) => p.evaluate(([x, y]) => window.__toScreen(x, y), [x, y]);
+  // A point on the sheet, on the screen; the lists under the drawing are folded first, so the
+  // drawing has its room.
+  const scr = async (x, y) => { const at = () => p.evaluate(([x, y]) => window.__toScreen(x, y), [x, y]);
+    const inside = ([sx, sy]) => p.evaluate(([sx, sy]) => { const c = document.querySelector(".canvhold .canvas")?.getBoundingClientRect(); return !!c && sx > c.left + 4 && sx < c.right - 4 && sy > c.top + 4 && sy < c.bottom - 4; }, [sx, sy]);
+    let q = await at();
+    // A point off the visible drawing: the view is moved to it (same zoom) and looked at again.
+    if (!(await inside(q))) { await p.evaluate(([x, y]) => window.__centre(x, y), [x, y]); await p.waitForTimeout(150); q = await at(); }
+    return q; };
   const clickAt = async (x, y) => { const [sx, sy] = await scr(x, y); await p.mouse.click(sx, sy); await p.waitForTimeout(250); };
   const dragFrom = async (a, c) => { const [x0, y0] = await scr(...a), [x1, y1] = await scr(...c); await p.mouse.move(x0, y0); await p.mouse.down(); await p.mouse.move((x0 + x1) / 2, (y0 + y1) / 2, { steps: 4 }); await p.mouse.move(x1, y1, { steps: 4 }); await p.mouse.up(); await p.waitForTimeout(300); };
-  const place = async (name, x, y) => { await p.fill(".psearch", name); await p.click(`.psym:has(span:text-is("${name}"))`); await clickAt(x, y); await p.fill(".psearch", ""); };
+  const side = async k => { if (!(await p.$(`.rail button[data-side='${k}'].on`))) await p.click(`.rail button[data-side='${k}']`); await p.waitForTimeout(120); };
+  const insp = () => side("inspector");
+  const place = async (name, x, y) => { await side("symbols"); await p.fill(".psearch", name); await p.click(`.psym:has(span:text-is("${name}"))`); await clickAt(x, y); await side("symbols"); await p.fill(".psearch", ""); };
   const shot = async n => { if (shots) await p.screenshot({ path: `${shots}/${n}.png` }); };
   await p.goto(url);
   await p.waitForTimeout(900);
@@ -95,7 +104,7 @@ const shots = process.env.SHOTS;
 
   // 6. The inspector edits the title block, and the frame follows.
   await p.keyboard.press("Escape"); await p.click(".canvas", { position: { x: 30, y: 30 } }); await p.waitForTimeout(200);
-  const company = p.locator(".insp .iprow:has(label:text-is('Company')) input");
+  await insp(); const company = p.locator(".insp .iprow:has(label:text-is('Company')) input");
   await company.fill("ACME Process <b>"); await company.press("Tab"); await p.waitForTimeout(400);
   const frame2 = await p.$$eval(".frame text", els => els.map(e => e.textContent));
   check("the title block shows the company as text", frame2.includes("ACME Process <b>"));
@@ -124,7 +133,7 @@ const shots = process.env.SHOTS;
   const btab = async name => {
     const b = await p.$(`.btabs button.bt:has-text("${name}")`);
     if (b && await b.isVisible()) return b.click();
-    await p.click(".btabs .bmore"); await p.click(`.menu button:has-text("${name}")`);
+    await p.click(`.btabs:has(button.bt:has-text("${name}")) .bmore`); await p.click(`.menu button:has-text("${name}")`);
   };
   const openEx = async name => {
     await p.evaluate(() => document.querySelector(".tabs .file").click()); await p.waitForTimeout(200);
@@ -254,7 +263,7 @@ const shots = process.env.SHOTS;
     await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button[title='DXF']"); await p.waitForTimeout(400);
     const dx = (await inv("exports")).filter(e => e.kind === "dxf").pop();
     check(`${name} exports DXF`, !!dx && dx.text.trimEnd().endsWith("EOF"));
-    await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Print')"); await p.waitForTimeout(1000);
+    await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Print')"); await p.waitForSelector(".pprev .pwrap").catch(() => {}); await p.waitForTimeout(600);
     check(`${name} prints`, (await p.$$(".pprev .pwrap")).length >= 3);
     await p.click(".bs .back"); await p.waitForTimeout(200);
   }
@@ -272,12 +281,12 @@ const shots = process.env.SHOTS;
   check("check 6 asks for the required attribute", (await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("seal plan")));
   const pq = await project(); const pa = pq.items.find(i => tagOf(pq, i) === "P-101A");
   const [sx, sy] = await scr(pa.x, pa.y + 2); await p.mouse.click(sx, sy); await p.waitForTimeout(300);
-  check("the Inspector shows the class's new attribute", (await p.textContent(".insp")).includes("Seal plan *"));
+  await insp(); check("the Inspector shows the class's new attribute", (await p.textContent(".insp")).includes("Seal plan *"));
 
   // 23. The Plant panel: the hierarchy with every object; remove a pump from the sheet only, it
   // stays (not drawn); draw it again from the panel.
   await openEx("Pump transfer");
-  await p.click(".palette header button:text-is('Plant')"); await p.waitForTimeout(300);
+  await side("plant"); await p.waitForTimeout(300);
   const tree = await p.$$eval(".plant .ptag", els => els.map(e => e.textContent));
   check("the Plant panel lists the objects", tree.includes("P-101A") && tree.includes("V-101") && tree.some(t => t.includes("P-1003")), JSON.stringify(tree.slice(0, 10)));
   check("the hierarchy has its levels", (await p.$$eval(".plant .pnname", els => els.map(e => e.textContent))).join("|") === "Plant 1|Unit 100|Area 1");
@@ -292,25 +301,25 @@ const shots = process.env.SHOTS;
   await clickAt(160, 190);
   q1 = await project();
   check("an object can be drawn again from the Plant panel", q1.items.some(i => tagOf(q1, i) === "P-101B") && q1.objects.filter(o => o.tag === "P-101B").length === 1);
-  await p.click(".palette header button:text-is('Symbols')");
+  await side("symbols");
 
   // 24. Datasheets: LT-101's datasheet takes the conditions of the line it measures; a value typed
   // on it goes to the object; it prints on one A4 page.
   const q2 = await project(); const lt = q2.items.find(i => tagOf(q2, i) === "LT-101");
   { const [lx, ly] = await scr(lt.x, lt.y); await p.mouse.click(lx, ly); await p.waitForTimeout(200); }
-  await p.click(".insp button:has-text('Datasheet')"); await p.waitForSelector(".dlg .ds");
-  const dsText = await p.textContent(".dlg .ds");
+  await insp(); await p.click(".insp button:has-text('Datasheet')"); await p.waitForSelector(".dspage .ds");
+  const dsText = await p.textContent(".dspage .ds");
   check("an instrument's datasheet has its sections", ["General", "Process conditions", "Instrument", "Specification"].every(t => dsText.includes(t)), dsText.slice(0, 200));
   check("the datasheet takes the process conditions from the vessel it is tapped to", dsText.includes("Mounted onV-101") && dsText.includes("from V-101"), dsText.slice(0, 400));
-  check("a new datasheet is not issued yet", (await p.textContent(".dlg .dsrev")).includes("Not issued yet"));
-  await p.click(".dlg footer button:has-text('Issue…')"); await p.waitForSelector(".dlg header:has-text('Issue the datasheet')");
+  check("a new datasheet is not issued yet", (await p.textContent(".dspage .dsrev")).includes("Not issued yet"));
+  await p.click(".dsbar button:has-text('Issue…')"); await p.waitForSelector(".dlg header:has-text('Issue the datasheet')");
   check("the first issue suggests revision A", (await p.inputValue(".dlg .form input.mono")) === "A");
   await p.fill(".dlg .form input[placeholder='What this issue is for']", "For comment"); await p.keyboard.press("Enter"); await p.waitForTimeout(400);
-  check("issuing gives the datasheet its revision and status", (await p.textContent(".dlg .dsrev")).includes("Rev A · Preliminary") && (await p.textContent(".dlg .ds.revs")).includes("For comment"));
-  await p.fill(".dlg .ds tr:has(td:text-is('Manufacturer')) input", "Acme Instruments"); await p.keyboard.press("Tab"); await p.waitForTimeout(300);
+  check("issuing gives the datasheet its revision and status", (await p.textContent(".dspage .dsrev")).includes("Rev A · Preliminary") && (await p.textContent(".dspage .ds.revs")).includes("For comment"));
+  await p.fill(".dspage .ds tr:has(td:text-is('Manufacturer')) input", "Acme Instruments"); await p.keyboard.press("Tab"); await p.waitForTimeout(300);
   check("a value typed on the datasheet goes to the object", (await project()).objects.find(o => o.tag === "LT-101")?.data.manufacturer === "Acme Instruments");
-  check("a value changed since the issue is marked Δ", (await p.textContent(".dlg .ds tr.chg:has(td:text-is('Manufacturer')) td.dlt")) === "Δ" && (await p.textContent(".dlg .dsrev")).includes("Δ 1 changed since"));
-  await p.click(".dlg footer button:has-text('Print')"); await p.waitForSelector(".pprev .pwrap");
+  check("a value changed since the issue is marked Δ", (await p.textContent(".dspage .ds tr.chg:has(td:text-is('Manufacturer')) td.dlt")) === "Δ" && (await p.textContent(".dspage .dsrev")).includes("Δ 1 changed since"));
+  await p.click(".dsbar button:has-text('Print')"); await p.waitForSelector(".pprev .pwrap");
   const dsPages = await p.$$eval(".pprev .pwrap", els => els.map(e => e.textContent));
   check("one datasheet prints on one page", dsPages.length === 1 && dsPages[0].includes("LT-101") && dsPages[0].includes("Acme Instruments"), JSON.stringify(dsPages.map(t => t.slice(0, 60))));
   await p.click(".printpage button:has-text('Back to the drawing')"); await p.waitForTimeout(200);
@@ -343,10 +352,10 @@ const shots = process.env.SHOTS;
   check("the layout keeps the form number and the hidden row", lay.form === "IDS-001" && lay.hidden.includes("Specification › Model"), JSON.stringify(lay));
   await p.click(".bs .back"); await p.waitForTimeout(300);
   await p.click(".tabs button:text-is('Lists')"); await p.click(".ribbon button:has-text('Datasheets')"); await p.waitForSelector(".lists .egrid tbody tr.f");
-  await p.locator(".lists .egrid tbody tr.f").filter({ has: p.locator("td", { hasText: /^LT-101$/ }) }).click(); await p.waitForSelector(".dlg .ds");
-  const dsT = await p.textContent(".dlg .bd");
-  check("the datasheet follows the layout", dsT.includes("Form IDS-001") && !(await p.$$eval(".dlg .ds td:first-child", els => els.map(e => e.textContent))).includes("Model"));
-  await p.keyboard.press("Escape"); await p.waitForTimeout(200);
+  await p.locator(".lists .egrid tbody tr.f").filter({ has: p.locator("td", { hasText: /^LT-101$/ }) }).click(); await p.waitForSelector(".dspage .ds");
+  const dsT = await p.textContent(".dspage");
+  check("the datasheet follows the layout", dsT.includes("Form IDS-001") && !(await p.$$eval(".dspage .ds td:first-child", els => els.map(e => e.textContent))).includes("Model"));
+  await p.click(".stabs .dtab .dx"); await p.waitForTimeout(200);
 
   // 27. Loop diagrams: L-101 is drawn with its devices; wiring typed in the table shows on it.
   await p.click(".ribbon button:has-text('Loop Diagrams')"); await p.waitForSelector(".dlg .loopsvg svg");
@@ -475,13 +484,13 @@ const shots = process.env.SHOTS;
     check("an old drawing goes behind the sheet, scaled to fit", !!u && u.k < 0.6 && !("draw" in u), JSON.stringify(u && { ...u }));
     check("its text shows", (await p.$$eval(".dsvg .underlay text", els => els.map(e => e.textContent))).includes("P-101A")); }
   await p.keyboard.press("Escape"); await p.waitForTimeout(200);
-  await p.fill(".ubox .three input >> nth=1", "40"); await p.keyboard.press("Tab"); await p.waitForTimeout(300);
+  await insp(); await p.fill(".ubox .three input >> nth=1", "40"); await p.keyboard.press("Tab"); await p.waitForTimeout(300);
   check("the Inspector moves it, keeping the drawing", (await project()).sheets[0].underlay?.x === 40 && (await p.$$eval(".dsvg .underlay text", els => els.length)) > 0);
-  await p.click(".ubox label.chk:has-text('Print') input"); await p.waitForTimeout(300);
+  await insp(); await p.click(".ubox label.chk:has-text('Print') input"); await p.waitForTimeout(300);
   await p.click(".tabs button:text-is('Sheets')"); await p.click(".ribbon button:has-text('DXF')"); await p.waitForTimeout(400);
   { const ex = await inv("exports"); const dx = ex.filter(e => e.kind === "dxf").pop();
     check("when printed, the sheet's DXF carries it on its own layer", !!dx && dx.text.includes("  8\r\nBACKGROUND\r\n")); }
-  await p.click(".ubox button:has-text('Remove')"); await p.waitForTimeout(300);
+  await insp(); await p.click(".ubox button:has-text('Remove')"); await p.waitForTimeout(300);
   check("Remove takes it away", !(await project()).sheets[0].underlay && !(await p.$(".dsvg .underlay")));
 
   // 34. A line to Datum Pipe, a loop to Datum Sim: each as that app's own file.
@@ -529,7 +538,7 @@ const shots = process.env.SHOTS;
 
   // 36. Issue a sheet at revision B, change it, compare and cloud the changes.
   await openEx("Pump transfer");
-  await p.click(".insp h4 button:has-text('Issue')"); await p.waitForSelector(".dlg");
+  await insp(); await p.click(".insp h4 button:has-text('Issue')"); await p.waitForSelector(".dlg");
   check("the next revision is offered", (await p.inputValue(".dlg .form input >> nth=0")) === "B");
   await p.click(".dlg footer button:has-text('Issue')"); await p.waitForTimeout(400);
   { const q = await project(); check("the sheet is issued at B", q.sheets[0].rev === "B" && q.sheets[0].snaps.some(x => x.rev === "B") && q.sheets[0].revs.some(r => r.rev === "B")); }
@@ -537,7 +546,7 @@ const shots = process.env.SHOTS;
     const [vx, vy] = await scr(v.x, v.y); await p.mouse.click(vx, vy); await p.waitForTimeout(200);
     for (let i = 0; i < 4; i++) await p.keyboard.press("ArrowRight");
     await p.waitForTimeout(300); await p.keyboard.press("Escape"); await p.waitForTimeout(300); }
-  await p.click(".insp button:has-text('Compare with B')"); await p.waitForSelector(".dlg .cmptbl tr");
+  await insp(); await p.click(".insp button:has-text('Compare with B')"); await p.waitForSelector(".dlg .cmptbl tr");
   { const rows = await p.$$eval(".dlg .cmptbl tr", els => els.map(e => e.textContent));
     check("the comparison lists the moved vessel and its rerouted lines", rows.some(r => r.includes("V-101") && r.includes("moved")) && rows.some(r => r.includes("rerouted")), JSON.stringify(rows)); }
   await p.click(".dlg footer button:has-text('Cloud them')"); await p.waitForTimeout(400);
@@ -596,7 +605,7 @@ const shots = process.env.SHOTS;
     check("the new cell is kept inside the block", tb.on && c.field === "f:Contract" && c.label === "CONTRACT" && c.x + c.w <= tb.w, JSON.stringify(c)); }
   if (process.env.SHOT) { await p.locator(".tbsec").scrollIntoViewIfNeeded(); await p.locator(".tbsec").screenshot({ path: `${process.env.SHOT}/tb.png` }); }
   await p.click(".bs .back"); await p.waitForTimeout(300); await p.keyboard.press("Escape");
-  { const inp = p.locator(".insp .iprow:has-text('Contract') input"); await inp.fill("C-2026-17"); await inp.press("Tab"); await p.waitForTimeout(400); }
+  await insp(); { const inp = p.locator(".insp .iprow:has-text('Contract') input"); await inp.fill("C-2026-17"); await inp.press("Tab"); await p.waitForTimeout(400); }
   check("the field of our own is drawn in the title block", (await p.$$eval(".dsvg .frame text", els => els.map(e => e.textContent))).includes("C-2026-17"));
 
   // 41. Review comments: pin one, reply, take in a reviewer's copy (their reply resolves it).
@@ -669,7 +678,7 @@ const shots = process.env.SHOTS;
   await p.fill(".dlg input", "Spare pump"); await p.click(".dlg footer button:has-text('Save')"); await p.waitForTimeout(400);
   check("the selection is saved as an assembly", (await project()).settings.assemblies.some(a => a.name === "Spare pump" && a.items.length === 1));
   await p.keyboard.press("Escape");
-  await p.fill(".psearch", "Spare"); await p.click(".asmrow:has-text('Spare pump')"); await p.fill(".psearch", "");
+  await side("symbols"); await p.fill(".psearch", "Spare"); await p.click(".asmrow:has-text('Spare pump')"); await p.fill(".psearch", "");
   { const [cx, cy] = await scr(200, 150); await p.mouse.click(cx, cy); await p.waitForTimeout(400); }
   { const q = await project(); check("the assembly is placed with the next free tag", q.items.some(i => tagOf(q, i) === "P-101C")); }
   await p.click(".tabs .file"); await p.click(".bs aside button:has-text('Options')"); await p.waitForTimeout(300);
@@ -699,7 +708,7 @@ const shots = process.env.SHOTS;
   const wire = async (tagName, io) => {
     const q = await project(); const it = q.items.find(i => tagOf(q, i) === tagName);
     const [x, y] = await scr(it.x, it.y); await p.mouse.click(x, y); await p.waitForTimeout(300);
-    const inp = p.locator(".insp .iprow:has-text('I/O channel') input"); await inp.fill(io); await inp.press("Tab"); await p.waitForTimeout(400);
+    await insp(); const inp = p.locator(".insp .iprow:has-text('I/O channel') input"); await inp.fill(io); await inp.press("Tab"); await p.waitForTimeout(400);
     await p.keyboard.press("Escape");
   };
   await wire("LT-101", "AI-01/1");
@@ -712,8 +721,8 @@ const shots = process.env.SHOTS;
   await openEx("Pump transfer");
   { const q = await project(); const pa = q.items.find(i => tagOf(q, i) === "P-101A");
     const [x, y] = await scr(pa.x, pa.y); await p.mouse.click(x, y); await p.waitForTimeout(400); }
-  check("the Inspector offers the pump's calculation sheets", (await p.$$eval(".insp .ibtns button", els => els.map(e => e.textContent))).some(t => t.startsWith("Pump power")));
-  await p.click(".insp button:has-text('Pump power')"); await p.waitForTimeout(400);
+  await insp(); check("the Inspector offers the pump's calculation sheets", (await p.$$eval(".insp .ibtns button", els => els.map(e => e.textContent))).some(t => t.startsWith("Pump power")));
+  await insp(); await p.click(".insp button:has-text('Pump power')"); await p.waitForTimeout(400);
   { const ex = (await inv("exports")).filter(e => e.kind === "calc").pop(); const m = ex && JSON.parse(ex.text);
     check("the sheet is a Datum Calc file with the pump's flow", !!m && m.format === 1 && m.regions.some(r => r.text.startsWith("Q = ") && r.text.endsWith("from P-101A")), ex?.text.slice(0, 120)); }
   await p.keyboard.press("Escape");
@@ -723,8 +732,8 @@ const shots = process.env.SHOTS;
   { const q = await project(); const lv = q.items.find(i => tagOf(q, i) === "LV-101");
     await inv("apply", { op: { SetData: { ids: [lv.obj], key: "dp_design", val: 50000 } } });
     const [x, y] = await scr(lv.x, lv.y); await p.mouse.click(x, y); await p.waitForTimeout(500); }
-  check("the Inspector sizes the control valve", ((await p.textContent(".insp .sizing").catch(() => "")) ?? "").includes("Cv required"));
-  await p.click(".insp .sizing button:has-text('Write to the datasheet')"); await p.waitForTimeout(400);
+  await insp(); check("the Inspector sizes the control valve", ((await p.textContent(".insp .sizing").catch(() => "")) ?? "").includes("Cv required"));
+  await insp(); await p.click(".insp .sizing button:has-text('Write to the datasheet')"); await p.waitForTimeout(400);
   check("the Cv is written to its data", Number((await project()).objects.find(o => o.tag === "LV-101").data.cv_required) > 1);
   await p.keyboard.press("Escape");
 
@@ -732,9 +741,9 @@ const shots = process.env.SHOTS;
   await openEx("Pump transfer");
   { const q = await project(); const pa = q.items.find(i => tagOf(q, i) === "P-101A");
     const [x, y] = await scr(pa.x, pa.y); await p.mouse.click(x, y); await p.waitForTimeout(400); }
-  await p.click(".insp button:has-text('Datasheet')"); await p.waitForSelector(".dlg .ds");
-  { const t = await p.textContent(".dlg"); check("the pump has a datasheet with its nozzles", t.includes("Pump datasheet") && t.includes("Suction") && t.includes("Differential pressure"), t.slice(0, 200)); }
-  await p.keyboard.press("Escape"); await p.waitForTimeout(200);
+  await insp(); await p.click(".insp button:has-text('Datasheet')"); await p.waitForSelector(".dspage .ds");
+  { const t = await p.textContent(".dspage"); check("the pump has a datasheet with its nozzles", t.includes("Pump datasheet") && t.includes("Suction") && t.includes("Differential pressure"), t.slice(0, 200)); }
+  await p.click(".stabs .dtab .dx"); await p.waitForTimeout(200);
 
   // 51. A simulator's stream results imported into the PFD's streams, with a preview.
   await openEx("Crude preheat (PFD)");
@@ -883,13 +892,13 @@ const shots = process.env.SHOTS;
   await openEx("Pump transfer");
   { const q = await project(); const v = q.items.find(i => tagOf(q, i) === "V-101");
     const [x, y] = await scr(v.x, v.y); await p.mouse.click(x, y); await p.waitForTimeout(300);
-    const before = (await p.$$(".insp .noztbl tbody tr")).length;
-    await p.click(".insp button:has-text('Add a nozzle')"); await p.waitForTimeout(200);
+    await insp(); const before = (await p.$$(".insp .noztbl tbody tr")).length;
+    await insp(); await p.click(".insp button:has-text('Add a nozzle')"); await p.waitForTimeout(200);
     const [nx, ny] = await scr(v.x - 25, v.y + 4); await p.mouse.click(nx, ny); await p.waitForTimeout(500);
     const [x2, y2] = await scr(v.x, v.y); await p.mouse.click(x2, y2); await p.waitForTimeout(400);
-    const after = (await p.$$(".insp .noztbl tbody tr")).length;
-    check("a nozzle is added to the vessel", after === before + 1 && (await p.textContent(".insp .noztbl")).includes("N1"), `${before} → ${after}`);
-    const inp = p.locator(".insp .noztbl tbody tr", { hasText: "N1" }).locator("td:nth-child(2) input"); await inp.fill("2"); await inp.press("Tab"); await p.waitForTimeout(300);
+    await insp(); const after = (await p.$$(".insp .noztbl tbody tr")).length;
+    await insp(); check("a nozzle is added to the vessel", after === before + 1 && (await p.textContent(".insp .noztbl")).includes("N1"), `${before} → ${after}`);
+    await insp(); const inp = p.locator(".insp .noztbl tbody tr", { hasText: "N1" }).locator("td:nth-child(2) input"); await inp.fill("2"); await inp.press("Tab"); await p.waitForTimeout(300);
     const r = await project(); check("the nozzle's size is kept", r.objects.find(o => o.tag === "V-101").data["nz.N1.size"] === "2"); }
   await p.keyboard.press("Escape");
 
@@ -897,13 +906,13 @@ const shots = process.env.SHOTS;
   await openEx("Pump transfer");
   { const q = await project(); const hv = q.items.find(i => tagOf(q, i) === "HV-104");
     const [x, y] = await scr(hv.x, hv.y); await p.mouse.click(x, y); await p.waitForTimeout(300);
-    await p.selectOption(".insp select.swapsym", "ball"); await p.waitForTimeout(400);
+    await insp(); await p.selectOption(".insp select.swapsym", "ball"); await p.waitForTimeout(400);
     const r = await project(); const it = r.items.find(i => i.id === hv.id);
     check("the valve is swapped and keeps its tag", it.sym === "ball" && tagOf(r, it) === "HV-104"); }
   await p.keyboard.press("Escape");
   { const q = await project(); const pa = q.items.find(i => tagOf(q, i) === "P-101A");
     const [x, y] = await scr(pa.x, pa.y); await p.mouse.click(x, y); await p.waitForTimeout(300);
-    await p.click(".insp button:has-text('Add a spare')"); await p.waitForTimeout(400);
+    await insp(); await p.click(".insp button:has-text('Add a spare')"); await p.waitForTimeout(400);
     check("a spare takes the next free suffix", (await project()).objects.some(o => o.tag === "P-101C")); }
   await p.keyboard.press("Escape");
 
@@ -1028,7 +1037,7 @@ const shots = process.env.SHOTS;
   await p.fill(".vtag", "LY-101"); await p.click(".dlg footer .btn.pri"); await p.waitForTimeout(600);
   { const q = await project(); const v = q.items.find(i => tagOf(q, i) === "LY-101");
     check("a virtual instrument is added, not drawn", !!v && v.virt === true && (await p.$$eval(".it", els => els.length)) === q.items.filter(i => !i.virt && q.sheets.find(s => s.id === i.sheet)).length, JSON.stringify(v));
-    check("the Inspector says it is virtual", ((await p.textContent(".insp")) ?? "").includes("Virtual: in its loop")); }
+    await insp(); check("the Inspector says it is virtual", ((await p.textContent(".insp")) ?? "").includes("Virtual: in its loop")); }
   await p.click(".ribbon button:has-text('I/O List')"); await p.waitForTimeout(500);
   check("the I/O list shows the loop's I/O", ((await p.textContent(".bottom .egrid")) ?? "").includes("LV-101"));
   await p.click(".ribbon button:has-text('Export for the DCS')"); await p.waitForTimeout(600);
@@ -1063,29 +1072,42 @@ const shots = process.env.SHOTS;
   check("a scan goes behind the sheet as a picture", ((await p.getAttribute(".dsvg .underlay image", "href")) ?? "").startsWith("data:image/png;base64,"));
   await p.keyboard.press("Escape"); await p.waitForTimeout(200);
 
-  // 79. The workspace: the left pane folds to a strip, the Inspector floats and folds, the bottom
-  // tabs never spill, a list opens as a tab beside the sheets.
+  // 79. The layout (0.11.3): one rail on the left opening one panel at a time, nothing on the right;
+  // the lists under the drawing linked both ways with it; a list moved to its own tab and back; the
+  // datasheet as a tab stepping through every datasheet; the slim bottom pane; colours for the screen.
   await openEx("Compressor package");
+  check("the rail opens one panel at a time", (await p.$$(".rail button[data-side]")).length === 4 && (await p.$$(".sidep")).length <= 1);
+  await side("symbols");
   check("the symbols are a tree with folding branches", (await p.$$(".palette .tgrp")).length >= 8 && (await p.$$(".palette .ti.psym")).length >= 20);
-  await p.click(".pfold"); await p.waitForTimeout(300);
-  check("the left pane folds to a strip", !!(await p.$(".prail")) && !(await p.$(".palette")));
-  await p.click(".prail button[title='Show the panel']"); await p.waitForTimeout(300);
-  await p.click(".insp button[title^='Float it']"); await p.waitForTimeout(300);
-  check("the Inspector floats over the sheet", !!(await p.$(".insp.float")));
-  await p.click(".insp button[title^='Dock it']"); await p.waitForTimeout(300);
-  await p.click(".insp button[title^='Fold it']"); await p.waitForTimeout(300);
-  check("the Inspector folds to a strip", !!(await p.$(".irail")) && !(await p.$(".insp")));
-  await p.click(".irail button"); await p.waitForTimeout(300);
-  { const nav = await p.$eval(".btabs", el => [el.getBoundingClientRect().right, Math.max(...[...el.querySelectorAll("button")].filter(b => b.offsetParent).map(b => b.getBoundingClientRect().right))]);
-    check("the bottom tabs stay inside their bar", nav[1] <= nav[0] + 1, JSON.stringify(nav)); }
-  await btab('Equipment'); await p.waitForTimeout(300);
-  await p.click(".btabs button[title^='Open this list in a tab']"); await p.waitForTimeout(500);
+  await p.click(".rail button[data-side='symbols']"); await p.waitForTimeout(200);
+  check("the panel folds away", !(await p.$(".sidep")));
+  await p.click(".rail button:has-text('Lists')"); await p.waitForTimeout(300);
+  await btab('Equipment'); await p.waitForTimeout(500);
+  await p.waitForSelector(".lowerlists .egrid tbody tr.f");
+  check("the lists sit under the drawing, in the drawing's tab", await p.isVisible(".canvhold svg") && (await p.$$(".lowerlists .egrid tbody tr.f")).length >= 3);
+  await side("documents");
+  await p.locator(".lowerlists .egrid tbody tr.f td", { hasText: /^Air cooler$/ }).first().click(); await p.waitForTimeout(400);
+  check("a row picks its symbol, and the Inspector shows it", !!(await p.$(".sidep .insp")) && (await p.$$(".lowerlists .egrid tr.f.sel")).length >= 1);
+  await p.click(".lowerlists .bdoc"); await p.waitForTimeout(400);
   await p.waitForSelector(".docview:visible .egrid tbody tr.f").catch(() => {});
-  { const tab = (await p.textContent(".stabs .dtab.on").catch(() => "")) ?? "", grid = (await p.textContent(".docview:visible .egrid").catch(() => "")) ?? "";
-    check("a list opens as a tab beside the sheets", tab.includes("Equipment") && grid.includes("Air cooler"), `${tab} | ${grid.slice(0, 120)}`); }
-  await p.click(".stabs button:text-is('PID-200')"); await p.waitForTimeout(300);
-  check("and the sheet comes back", await p.isVisible(".canvhold svg"));
+  check("a list moves to its own tab", ((await p.textContent(".stabs .dtab.on").catch(() => "")) ?? "").includes("Equipment") && ((await p.textContent(".docview:visible .egrid").catch(() => "")) ?? "").includes("Air cooler"));
+  await p.click(".docview:visible button:has-text('Show under the drawing')"); await p.waitForTimeout(400);
+  check("and comes back under the drawing", !(await p.$(".stabs .dtab")) && await p.isVisible(".canvhold svg") && await p.isVisible(".lowerlists .egrid"));
+  await side("documents");
+  await p.locator(".docs .tgrp", { hasText: "Datasheets" }).last().locator(".ti").first().click(); await p.waitForSelector(".dspage .ds");
+  { const first = await p.textContent(".dsbar b"); await p.click(".dsbar button:text-is('›')"); await p.waitForTimeout(500);
+    const second = await p.textContent(".dsbar b");
+    check("a datasheet opens as a tab and steps to the next", first !== second && ((await p.textContent(".dsbar")) ?? "").includes("2 of"), `${first} -> ${second}`); }
   await p.click(".stabs .dtab .dx"); await p.waitForTimeout(200);
+  await btab('Messages'); await p.waitForTimeout(300);
+  check("the bottom pane keeps the messages", ((await p.textContent(".bottom.slim")) ?? "").length > 20);
+  await btab('Log'); await p.waitForTimeout(500);
+  check("and the log of changes", (await p.$$(".logtbl tbody tr")).length >= 1);
+  await p.click(".tabs button:text-is('View')"); await p.selectOption(".ccol:has-text('On the screen') select", "bw"); await p.waitForTimeout(300);
+  { const c = await p.$eval(".canvhold .ln.major .lstroke", e => getComputedStyle(e).stroke).catch(() => "");
+    await p.selectOption(".ccol:has-text('On the screen') select", "colour"); await p.waitForTimeout(300);
+    const c2 = await p.$eval(".canvhold .ln.major .lstroke", e => getComputedStyle(e).stroke).catch(() => "");
+    check("the drawing is shown in colour or black and white", c !== c2 && c2 === "rgb(31, 58, 138)", `${c} / ${c2}`); }
 
   // 80. A library of the project's own: a symbol drawn in the symbol editor, kept in this project
   // only, shown as a branch of the Symbols tree; a client's codes kept in the project and checked.
@@ -1109,6 +1131,7 @@ const shots = process.env.SHOTS;
   await p.click(".libhead button:has-text('Save codes')"); await p.waitForTimeout(600);
   check("the codes are kept in this project", ((await project()).settings.codes ?? []).some(l => l.codes.length === 4));
   await p.click(".bs .back"); await p.waitForTimeout(400);
+  await side("symbols");
   check("the project's library is a branch of the Symbols tree", ((await p.textContent(".palette .tbody")) ?? "").includes("Job 4711 symbols"));
   await btab('Checks'); await p.waitForTimeout(400);
   check("check 28 finds codes the project's list does not have", (await p.$$eval(".ctbl tbody td", els => els.map(e => e.textContent))).some(t => t.includes("not in the project's list")));

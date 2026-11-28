@@ -3,6 +3,8 @@
 // an open end), dragging a line's segments, dropping symbols from the palette (an in-line symbol
 // dropped on a line goes into it). Everything drawn comes from the engine (view.rs): this file
 // draws it and sends edits.
+import { screenCss } from "./colours";
+import { screenMode } from "./store";
 import { For, Show, JSX, createSignal, createMemo, createEffect, onMount, onCleanup, batch, on } from "solid-js";
 import { Pt, Prim, ItemView, LineView, End, Kind, Item, Line, Note } from "./api";
 import { derived, sel, setSel, act, proj, sheet, opts, tool, setTool, symOf, lib, openMenu, MenuItem, hiNumber, hidden, setSheetId, lineOf, onFit, bgs, loadBg, setPanel, setPanelOpen, showIssues } from "./store";
@@ -27,6 +29,7 @@ export const toScreen = (x: number, y: number): Pt => {
   return [r.left + pan()[0] + x * zoom(), r.top + pan()[1] + y * zoom()];
 };
 (window as any).__toScreen = (x: number, y: number) => (svgEl ? toScreen(x, y) : null);
+(window as any).__centre = (x: number, y: number) => centreOn([x, y], zoom());
 export const viewCenter = (): Pt => {
   if (!svgEl) return [150, 100];
   const r = svgEl.getBoundingClientRect();
@@ -166,6 +169,10 @@ export const Canvas = () => {
   const portAt = (p: Pt): { it: ItemView; k: number } | null => {
     let best: { it: ItemView; k: number } | null = null, bd = Math.max(1.6, 7 / zoom());
     for (const it of items()) it.ports.forEach((q, k) => { const d = Math.hypot(q.p[0] - p[0], q.p[1] - p[1]); if (d < bd) { bd = d; best = { it, k }; } });
+    // Zoomed out, a small symbol's points come close to its middle: a click nearer the middle than
+    // the point picks the symbol, not the point.
+    const b0 = best as { it: ItemView; k: number } | null;
+    if (b0) { const c: Pt = [(b0.it.bbox[0] + b0.it.bbox[2]) / 2, (b0.it.bbox[1] + b0.it.bbox[3]) / 2]; if (Math.hypot(c[0] - p[0], c[1] - p[1]) < bd) return null; }
     return best;
   };
   const tol = () => Math.max(1.2, 5 / zoom());
@@ -340,7 +347,8 @@ export const Canvas = () => {
   onFit(fit);
   // The first drawing is fitted when it arrives.
   const hasView = createMemo(() => !!v());
-  createEffect(on(hasView, has => { if (has) requestAnimationFrame(fit); }));
+  // Fitted once the panels round it have their size (and again a moment later, when they have settled).
+  createEffect(on(hasView, has => { if (has) { requestAnimationFrame(fit); setTimeout(fit, 220); } }));
   createEffect(() => { const sv = v(); if (sv?.underlay) loadBg(sv.id, sv.underlay.rev); });
   onMount(() => { addEventListener("mousemove", move); addEventListener("mouseup", up); addEventListener("keyup", keyup); });
   onCleanup(() => { removeEventListener("mousemove", move); removeEventListener("mouseup", up); removeEventListener("keyup", keyup); });
@@ -397,6 +405,7 @@ export const Canvas = () => {
     <div class="canvas" classList={{ grid: opts().grid, panning: space() || drag()?.k === "pan", drawing: tool().k !== "select" }} tabindex="0" onKeyDown={keys}
       onDragOver={e => e.preventDefault()} onDrop={drop}
       style={{ "background-size": `${grid() * 4 * zoom()}px ${grid() * 4 * zoom()}px`, "background-position": `${pan()[0]}px ${pan()[1]}px` }}>
+      <style>{screenCss(screenMode())}</style>
       <svg ref={svgEl} class="dsvg" onMouseDown={down} onDblClick={dbl} onWheel={wheel} onContextMenu={ctx} onMouseLeave={() => setMouse(null)}>
         <SymbolDefs />
         <Show when={v()}>{sv => <g transform={`translate(${pan()[0]} ${pan()[1]}) scale(${zoom()})`}>
