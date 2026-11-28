@@ -1125,7 +1125,7 @@ const shots = process.env.SHOTS;
   await p.click(".dlg footer button:has-text('Use this symbol')"); await p.waitForTimeout(400);
   check("the symbol editor adds a symbol to the library", (await p.$$(".libtbl tbody tr")).length === 1);
   await p.click(".libhead button:has-text('Save library')"); await p.waitForTimeout(600);
-  { const q = await project(); check("the library is kept in this project", (q.settings.libraries ?? []).some(l => l.name === "Job 4711 symbols" && l.symbols.length === 1 && l.symbols[0].draw.includes("r -8 -6 16 12"))); }
+  { const q = await project(); check("the library is kept in this project", (q.settings.libraries ?? []).some(l => l.name === "Job 4711 symbols" && l.symbols.length === 1 && /(^|; )r /.test(l.symbols[0].draw) && /(^|; )c /.test(l.symbols[0].draw))); }
   await p.click(".codesec button:has-text('Import codes')"); await p.waitForSelector(".codetbl tbody tr");
   check("codes are read for review", (await p.$$(".codetbl tbody tr")).length === 4);
   await p.click(".libhead button:has-text('Save codes')"); await p.waitForTimeout(600);

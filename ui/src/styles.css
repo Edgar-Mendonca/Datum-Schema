@@ -1403,3 +1403,7 @@ tr.behind td { background: var(--err-bg); }
 .symedsvg .symhov { fill: #2F6FD0; opacity: .6; }
 .symhint { margin: 0; }
 .symedsvg .symink { fill: none; stroke-width: .3; stroke-linecap: round; stroke-linejoin: round; }
+/* The hint over the sheet never takes a click; the drawing always keeps room. */
+.toolbadge { pointer-events: none; }
+.lowerlists { max-height: calc(100% - 160px); }
+.bottom.slim { max-height: 34vh; }
